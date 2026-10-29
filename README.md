@@ -1,14 +1,14 @@
 # Proyecto GTPN: entorno y flujo de trabajo del grupo
 
-Este documento define cómo vamos a trabajar los cinco sobre el proyecto de organización de cursos en Flowable 6.8: cómo armamos el entorno para que todos veamos lo mismo, cómo organizamos el repositorio y cómo nos repartimos el trabajo.
+Este documento define cómo vamos a trabajar sobre el proyecto de organización de cursos en Flowable, cómo armamos el entorno para que todos veamos lo mismo, cómo organizamos el repositorio y cómo nos repartimos el trabajo.
 
 ---
 
 ## 1. La idea central: el entorno se reproduce desde código
 
-Para que todos veamos lo mismo **no hace falta compartir una única base de datos**. Hace falta que cualquiera pueda reconstruir el mismo entorno desde el repositorio con un par de comandos.
+Cualquiera puede reconstruir el mismo entorno desde el repositorio con un par de comandos.
 
-Además es obligatorio por otra razón: el día de la defensa todo va a correr en una sola máquina. Si el entorno depende de datos que alguien cargó a mano, no vamos a poder rearmarlo.
+Esta pensado como que todo va a correr en una sola máquina. Si el entorno depende de datos que alguien cargó a mano, no vamos a poder rearmarlo.
 
 Por eso usamos dos entornos:
 
@@ -17,34 +17,104 @@ Por eso usamos dos entornos:
 | **Local** | Desarrollar y probar cada uno lo suyo | En la máquina de cada uno, con Docker |
 | **Compartido** | Integrar las apps entre sí y ensayar la defensa | Un único servidor al que nos conectamos todos |
 
+>Por el momento el entorno `Compartido` no esta implementado
+
 ---
 
 ## 2. Entorno local
 
-### Qué levanta el `docker-compose.yml`
+### Requisitos y configuración
 
-- **PostgreSQL**, con dos bases:
-  - `flowable`: la base del motor.
-  - `institucion`: nuestra base (empresas, cursos, estado, etc.). Se crea sola con un script SQL ubicado en `/docker-entrypoint-initdb.d`, que también carga los datos de prueba. Esto cubre además el entregable de *scripts para crear la BD y cargar datos de prueba*.
-- **Flowable 6.8** (`flowable/flowable-ui:6.8.0`) apuntando a esa base, con nuestro `.jar` de listeners y delegates incluido.
-- Más adelante, el **servicio REST de aulas**.
+Se necesita Docker con Docker Compose, Java 11 y Maven para ejecutar el proyecto Java. El archivo `.env` configura la base y las credenciales locales:
 
-### Script de inicialización
-
-Junto al compose hay un script (bash o Python) que, usando la API REST de Flowable:
-
-1. Crea los cinco usuarios y los grupos `administracion` y `docentes`.
-2. Despliega el BPMN y la DMN.
-
-### Cómo resetear el entorno
-
-```bash
-docker compose down -v     # borra contenedores y volúmenes (base incluida)
-docker compose up -d       # levanta todo de cero
-./infra/bootstrap.sh       # usuarios, grupos y despliegue
+```env
+POSTGRES_DB=Institucion
+POSTGRES_USER=UserPostgres
+POSTGRES_PASSWORD=Password
+LOAD_SEED_DATA=true
 ```
 
-Con esto cualquiera queda con un entorno limpio e idéntico al de los demás. Sirve especialmente para probar cada escenario de la defensa desde cero.
+Estas credenciales son solo para desarrollo local.
+
+### Qué inicia Docker Compose
+
+`docker-compose.yml` define tres servicios:
+
+- **PostgreSQL 15** crea la base `Institucion` al inicializar un volumen vacío. Su healthcheck espera a que PostgreSQL acepte conexiones.
+- **Flowable UI 6.8** se conecta a esa misma base y crea/actualiza sus tablas internas al arrancar.
+- **pgAdmin** se inicia con el profile `dev` y permite inspeccionar la base desde el navegador.
+
+Las tablas `ACT_*` y `*_DATABASECHANGELOG*` son de Flowable. Las tablas `empresas`, `cursos` y `schema_version` son de este proyecto.
+
+### Levantar y verificar
+
+```bash
+make dev-up      # inicia Postgres, Flowable y pgAdmin en segundo plano
+make verify      # verifica configuración, tablas y disponibilidad de Flowable
+make dev-logs    # sigue los logs; Ctrl-C deja los contenedores ejecutándose
+make dev-psql    # abre psql conectado a Institucion
+make dev-down    # detiene y elimina los contenedores, conserva los volúmenes
+```
+
+`make dev-up` espera a que PostgreSQL esté saludable. Flowable puede tardar unos segundos adicionales; `make verify` reintenta el acceso a la UI durante un tiempo limitado.
+
+Direcciones locales:
+
+- Flowable UI: <http://127.0.0.1:8080/flowable-ui>
+- pgAdmin: <http://127.0.0.1:5050> (usuario `admin@localhost.com`, contraseña `admin123`)
+
+Para ver PostgreSQL desde pgAdmin, iniciá sesión y registrá un servidor:
+Hacer click derecho sobre Server y seleccionar Register. En la pestaña **Connection** usá:
+
+| Campo | Valor |
+|---|---|
+| Host name/address | `postgres` |
+| Port | `5432` |
+| Maintenance database | `Institucion` |
+| Username | `UserPostgres` |
+| Password | `Password` |
+
+El host `postgres` funciona desde el contenedor de pgAdmin en la red de Compose. Desde una herramienta instalada directamente en la PC, el host es `localhost` y el puerto `5432`.
+
+### Schema y seed SQL: empresas y cursos
+
+En el primer arranque con un volumen vacío, PostgreSQL ejecuta automáticamente, en orden:
+
+1. `infra/db/init/01-institucion-schema.sh` ejecuta `infra/db/sql/institucion-schema.sql` en `Institucion`. Crea `schema_version`, `empresas` y `cursos`, incluyendo claves primarias, restricciones y unicidad de nombres.
+2. `infra/db/init/02-seed.sh` ejecuta `infra/db/sql/seed.sql` si `LOAD_SEED_DATA=true`. Inserta cuatro empresas y tres cursos de ejemplo.
+
+Para no insertar esos datos al crear una base nueva, poné `LOAD_SEED_DATA=false` en `.env` antes de iniciar PostgreSQL por primera vez. Esto omite solo la seed SQL; el schema se crea igual. Cambiar esa variable con un volumen ya inicializado no borra filas ni vuelve a ejecutar los scripts.
+
+La seed SQL actual **no es idempotente**: las restricciones únicas del schema impiden duplicados, pero volver a ejecutar `seed.sql` sobre una base que ya tiene esos nombres produce un error de clave duplicada. No la ejecutes manualmente hasta que la seed use `ON CONFLICT`.
+
+### Seed Java: usuarios, grupos y membresías de Flowable
+
+La seed Java es independiente de `LOAD_SEED_DATA`. Primero levantá PostgreSQL y Flowable:
+
+```bash
+make dev-up
+```
+
+Esperá a que Flowable termine de iniciar y aplique sus migraciones; podés confirmarlo con `make verify`. Después, desde la raíz del proyecto, compilá y ejecutá la seed:
+
+```bash
+mvn compile
+mvn exec:java -Dexec.mainClass=flowable.seed.Main
+```
+
+También podés compilar y ejecutar en un solo comando, una vez que `make dev-up` haya terminado y Flowable esté listo: `mvn compile exec:java -Dexec.mainClass=flowable.seed.Main`. `Main` conecta con `Institucion` y ejecuta `FlowableSeed`, que crea los usuarios con IDs del `1` al `10`, los grupos `Admin`, `Administracion` y `Docentes`, y sus membresías. Los datos se guardan en las tablas de identidad de Flowable, no en una tabla propia de usuarios.
+
+La conexión y las contraseñas de esos usuarios están escritas en el código Java para desarrollo. Luego hay que externalizar la configuración antes de usarlo fuera del entorno local. Crear esos usuarios no despliega automáticamente procesos BPMN/DMN.
+
+### Detener y empezar de cero
+
+`make dev-down` conserva los datos. Para borrar **todos** los datos persistidos de PostgreSQL y la configuración de pgAdmin y volver a inicializar:
+
+```bash
+make dev-reset
+```
+
+Este comando equivale a detener Compose y eliminar sus volúmenes (`docker compose down -v`), y luego iniciar los servicios otra vez. Es destructivo: se pierden los datos de `Institucion`, incluidas las tablas y usuarios de Flowable. Con `LOAD_SEED_DATA=true`, el nuevo volumen vuelve a cargar las cuatro empresas y los tres cursos; para recrear también los usuarios y grupos, ejecutá `Main` después de que Flowable haya arrancado. No hace falta usar `dev-reset` para el trabajo diario.
 
 ---
 
@@ -73,7 +143,7 @@ Que cada uno corra su propio Flowable en Docker apuntando a una misma base Postg
 Usamos **un único repositorio (monorepo)**:
 
 ```
-/infra        docker-compose, SQL de la base institucion, scripts de inicialización
+/infra        docker-compose, SQL de la base Institucion, scripts de inicialización
 /motor        BPMN, DMN y proyecto Maven con listeners y delegates (+ tests JUnit)
 /aulas        servicio REST de aulas
 /web          sitio web
@@ -110,7 +180,7 @@ Usamos **un único repositorio (monorepo)**:
 | Integrante | Responsabilidad | Entregables |
 |---|---|---|
 | **1. Motor e integración** | BPMN completo (dueño del modelo), DMN, usuarios y grupos, contrato del proceso | `.bpmn20.xml`, `.dmn`, `docs/contrato.md` |
-| **2. Backend Java e infraestructura** | Delegates, task listener, execution listener, compensaciones y manejo de errores; base `institucion`; servicio REST de aulas; `docker-compose` y entorno compartido | `.jar` + fuentes, SQL, servicio de aulas, `/infra` |
+| **2. Backend Java e infraestructura** | Delegates, task listener, execution listener, compensaciones y manejo de errores; base `Institucion`; servicio REST de aulas; `docker-compose` y entorno compartido | `.jar` + fuentes, SQL, servicio de aulas, `/infra` |
 | **3. Sitio web: parte pública y empresas** | Formulario de solicitud e inicio de la instancia, login y vistas de la empresa, generación de PDFs | `/web` |
 | **4. Sitio web: administración** | Bandeja de tareas, reclamo y completado, formularios de propuesta, revisión, evaluación de recursos, lista, archivo e informe | `/web` |
 | **5. Apps externas** | App de escritorio con API Java (materiales), simulador de comunicaciones REST, app móvil para docentes | `/desktop`, `/mobile` |
@@ -125,9 +195,10 @@ Usamos **un único repositorio (monorepo)**:
 
 - [ ] Crear el repositorio con la estructura de carpetas.
 - [ ] Acordar y escribir `docs/contrato.md`.
-- [ ] Armar `docker-compose.yml` y el script de inicialización.
+- [x] Armar `docker-compose.yml` de desarrollo y el script de inicialización.
+- [ ] Armar el ambiente de producción y el checklist de despliegue.
 - [ ] Probar un mini-proceso de compensación (cancelación a mitad del subproceso y fin normal) antes de construir el resto.
 - [ ] Decidir dónde corre el entorno compartido (PC con Tailscale o VPS).
 - [ ] Consultar con el profesor:
   - cómo espera que se maneje el escenario 7 (falta de aulas), que no está en el diagrama;
-  - si las cuentas de las empresas pueden vivir solo en la base `institucion`, sin ser usuarios de Flowable.
+  - si las cuentas de las empresas pueden vivir solo en la base `Institucion`, sin ser usuarios de Flowable.
