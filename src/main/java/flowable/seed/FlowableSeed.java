@@ -33,6 +33,8 @@ public class FlowableSeed {
 
         seedGroup("Administracion", "Administracion de cursos");
         seedGroup("Docentes", "Docentes de los cursos");
+        asignPrivilegesUsers("Administracion");
+        asignPrivilegesUsers("Docentes");
 
         seedUser("jefeAdministrativo","Jefe", "administrativo", "jefeAdministrativo@gmail.com",  "JefeA");
         seedUser("empleadoAdministrativo","Empleado", "administrativo", "empleadoAdministrativo@gmail.com",  "EmpleadoA");
@@ -40,11 +42,11 @@ public class FlowableSeed {
         setMembership("jefeAdministrativo", "Administracion"); // Jefe admnistrativo
         setMembership("empleadoAdministrativo", "Administracion"); // Empleado administrativo
 
-        seedUser("jefeDocente","Jefe", "docente", "jefeDocente@gmail.com",  "JefeD123");
+        seedUser("jefeDeEquipo","Jefe", "docente", "jefeDocente@gmail.com",  "JefeD123");
         seedUser("docente1","Docente", "1", "docente1@gmail.com",  "Docente1");
         seedUser("docente2","Docente", "2", "docente2@gmail.com",  "Docente2");
 
-        setMembership("jefeDocente", "Docentes"); // Jefe docente
+        setMembership("jefeDeEquipo", "Docentes"); // Jefe docente
         setMembership("docente1", "Docentes"); // Docente 1
         setMembership("docente2", "Docentes"); // Docente 2
     }
@@ -135,4 +137,33 @@ public class FlowableSeed {
             }
         }
     }
+
+    private void asignPrivilegesUsers(String groupId) {
+    List<String> privileges = Arrays.asList(
+        "access-idm",
+        "access-task",
+        "access-rest-api"
+    );
+
+    for (String name : privileges) {
+        Privilege privilege = idmIdentityService.createPrivilegeQuery()
+                .privilegeName(name)
+                .singleResult();
+
+        if (privilege == null) {
+            System.out.println("No existe el privilegio " + name);
+            continue;
+        }
+
+        boolean alreadyAssigned = idmIdentityService.createPrivilegeQuery()
+                .privilegeId(privilege.getId())
+                .groupId(groupId)
+                .count() > 0;
+
+        if (!alreadyAssigned) {
+            idmIdentityService.addGroupPrivilegeMapping(privilege.getId(), groupId);
+            System.out.println("Privilegio " + name + " asignado al grupo " + groupId);
+        }
+    }
+}
 }
