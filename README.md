@@ -80,12 +80,14 @@ El host `postgres` funciona desde el contenedor de pgAdmin en la red de Compose.
 
 En el primer arranque con un volumen vacío, PostgreSQL ejecuta automáticamente, en orden:
 
-1. `infra/db/init/01-institucion-schema.sh` ejecuta `infra/db/sql/institucion-schema.sql` en `Institucion`. Crea `schema_version`, `empresas` y `cursos`, incluyendo claves primarias, restricciones y unicidad de nombres.
+1. `infra/db/init/01-institucion-schema.sh` ejecuta `infra/db/sql/institucion-schema.sql` en `Institucion`. Crea `schema_version`, `empresas` y `cursos`, incluyendo claves primarias, claves foráneas, restricciones de fechas, presupuesto y estado, y la unicidad de `(empresa_id, nombre)`.
 2. `infra/db/init/02-seed.sh` ejecuta `infra/db/sql/seed.sql` si `LOAD_SEED_DATA=true`. Inserta cuatro empresas y tres cursos de ejemplo.
 
 Para no insertar esos datos al crear una base nueva, poné `LOAD_SEED_DATA=false` en `.env` antes de iniciar PostgreSQL por primera vez. Esto omite solo la seed SQL; el schema se crea igual. Cambiar esa variable con un volumen ya inicializado no borra filas ni vuelve a ejecutar los scripts.
 
-La seed SQL actual **no es idempotente**: las restricciones únicas del schema impiden duplicados, pero volver a ejecutar `seed.sql` sobre una base que ya tiene esos nombres produce un error de clave duplicada. No la ejecutes manualmente hasta que la seed use `ON CONFLICT`.
+La seed SQL es **idempotente**: usa `ON CONFLICT DO NOTHING` sobre `empresas.nombre` y sobre `cursos (empresa_id, nombre)`, así que se puede volver a ejecutar sin duplicar filas ni fallar por claves repetidas.
+
+Los scripts de inicialización solo corren con un volumen vacío. Si ya tenías un volumen con la versión anterior del schema, ejecutá `make dev-reset` para recrearlo con las columnas `empresa_id` y `estado`. `schema_version` registra la versión `2`.
 
 ### Seed Java: usuarios, grupos y membresías de Flowable
 
@@ -115,6 +117,28 @@ make dev-reset
 ```
 
 Este comando equivale a detener Compose y eliminar sus volúmenes (`docker compose down -v`), y luego iniciar los servicios otra vez. Es destructivo: se pierden los datos de `Institucion`, incluidas las tablas y usuarios de Flowable. Con `LOAD_SEED_DATA=true`, el nuevo volumen vuelve a cargar las cuatro empresas y los tres cursos; para recrear también los usuarios y grupos, ejecutá `Main` después de que Flowable haya arrancado. No hace falta usar `dev-reset` para el trabajo diario.
+
+### Tablas propias de la base `Institucion`
+
+Además de las tablas `ACT_*` que administra Flowable, el schema define tres tablas propias:
+
+| Tabla | Columnas principales | Para qué sirve |
+|---|---|---|
+| `schema_version` | `version` (PK), `applied_at` | Registra qué versión del schema se aplicó. El script inserta la versión `2` con `ON CONFLICT DO NOTHING`. |
+| `empresas` | `id` (PK identity), `nombre` (único, obligatorio), `cantidad_empleados` (entero `>= 0`) | Empresas que solicitan cursos. |
+| `cursos` | `id` (PK identity), `empresa_id` (FK a `empresas`), `nombre`, `descripcion`, `programa`, `presupuesto` (entero `> 0`), `fecha_inicio`, `fecha_fin`, `resultados`, `instancia_flowable_id` (único), `estado` | Cada fila representa una solicitud/contratación concreta de una empresa y su vínculo con la instancia del proceso en Flowable. `CHECK (fecha_inicio <= fecha_fin)` valida el rango de fechas y `UNIQUE (empresa_id, nombre)` permite que dos empresas pidan un curso con el mismo nombre. |
+
+`instancia_flowable_id` guarda el ID de la instancia de proceso de Flowable asociada al curso (por ejemplo `PROC_INST_1001` en la seed) y es `NULL` mientras el curso no tenga una instancia creada.
+
+La relación entre `cursos` e instancias de Flowable es **1:1 a propósito**: según el enunciado (secciones 3.2 y 4.1.1), cada curso debe estar vinculado con su correspondiente instancia y cada solicitud inicia una instancia propia. El `UNIQUE` sobre `instancia_flowable_id` refuerza esa invariante: impide que dos cursos apunten a la misma instancia. Un curso sin instancia todavía es válido porque PostgreSQL admite varios `NULL` en una columna `UNIQUE`.
+
+`estado` refleja el avance del curso y lo actualiza el Execution Listener al cerrar la instancia. Valores permitidos: `solicitado`, `en_preparacion`, `confirmado`, `pendiente_de_inicio`, `en_desarrollo`, `en_elaboracion_informe`, `finalizado`, `cancelado`, `rechazado`, `cerrado_por_falta_de_respuesta` y `no_viable`.
+
+`solicitado` es el estado inicial y el `DEFAULT` de la columna. La fila del curso se crea cuando una empresa envía la solicitud y se inicia su instancia (sección 4.1.1), pero en ese momento todavía no se evaluó la viabilidad ni hubo acuerdo o confirmación, así que `en_preparacion` sería incorrecto. No figura en la lista de estados de la sección 4.1.2 porque esa lista aplica después de habilitar el acceso de la empresa; lo agregamos como extensión para representar la solicitud recién registrada.
+
+> **Anotación pendiente de consultar:** ¿una misma empresa puede contratar el mismo curso más de una vez? Si la respuesta es sí, `UNIQUE (empresa_id, nombre)` no alcanza y habría que guiarse por las fechas: por ejemplo, permitir la repetición cuando los rangos `fecha_inicio`/`fecha_fin` no se superponen, o incluir la fecha de inicio en la clave de unicidad. Si la respuesta es no, la restricción actual queda bien.
+
+> **Sobre `resultados`:** es un `VARCHAR(255)` y en la seed ya contiene una ruta de ejemplo. La idea es que guarde la **ruta donde se va a guardar el PDF** con el informe de resultados del curso, no el contenido del informe en sí. Podriamos mover los PDFs a un storage externo por ejemplo MinIO, ahi conviene reemplazar esa ruta por la clave o URL del objeto y agregar una columna para el **hash** que permita verificar que el archivo no se corrompió.
 
 ---
 
@@ -201,4 +225,5 @@ Usamos **un único repositorio (monorepo)**:
 - [ ] Decidir dónde corre el entorno compartido (PC con Tailscale o VPS).
 - [ ] Consultar con el profesor:
   - cómo espera que se maneje el escenario 7 (falta de aulas), que no está en el diagrama;
-  - si las cuentas de las empresas pueden vivir solo en la base `Institucion`, sin ser usuarios de Flowable.
+  - si las cuentas de las empresas pueden vivir solo en la base `Institucion`, sin ser usuarios de Flowable;
+  - si una misma empresa puede contratar el mismo curso más de una vez; de ser así, la unicidad de `cursos` debería considerar las fechas.
