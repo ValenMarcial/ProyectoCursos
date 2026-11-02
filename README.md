@@ -104,9 +104,27 @@ mvn compile
 mvn exec:java -Dexec.mainClass=flowable.seed.Main
 ```
 
+Por defecto, `Main` crea los usuarios y grupos e importa el modelo BPMN. Podés controlar cada parte con parámetros de lanzamiento:
+
+| Parámetros | Crea usuarios/grupos | Importa el BPMN |
+|---|---|---|
+| ninguno | sí | sí |
+| `--no-seed` | no | sí |
+| `--no-import` | sí | no |
+
+```bash
+# Solo importar el BPMN (no crea usuarios ni grupos)
+mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
+
+# Solo crear usuarios y grupos (no importa el BPMN ni pide credenciales)
+mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-import"
+```
+
+Usar `--no-seed` y `--no-import` juntos es un error: `Main` muestra el uso y termina con código de salida distinto de cero, porque no habría nada para hacer. Un argumento desconocido también produce un error. Aun con `--no-seed` se crea el motor IDM y se conecta a `Institucion`.
+
 También podés compilar y ejecutar en un solo comando, una vez que `make dev-up` haya terminado y Flowable esté listo: `mvn compile exec:java -Dexec.mainClass=flowable.seed.Main`. `Main` conecta con `Institucion` y ejecuta `FlowableSeed`, que crea los usuarios con IDs del `1` al `10`, los grupos `Admin`, `Administracion` y `Docentes`, y sus membresías. Los datos se guardan en las tablas de identidad de Flowable, no en una tabla propia de usuarios.
 
-Después de la seed, `Main` solicita por terminal un usuario y una contraseña de Flowable UI e importa el modelo `src/main/resources/processes/ProyectoCursos.bpmn20.xml` al Modeler. El proceso se llama `Proyecto Cursos` y conserva el id `process-proyecto-curso`.
+Cuando la importación está habilitada, `Main` solicita por terminal un usuario y una contraseña de Flowable UI e importa el modelo `src/main/resources/processes/ProyectoCursos.bpmn20.xml` al Modeler. El proceso se llama `Proyecto Cursos` y conserva el id `process-proyecto-curso`.
 
 La importación usa las credenciales de Flowable UI, no las de PostgreSQL. El usuario debe pertenecer al grupo `Admin` —por ejemplo, cualquiera de los usuarios creados por la seed— porque ese grupo tiene el privilegio `access-modeler`; `Administracion` y `Docentes` no lo tienen. La contraseña se escribe en la terminal y queda visible durante la ejecución.
 
