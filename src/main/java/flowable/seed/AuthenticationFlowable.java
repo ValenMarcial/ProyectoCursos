@@ -9,7 +9,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
-public class AutenticationFlowable {
+public class AuthenticationFlowable {
     public static HttpClient authenticate(String user, String password) throws Exception {
 
         // Creamos la cokie y aceptamos todos los terminos

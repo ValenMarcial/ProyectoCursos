@@ -15,8 +15,8 @@ public class ModelerImporter {
     public static void importModelToModeler(String bpmnResourcePath, String user, String password) {
 
         try {
-            // 1. Validar autenticación con la clase AutenticacionFlowable
-            HttpClient client = AutenticationFlowable.authenticate(user, password);
+            // 1. Validar autenticación con la clase AuthenticationFlowable
+            HttpClient client = AuthenticationFlowable.authenticate(user, password);
 
             if (client == null) {
                 System.err.println("Credenciales inválidas. Se cancela la importación del modelo.");
