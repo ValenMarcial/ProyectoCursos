@@ -1,14 +1,20 @@
+name: proyecto-cursos-dev
+
 services:
   postgres:
     image: postgres:15
-    container_name: flowable-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      LOAD_SEED_DATA: ${LOAD_SEED_DATA:-true}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infra/db/init:/docker-entrypoint-initdb.d:ro
+      - ./infra/db/sql:/db-sql:ro
+    ports:
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test:
         ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -20,10 +26,10 @@ services:
 
   flowable:
     image: flowable/flowable-ui:6.8.0
-    container_name: flowable-persistente
     restart: unless-stopped
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       SPRING_DATASOURCE_DRIVER_CLASS_NAME:
         org.postgresql.Driver
@@ -38,8 +44,11 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4
-    container_name: flowable-pgadmin
+    profiles: ["dev"]
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@localhost.com
       PGADMIN_DEFAULT_PASSWORD: admin123
