@@ -10,47 +10,71 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 
 public class AuthenticationFlowable {
-    public static HttpClient authenticate(String user, String password) throws Exception {
+    private static final URI FLOWABLE_UI_URI = URI.create("http://localhost:8080/flowable-ui/");
+    private static final URI AUTHENTICATION_URI = URI.create("http://localhost:8080/flowable-ui/app/authentication");
 
-        // Creamos la cokie y aceptamos todos los terminos
+    public static HttpClient authenticate(String user, String password) throws Exception {
+        // Crear un cliente HTTP con manejo de cookies para mantener la sesion
+        HttpClient client = createClient();
+
+        // Inicializar la sesión en Flowable UI para obtener cookies de sesion
+        initializeSession(client);
+
+        // Enviar la solicitud de inicio de sesion con las credenciales proporcionadas
+        HttpResponse<String> response = submitLogin(client, user, password);
+
+        // Validar la respuesta de inicio de sesion y devolver el cliente si es exitoso
+        return validateLoginResponse(response) ? client : null;
+    }
+
+    private static HttpClient createClient() {
+        // Crear un cliente HTTP con manejo de cookies para mantener la sesion
         CookieManager cookieManager = new CookieManager();
         cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 
-        HttpClient client = HttpClient.newBuilder()
+        return HttpClient.newBuilder()
                 .cookieHandler(cookieManager)
                 .build();
+    }
 
-        // 1. Inicializamos la sesión con una peticion GET al endpoint de Flowable UI
+    private static void initializeSession(HttpClient client) throws Exception {
+        // Enviar una solicitud GET a Flowable UI para inicializar la sesión y obtener
+        // cookies de sesion
         HttpRequest initRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/flowable-ui/"))
+                .uri(FLOWABLE_UI_URI)
                 .GET()
                 .build();
 
+        // Enviar la solicitud y descartar la respuesta, ya que solo necesitamos las cookies de sesion
         client.send(initRequest, HttpResponse.BodyHandlers.ofString());
+    }
 
-        // 2. Enviamos las credenciales para la autenticacion
+    private static HttpResponse<String> submitLogin(HttpClient client, String user, String password) throws Exception {
+        // Construir los datos del formulario de inicio de sesion con las credenciales proporcionadas
         String formData = "j_username=" + URLEncoder.encode(user, StandardCharsets.UTF_8)
                 + "&j_password=" + URLEncoder.encode(password, StandardCharsets.UTF_8);
 
-        // 3. Realizamos la petición POST al endpoint de autenticacion
+        // Construir la solicitud POST para enviar los datos del formulario de inicio de sesion
         HttpRequest loginRequest = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080/flowable-ui/app/authentication"))
+                .uri(AUTHENTICATION_URI)
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(formData))
                 .build();
 
-        HttpResponse<String> response = client.send(loginRequest, HttpResponse.BodyHandlers.ofString());
+        // Enviar la solicitud de inicio de sesion y devolver la respuesta
+        return client.send(loginRequest, HttpResponse.BodyHandlers.ofString());
+    }
 
-        // 4. Verificamos el código de estado HTTP para determinar si la autenticacion
-        // fue exitosa
+    private static boolean validateLoginResponse(HttpResponse<String> response) {
+        // Validar la respuesta de inicio de sesion y determinar si fue exitosa
         if (response.statusCode() == 200) {
             System.out.println("Autenticación exitosa en Flowable UI.");
-            return client; // Retorna el cliente HTTP con la sesión iniciada
+            return true;
         }
 
         if (response.statusCode() == 401) {
             System.err.println("Autenticación fallida: Credenciales inválidas (HTTP 401).");
-            return null;
+            return false;
         }
 
         throw new IllegalStateException(
