@@ -4,14 +4,14 @@ import flowable.viability.AmountCursos;
 
 rule "Is Viable"
     when
-        $fact : AmountCursos( amopuntInstancesActives < 5 )
+        $fact : AmountCursos( amountInstancesActives < 5 )
     then
         insert(Boolean.TRUE);
 end
 
 rule "Is Not Viable"
     when
-        $fact : AmountCursos( amopuntInstancesActives >= 5 )
+        $fact : AmountCursos( amountInstancesActives >= 5 )
     then
         insert(Boolean.FALSE);
 end
