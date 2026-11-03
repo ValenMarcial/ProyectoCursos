@@ -241,7 +241,7 @@ Usamos **un único repositorio (monorepo)**:
 
 ## 7. Próximos pasos
 
-- [ ] Crear el repositorio con la estructura de carpetas.
+- [x] Crear el repositorio con la estructura de carpetas.
 - [ ] Acordar y escribir `docs/contrato.md`.
 - [x] Armar `docker-compose.yml` de desarrollo y el script de inicialización.
 - [x] Importar el BPMN al Modeler desde `Main`.
