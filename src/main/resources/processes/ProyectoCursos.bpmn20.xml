@@ -209,10 +209,10 @@
     <sequenceFlow id="sid-D42997BC-72FC-4BA8-9001-5FED74341791" sourceRef="sid-378C089F-415C-4EC6-B426-E2D989460B8C" targetRef="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897"></sequenceFlow>
     <sequenceFlow id="sid-DD0BEBFB-2328-4789-A1B6-7144D7DB0167" sourceRef="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" targetRef="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63"></sequenceFlow>
     <sequenceFlow id="sid-71F6CA37-6082-4688-91DD-EEF427051254" name="Si" sourceRef="sid-9CF3938A-D55A-46D1-A063-DD4464916986" targetRef="sid-F96A6968-13D6-4EA4-929E-69230127C208">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[{amountCursos.isViable}]]></conditionExpression>
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[{isViable}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="sid-999D6FA3-9B36-44BA-9DF3-8039BC90A6C0" name="No" sourceRef="sid-9CF3938A-D55A-46D1-A063-DD4464916986" targetRef="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F">
-      <conditionExpression xsi:type="tFormalExpression"><![CDATA[{!amountCursos.isViable}]]></conditionExpression>
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[{!isViable}]]></conditionExpression>
     </sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
