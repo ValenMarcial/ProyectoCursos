@@ -6,7 +6,6 @@ rule "Is Viable"
     when
         $fact : AmountCursos( amopuntInstancesActives < 5 )
     then
-        $fact.setIsViable(true);
         insert(Boolean.TRUE);
 end
 
@@ -14,6 +13,5 @@ rule "Is Not Viable"
     when
         $fact : AmountCursos( amopuntInstancesActives >= 5 )
     then
-        $fact.setIsViable(false);
         insert(Boolean.FALSE);
 end

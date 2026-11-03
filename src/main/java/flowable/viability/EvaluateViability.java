@@ -21,6 +21,6 @@ public class EvaluateViability implements ExecutionListener {
         long othersInstancesActives = totalActives > 0 ? totalActives - 1 : 0;
 
         // Instanciamos el objeto AmountCursos con la cantidad de instancias activas para Drools
-        execution.setVariable("amountCursos", new AmountCursos(othersInstancesActives));
+        execution.setVariableLocal("amountCursos", new AmountCursos(othersInstancesActives));
     }
 }
