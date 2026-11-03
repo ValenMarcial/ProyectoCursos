@@ -1,0 +1,17 @@
+package flowable.rules;
+
+import flowable.viabilidad.AmountCursos;
+
+rule "Is Viable"
+    when
+        $fact : AmountCursos( amopuntInstancesActives < 5 )
+    then
+        $fact.setIsViable(true);
+end
+
+rule "Is Not Viable"
+    when
+        $fact : AmountCursos( amopuntInstancesActives >= 5 )
+    then
+        $fact.setIsViable(false);
+end
