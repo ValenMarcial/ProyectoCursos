@@ -89,7 +89,7 @@ La seed SQL es **idempotente**: usa `ON CONFLICT DO NOTHING` sobre `empresas.nom
 
 Los scripts de inicialización solo corren con un volumen vacío. Si ya tenías un volumen con la versión anterior del schema, ejecutá `make dev-reset` para recrearlo con las columnas `empresa_id` y `estado`. `schema_version` registra la versión `2`.
 
-### Seed Java: usuarios, grupos y membresías de Flowable
+### Seed Java: usuarios, grupos e importación del modelo
 
 La seed Java es independiente de `LOAD_SEED_DATA`. Primero levantá PostgreSQL y Flowable:
 
@@ -104,9 +104,33 @@ mvn compile
 mvn exec:java -Dexec.mainClass=flowable.seed.Main
 ```
 
+Por defecto, `Main` crea los usuarios y grupos e importa el modelo BPMN. Podés controlar cada parte con parámetros de lanzamiento:
+
+| Parámetros | Crea usuarios/grupos | Importa el BPMN |
+|---|---|---|
+| ninguno | sí | sí |
+| `--no-seed` | no | sí |
+| `--no-import` | sí | no |
+
+```bash
+# Solo importar el BPMN (no crea usuarios ni grupos)
+mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
+
+# Solo crear usuarios y grupos (no importa el BPMN ni pide credenciales)
+mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-import"
+```
+
+Usar `--no-seed` y `--no-import` juntos es un error: `Main` muestra el uso y termina con código de salida distinto de cero, porque no habría nada para hacer. Un argumento desconocido también produce un error. Aun con `--no-seed` se crea el motor IDM y se conecta a `Institucion`.
+
 También podés compilar y ejecutar en un solo comando, una vez que `make dev-up` haya terminado y Flowable esté listo: `mvn compile exec:java -Dexec.mainClass=flowable.seed.Main`. `Main` conecta con `Institucion` y ejecuta `FlowableSeed`, que crea los usuarios con IDs del `1` al `10`, los grupos `Admin`, `Administracion` y `Docentes`, y sus membresías. Los datos se guardan en las tablas de identidad de Flowable, no en una tabla propia de usuarios.
 
-La conexión y las contraseñas de esos usuarios están escritas en el código Java para desarrollo. Luego hay que externalizar la configuración antes de usarlo fuera del entorno local. Crear esos usuarios no despliega automáticamente procesos BPMN/DMN.
+Cuando la importación está habilitada, `Main` solicita por terminal un usuario y una contraseña de Flowable UI e importa el modelo `src/main/resources/processes/ProyectoCursos.bpmn20.xml` al Modeler. El proceso se llama `Proyecto Cursos` y conserva el id `process-proyecto-curso`.
+
+La importación usa las credenciales de Flowable UI, no las de PostgreSQL. El usuario debe pertenecer al grupo `Admin` —por ejemplo, cualquiera de los usuarios creados por la seed— porque ese grupo tiene el privilegio `access-modeler`; `Administracion` y `Docentes` no lo tienen. La contraseña se escribe en la terminal y queda visible durante la ejecución.
+
+`ModelerImporter` autentica contra `http://localhost:8080/flowable-ui/` y hace un `POST` multipart a `/flowable-ui/modeler-app/rest/import-process-model`. El archivo se lee desde el classpath, así que volvé a compilar después de modificar el BPMN. Si las credenciales son inválidas, la importación se cancela; si el archivo no existe o la respuesta no es `200`/`201`, se informa el error y el cuerpo de la respuesta.
+
+Importar el modelo al Modeler **no lo despliega** en el motor ni crea una definición de proceso: solo deja el modelo disponible en la aplicación Modeler. El despliegue se hace aparte desde Flowable UI o su API por el momento. Volver a ejecutar `Main` repite la importación del archivo.
 
 ### Detener y empezar de cero
 
@@ -116,7 +140,7 @@ La conexión y las contraseñas de esos usuarios están escritas en el código J
 make dev-reset
 ```
 
-Este comando equivale a detener Compose y eliminar sus volúmenes (`docker compose down -v`), y luego iniciar los servicios otra vez. Es destructivo: se pierden los datos de `Institucion`, incluidas las tablas y usuarios de Flowable. Con `LOAD_SEED_DATA=true`, el nuevo volumen vuelve a cargar las cuatro empresas y los tres cursos; para recrear también los usuarios y grupos, ejecutá `Main` después de que Flowable haya arrancado. No hace falta usar `dev-reset` para el trabajo diario.
+Este comando equivale a detener Compose y eliminar sus volúmenes (`docker compose down -v`), y luego iniciar los servicios otra vez. Es destructivo: se pierden los datos de `Institucion`, incluidas las tablas y usuarios de Flowable. Con `LOAD_SEED_DATA=true`, el nuevo volumen vuelve a cargar las cuatro empresas y los tres cursos; para recrear también los usuarios y grupos y volver a importar el BPMN al Modeler, ejecutá `Main` después de que Flowable haya arrancado. No hace falta usar `dev-reset` para el trabajo diario.
 
 ### Tablas propias de la base `Institucion`
 
@@ -220,6 +244,7 @@ Usamos **un único repositorio (monorepo)**:
 - [ ] Crear el repositorio con la estructura de carpetas.
 - [ ] Acordar y escribir `docs/contrato.md`.
 - [x] Armar `docker-compose.yml` de desarrollo y el script de inicialización.
+- [x] Importar el BPMN al Modeler desde `Main`.
 - [ ] Armar el ambiente de producción y el checklist de despliegue.
 - [ ] Probar un mini-proceso de compensación (cancelación a mitad del subproceso y fin normal) antes de construir el resto.
 - [ ] Decidir dónde corre el entorno compartido (PC con Tailscale o VPS).

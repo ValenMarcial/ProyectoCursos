@@ -3,7 +3,7 @@
   <collaboration id="Collaboration">
     <participant id="sid-C6269A25-41A2-4867-A023-7D2DF142C698" name="Institución de capacitación" processRef="process-proyecto-curso"></participant>
   </collaboration>
-  <process id="process-proyecto-curso" name="Institución de capacitación" isExecutable="true">
+  <process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
     <laneSet id="laneSet_process-proyecto-curso">
       <lane id="sid-16EED2DB-CECD-46D1-B6ED-AD042E6C8943" name="Administración">
         <flowNodeRef>sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79</flowNodeRef>
