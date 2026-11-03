@@ -1,13 +1,13 @@
 package flowable.viability;
 
 public class AmountCursos {
-    private long amountInstancesActive;
+    private long amountInstancesActives;
 
-    public AmountCursos(long amountInstancesActive) {
-        this.amountInstancesActive = amountInstancesActive;
+    public AmountCursos(long amountInstancesActives) {
+        this.amountInstancesActives = amountInstancesActives;
     }
 
-    public long getAmountInstancesActive() {
-        return amountInstancesActive;
+    public long getAmountInstancesActives() {
+        return amountInstancesActives;
     }
 }
