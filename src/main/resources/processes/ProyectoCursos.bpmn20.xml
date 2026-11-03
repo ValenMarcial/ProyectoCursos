@@ -3,7 +3,12 @@
   <collaboration id="Collaboration">
     <participant id="sid-C6269A25-41A2-4867-A023-7D2DF142C698" name="Institución de capacitación" processRef="process-proyecto-curso"></participant>
   </collaboration>
-  <process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
+  <message id="msgSolicitud" name="msgSolicitud"></message>
+  <message id="msgAceptacion" name="msgAceptacion"></message>
+  <message id="msgRechazo" name="msgRechazo"></message>
+  <message id="msgModificaciones" name="msgModificaciones"></message>
+  <message id="msgCancelacion" name="msgCancelacion"></message>
+  <process id="process-proyecto-curso" name="Institución de capacitación" isExecutable="true">
     <laneSet id="laneSet_process-proyecto-curso">
       <lane id="sid-16EED2DB-CECD-46D1-B6ED-AD042E6C8943" name="Administración">
         <flowNodeRef>sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79</flowNodeRef>
@@ -43,9 +48,7 @@
         <flowNodeRef>sid-8CE81178-461A-4874-AFED-796E088D553E</flowNodeRef>
         <flowNodeRef>sid-AF02A812-7E6F-41A7-A6FC-75B5199D3722</flowNodeRef>
         <flowNodeRef>sid-E46D48BB-6457-48A1-8782-E6AE62B2FB8D</flowNodeRef>
-        <flowNodeRef>sid-EF2410A6-40EC-4D9F-8431-37420AAA9D3C</flowNodeRef>
         <flowNodeRef>sid-4D9A4D7F-AD32-4A04-BF08-184CE4F56D50</flowNodeRef>
-        <flowNodeRef>sid-5C90C2C2-9088-4F1F-89E1-76BEB450D337</flowNodeRef>
         <flowNodeRef>sid-748C8A20-2795-4083-8BFA-E3CE09B3AB95</flowNodeRef>
         <flowNodeRef>sid-AAC9E3A3-D01B-459D-A391-B785FD8FC5EF</flowNodeRef>
         <flowNodeRef>sid-E7B9DFA2-6CA0-4872-878C-B24BB73AF76C</flowNodeRef>
@@ -59,6 +62,8 @@
         <flowNodeRef>sid-B2F86CA3-3ED0-4733-8EDE-8533235D8BE9</flowNodeRef>
         <flowNodeRef>sid-71F6CA37-6082-4688-91DD-EEF427051254</flowNodeRef>
         <flowNodeRef>sid-999D6FA3-9B36-44BA-9DF3-8039BC90A6C0</flowNodeRef>
+        <flowNodeRef>sid-5C90C2C2-9088-4F1F-89E1-76BEB450D337</flowNodeRef>
+        <flowNodeRef>sid-EF2410A6-40EC-4D9F-8431-37420AAA9D3C</flowNodeRef>
       </lane>
       <lane id="sid-4F7EBCB7-BC3E-4D65-8C3B-CDBFF5A6F6E5" name="Docentes">
         <flowNodeRef>sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85</flowNodeRef>
@@ -72,9 +77,9 @@
       </lane>
     </laneSet>
     <startEvent id="sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79" isInterrupting="true">
-      <messageEventDefinition></messageEventDefinition>
+      <messageEventDefinition messageRef="msgSolicitud"></messageEventDefinition>
     </startEvent>
-    <businessRuleTask id="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0" name="Evaluar Viabilidad" flowable:ruleVariablesInput="amountCursos" flowable:rules="Is Viable,Is Not Viable" flowable:resultVariable="isViable">
+    <businessRuleTask id="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0" name="Evaluar Viabilidad" flowable:ruleVariablesInput="${amountCursos}" flowable:rules="Is Viable,Is Not Viable" flowable:resultVariable="isViable">
       <extensionElements>
         <flowable:executionListener event="start" class="flowable.viability.EvaluateViability"></flowable:executionListener>
         <flowable:executionListener event="end" class="flowable.viability.ViabilityResult"></flowable:executionListener>
@@ -82,28 +87,38 @@
     </businessRuleTask>
     <exclusiveGateway id="sid-9CF3938A-D55A-46D1-A063-DD4464916986" name="Es viable?"></exclusiveGateway>
     <userTask id="sid-F96A6968-13D6-4EA4-929E-69230127C208" name="Registrar y Elaborar propuesta" flowable:formFieldValidation="true"></userTask>
-    <scriptTask id="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F" name="Notificar Decisión" flowable:autoStoreVariables="false"></scriptTask>
+    <scriptTask id="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F" name="Notificar Decisión" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[println "No viable: " + execution.processInstanceId; execution.setVariable("resultado", "no_viable")]]></script>
+    </scriptTask>
     <endEvent id="sid-32693999-A94F-4509-B0B9-B915626A33BA"></endEvent>
-    <scriptTask id="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3" name="Enviar propuesta" flowable:autoStoreVariables="false"></scriptTask>
+    <scriptTask id="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3" name="Enviar propuesta" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[execution.setVariable("recordatoriosEnviados", 0); if (!execution.hasVariable("plazoRecordatorio")) execution.setVariable("plazoRecordatorio", "PT5D"); println "Propuesta enviada: " + execution.processInstanceId]]></script>
+    </scriptTask>
     <eventBasedGateway id="sid-8E7F098B-B495-4B18-9D81-09D9B338C643" name="Esperar respuesta"></eventBasedGateway>
     <intermediateCatchEvent id="sid-AE90424C-2654-4C64-909C-BD085A34654C" name="5 días">
-      <timerEventDefinition></timerEventDefinition>
+      <timerEventDefinition>
+        <timeDuration>${plazoRecordatorio}</timeDuration>
+      </timerEventDefinition>
     </intermediateCatchEvent>
     <intermediateCatchEvent id="sid-BCDCCC94-87B1-4A9C-AA42-860B0CB20553" name="Aceptación">
-      <messageEventDefinition></messageEventDefinition>
+      <messageEventDefinition messageRef="msgAceptacion"></messageEventDefinition>
     </intermediateCatchEvent>
     <intermediateCatchEvent id="sid-2EDEE778-CCB8-4D86-B10B-F0CA6DE47860" name="Rechazo">
-      <messageEventDefinition></messageEventDefinition>
+      <messageEventDefinition messageRef="msgRechazo"></messageEventDefinition>
     </intermediateCatchEvent>
     <intermediateCatchEvent id="sid-B1226B89-72C5-427D-85EF-783C6E99CC5D" name="Modificaciones">
-      <messageEventDefinition></messageEventDefinition>
+      <messageEventDefinition messageRef="msgModificaciones"></messageEventDefinition>
     </intermediateCatchEvent>
     <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:formFieldValidation="true"></userTask>
     <exclusiveGateway id="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" name="¿Se enviaron 2 recordatorios?"></exclusiveGateway>
     <userTask id="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" name="Archivar solicitud" flowable:formFieldValidation="true"></userTask>
-    <scriptTask id="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" name="Enviar recordatorio" flowable:autoStoreVariables="false"></scriptTask>
+    <scriptTask id="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" name="Enviar recordatorio" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[execution.setVariable("recordatoriosEnviados", execution.getVariable("recordatoriosEnviados") + 1); println "Recordatorio enviado: " + execution.processInstanceId]]></script>
+    </scriptTask>
     <endEvent id="sid-4AE2563B-27A7-4FE6-8F56-F852E09E7AD5" name="Solicitud cerrada"></endEvent>
-    <scriptTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" flowable:autoStoreVariables="false"></scriptTask>
+    <scriptTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[println "Acceso habilitado: " + execution.processInstanceId]]></script>
+    </scriptTask>
     <subProcess id="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF" name="Preparar curso">
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
@@ -115,7 +130,7 @@
       <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:formFieldValidation="true"></userTask>
       <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:formFieldValidation="true"></userTask>
       <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:formFieldValidation="true"></userTask>
-      <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula"></serviceTask>
+      <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:expression="${execution.setVariable(&quot;aulaAsignada&quot;, &quot;Aula 1&quot;)}"></serviceTask>
       <boundaryEvent id="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" name="Liberar recursos" attachedToRef="sid-065649F8-9F01-4C34-B290-C37474CC479D" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
@@ -126,13 +141,15 @@
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
       <userTask id="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" name="Liberar Equipamiento" isForCompensation="true" flowable:formFieldValidation="true"></userTask>
-      <scriptTask id="sid-892710F9-B2AE-4002-82D0-131829D8FA29" name="Liberar Aula Virtual" isForCompensation="true" flowable:autoStoreVariables="false"></scriptTask>
-      <serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true"></serviceTask>
+      <scriptTask id="sid-892710F9-B2AE-4002-82D0-131829D8FA29" name="Liberar Aula Virtual" isForCompensation="true" scriptFormat="groovy" flowable:autoStoreVariables="false">
+        <script><![CDATA[println "Aula virtual liberada: " + execution.processInstanceId]]></script>
+      </scriptTask>
+      <serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true" flowable:expression="${execution.removeVariable(&quot;aulaAsignada&quot;)}"></serviceTask>
       <inclusiveGateway id="sid-DD45928D-A46B-4C2B-8803-2D0B1AF12979"></inclusiveGateway>
       <endEvent id="sid-85D22149-CBE0-424A-9E0D-9C03CFB275CD"></endEvent>
       <subProcess id="sid-98039E66-3765-4C9A-8061-7280782D1D67" name="Cancelación" triggeredByEvent="true">
         <startEvent id="sid-5CB2EE36-A7DB-46FE-B592-3C317EEE0CE0" name="Recibir Cancelación" isInterrupting="true">
-          <messageEventDefinition></messageEventDefinition>
+          <messageEventDefinition messageRef="msgCancelacion"></messageEventDefinition>
         </startEvent>
         <intermediateThrowEvent id="sid-3329D761-38E5-49B6-99FE-711F82A01284" name="Liberar recursos">
           <compensateEventDefinition></compensateEventDefinition>
@@ -166,9 +183,13 @@
     <boundaryEvent id="sid-E73C6721-C020-4CF3-A3FB-1C279A1153DD" attachedToRef="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF">
       <errorEventDefinition flowable:errorVariableLocalScope="true" flowable:errorVariableTransient="true"></errorEventDefinition>
     </boundaryEvent>
-    <scriptTask id="sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1" name="Notificar Cierre" flowable:autoStoreVariables="false"></scriptTask>
+    <scriptTask id="sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1" name="Notificar Cierre" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[println "Curso cancelado: " + execution.processInstanceId; execution.setVariable("resultado", "cancelado")]]></script>
+    </scriptTask>
     <endEvent id="sid-2DBA8D2D-BCDA-4492-950F-3FEE9B0959BA"></endEvent>
-    <scriptTask id="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" name="Enviar confirmación" flowable:autoStoreVariables="false"></scriptTask>
+    <scriptTask id="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" name="Enviar confirmación" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <script><![CDATA[println "Confirmación enviada: " + execution.processInstanceId]]></script>
+    </scriptTask>
     <userTask id="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" name="Enviar informe a empreasa y Archivar expediente" flowable:formFieldValidation="true"></userTask>
     <intermediateThrowEvent id="sid-88F847B3-5FE2-4251-A612-120F9DD46CA9" name="Liberar recursos">
       <compensateEventDefinition></compensateEventDefinition>
@@ -176,7 +197,9 @@
     <endEvent id="sid-343EF313-279B-45FF-9F2C-343A3C2804DB"></endEvent>
     <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:formFieldValidation="true"></userTask>
     <intermediateCatchEvent id="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" name="Fecha programada">
-      <timerEventDefinition></timerEventDefinition>
+      <timerEventDefinition>
+        <timeDate>${fechaInicio}</timeDate>
+      </timerEventDefinition>
     </intermediateCatchEvent>
     <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:formFieldValidation="true"></userTask>
     <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:formFieldValidation="true"></userTask>
@@ -191,9 +214,7 @@
     <sequenceFlow id="sid-8CE81178-461A-4874-AFED-796E088D553E" sourceRef="sid-B1226B89-72C5-427D-85EF-783C6E99CC5D" targetRef="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6"></sequenceFlow>
     <sequenceFlow id="sid-AF02A812-7E6F-41A7-A6FC-75B5199D3722" sourceRef="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" targetRef="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3"></sequenceFlow>
     <sequenceFlow id="sid-E46D48BB-6457-48A1-8782-E6AE62B2FB8D" sourceRef="sid-AE90424C-2654-4C64-909C-BD085A34654C" targetRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73"></sequenceFlow>
-    <sequenceFlow id="sid-EF2410A6-40EC-4D9F-8431-37420AAA9D3C" name="No" sourceRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" targetRef="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB"></sequenceFlow>
     <sequenceFlow id="sid-4D9A4D7F-AD32-4A04-BF08-184CE4F56D50" sourceRef="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" targetRef="sid-8E7F098B-B495-4B18-9D81-09D9B338C643"></sequenceFlow>
-    <sequenceFlow id="sid-5C90C2C2-9088-4F1F-89E1-76BEB450D337" name="Si" sourceRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" targetRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62"></sequenceFlow>
     <sequenceFlow id="sid-748C8A20-2795-4083-8BFA-E3CE09B3AB95" sourceRef="sid-2EDEE778-CCB8-4D86-B10B-F0CA6DE47860" targetRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62"></sequenceFlow>
     <sequenceFlow id="sid-AAC9E3A3-D01B-459D-A391-B785FD8FC5EF" sourceRef="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" targetRef="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF"></sequenceFlow>
     <sequenceFlow id="sid-E7B9DFA2-6CA0-4872-878C-B24BB73AF76C" sourceRef="sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1" targetRef="sid-2DBA8D2D-BCDA-4492-950F-3FEE9B0959BA"></sequenceFlow>
@@ -205,15 +226,21 @@
     <sequenceFlow id="sid-3BDFD0AF-EB4E-423D-A25D-4C74585AA585" sourceRef="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0" targetRef="sid-9CF3938A-D55A-46D1-A063-DD4464916986"></sequenceFlow>
     <sequenceFlow id="sid-F31FAA7A-FFC1-4AB5-B435-1E320FE82A40" sourceRef="sid-BCDCCC94-87B1-4A9C-AA42-860B0CB20553" targetRef="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3"></sequenceFlow>
     <sequenceFlow id="sid-B2F86CA3-3ED0-4733-8EDE-8533235D8BE9" sourceRef="sid-E73C6721-C020-4CF3-A3FB-1C279A1153DD" targetRef="sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1"></sequenceFlow>
-    <sequenceFlow id="sid-CAA3924D-E0D3-40B4-9617-5D4788261440" sourceRef="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" targetRef="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43"></sequenceFlow>
-    <sequenceFlow id="sid-79CDB8DF-3B4E-456A-91A4-314B7A8500CD" sourceRef="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" targetRef="sid-378C089F-415C-4EC6-B426-E2D989460B8C"></sequenceFlow>
-    <sequenceFlow id="sid-D42997BC-72FC-4BA8-9001-5FED74341791" sourceRef="sid-378C089F-415C-4EC6-B426-E2D989460B8C" targetRef="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897"></sequenceFlow>
-    <sequenceFlow id="sid-DD0BEBFB-2328-4789-A1B6-7144D7DB0167" sourceRef="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" targetRef="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63"></sequenceFlow>
     <sequenceFlow id="sid-71F6CA37-6082-4688-91DD-EEF427051254" name="Si" sourceRef="sid-9CF3938A-D55A-46D1-A063-DD4464916986" targetRef="sid-F96A6968-13D6-4EA4-929E-69230127C208">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isViable}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="sid-999D6FA3-9B36-44BA-9DF3-8039BC90A6C0" name="No" sourceRef="sid-9CF3938A-D55A-46D1-A063-DD4464916986" targetRef="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F">
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!isViable}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="sid-CAA3924D-E0D3-40B4-9617-5D4788261440" sourceRef="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" targetRef="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43"></sequenceFlow>
+    <sequenceFlow id="sid-79CDB8DF-3B4E-456A-91A4-314B7A8500CD" sourceRef="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" targetRef="sid-378C089F-415C-4EC6-B426-E2D989460B8C"></sequenceFlow>
+    <sequenceFlow id="sid-D42997BC-72FC-4BA8-9001-5FED74341791" sourceRef="sid-378C089F-415C-4EC6-B426-E2D989460B8C" targetRef="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897"></sequenceFlow>
+    <sequenceFlow id="sid-DD0BEBFB-2328-4789-A1B6-7144D7DB0167" sourceRef="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" targetRef="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63"></sequenceFlow>
+    <sequenceFlow id="sid-5C90C2C2-9088-4F1F-89E1-76BEB450D337" name="Si" sourceRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" targetRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatoriosEnviados >= 2}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="sid-EF2410A6-40EC-4D9F-8431-37420AAA9D3C" name="No" sourceRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" targetRef="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatoriosEnviados < 2}]]></conditionExpression>
     </sequenceFlow>
   </process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_Collaboration">
