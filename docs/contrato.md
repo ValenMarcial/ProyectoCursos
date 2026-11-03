@@ -1,5 +1,85 @@
 En este documento se desarrolla el paso a paso de la realización de las actividades del modelo BPMN.
 
+# Mensajes, timers y variables del proceso
+
+Estos nombres son los que usan el sitio web y el simulador de comunicaciones para actuar sobre las instancias. Si se cambia alguno en el BPMN, hay que avisar al grupo y actualizar esta sección.
+
+Son los valores mínimos que hicieron falta para que Flowable acepte desplegar el modelo (antes rechazaba el despliegue con 15 errores de validación). Las tareas automáticas todavía son simulaciones: escriben en el log de Flowable (`make dev-logs`) y, cuando corresponde, guardan variables.
+
+## Mensajes
+
+Todos los mensajes usan el mismo valor como id y como name.
+
+| Mensaje | Evento | Quién lo envía |
+|---|---|---|
+| `msgSolicitud` | Inicio "Solicitud recibida" | Sitio web, al enviar el formulario de solicitud |
+| `msgAceptacion` | Aceptación (gateway "Esperar respuesta") | Simulador. Tiene que enviar `fechaInicio` |
+| `msgRechazo` | Rechazo (gateway "Esperar respuesta") | Simulador |
+| `msgModificaciones` | Modificaciones (gateway "Esperar respuesta") | Simulador, con las observaciones |
+| `msgCancelacion` | Inicio del subproceso de evento "Cancelación", dentro de "Preparar curso" | Simulador |
+
+Por la API REST:
+
+```bash
+# Iniciar una solicitud (lo que hace el sitio web)
+POST /flowable-ui/process-api/runtime/process-instances
+{"message": "msgSolicitud", "variables": [...]}
+
+# Enviar un mensaje a una instancia en curso (lo que hace el simulador):
+# 1. buscar la ejecución que espera el mensaje
+GET /flowable-ui/process-api/runtime/executions?processInstanceId=<id>&messageEventSubscriptionName=msgAceptacion
+# 2. enviarle el mensaje con sus variables
+PUT /flowable-ui/process-api/runtime/executions/<executionId>
+{"action": "messageEventReceived", "messageName": "msgAceptacion", "variables": [{"name": "fechaInicio", "value": "2026-11-20T09:00:00"}]}
+```
+
+## Timers
+
+Los plazos usan variables y no valores fijos en el modelo, como pide el enunciado (3.5): así se pueden acortar para las pruebas sin modificar el BPMN.
+
+| Timer | Configuración | Variable |
+|---|---|---|
+| "5 días" (espera de respuesta) | Time duration `${plazoRecordatorio}` | Duración ISO-8601. Si no viene al iniciar, "Enviar propuesta" la define en `PT5D`. Para probar se puede iniciar el proceso con `PT1M`. |
+| "Fecha programada" (inicio del curso) | Time date `${fechaInicio}` | Fecha ISO-8601, por ejemplo `2026-11-20T09:00:00`. La envía el simulador con `msgAceptacion`, así que está definida antes de llegar al timer. |
+
+## Tareas automáticas
+
+Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}` dentro del script: concatenan con `+`.
+
+| Tarea | Tipo | Qué hace hoy |
+|---|---|---|
+| Notificar Decisión | Script | Log y `resultado = "no_viable"` |
+| Enviar propuesta | Script | `recordatoriosEnviados = 0` (el contador se reinicia con cada versión nueva de la propuesta, como pide el enunciado), define `plazoRecordatorio = "PT5D"` si no existe, y log |
+| Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
+| Habilitar acceso de la empresa | Script | Log. Falta crear o reutilizar la cuenta de la empresa |
+| Enviar confirmación | Script | Log |
+| Notificar Cierre | Script | Log y `resultado = "cancelado"` |
+| Liberar Aula Virtual | Script (compensación) | Log |
+| Reservar aula | Service task (expresión) | `aulaAsignada = "Aula 1"`. Falta la clase Java que simule el web service y lance el error por falta de aulas (escenario 7) |
+| Liberar Aula | Service task (expresión, compensación) | Elimina `aulaAsignada` |
+
+## Variables
+
+| Variable | Tipo | La define | La usa |
+|---|---|---|---|
+| `isViable` | boolean | Tarea "Evaluar Viabilidad" (ver sección de viabilidad) | Gateway "Es viable?" |
+| `plazoRecordatorio` | String (duración ISO-8601) | Inicio del proceso o "Enviar propuesta" | Timer "5 días" |
+| `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
+| `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" |
+| `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
+| `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
+
+Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
+
+## Pendiente para que el proceso corra completo
+
+Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:
+
+- Condiciones del gateway "Recursos necesarios" (por ejemplo, `${aulaFisica}`, `${aulaVirtual}`, `${equipamiento}`).
+- `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
+- Asignaciones y grupos candidatos de cada tarea de usuario.
+- La clase Java de "Reservar aula" con el error por falta de aulas.
+
 # Sección de viabilidad
 
 Este documento describe la sección de **viabilidad** del proceso `Proyecto Cursos`, implementada en la rama `vm/evaluate-viability`. Su objetivo es fijar los IDs, las variables y el comportamiento esperado para que el resto de los componentes puedan integrarse sin depender de la implementación interna.

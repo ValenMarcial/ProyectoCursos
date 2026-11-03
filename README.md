@@ -25,7 +25,7 @@ Por eso usamos dos entornos:
 
 ### Requisitos y configuración
 
-Se necesita Docker con Docker Compose, Java 11 y Maven para ejecutar el proyecto Java. El archivo `.env` configura la base y las credenciales locales:
+Se necesita Docker con Docker Compose, Java 11 (o 17) y Maven para ejecutar el proyecto Java. Drools 7 no funciona con Java 21 o superior: compila, pero falla al ejecutar las reglas porque usa `java.lang.Compiler`, que ya no existe. El contenedor de Flowable trae Java 11, así que esto solo afecta a lo que se corre en la PC (por ejemplo, los tests). El archivo `.env` configura la base y las credenciales locales:
 
 ```env
 POSTGRES_DB=Institucion
@@ -41,7 +41,7 @@ Estas credenciales son solo para desarrollo local.
 `docker-compose.yml` define tres servicios:
 
 - **PostgreSQL 15** crea la base `Institucion` al inicializar un volumen vacío. Su healthcheck espera a que PostgreSQL acepte conexiones.
-- **Flowable UI 6.8** se conecta a esa misma base y crea/actualiza sus tablas internas al arrancar.
+- **Flowable UI 6.8** se conecta a esa misma base y crea/actualiza sus tablas internas al arrancar. Además carga nuestro `.jar` y las librerías de Drools desde `target/flowable-lib` (ver [Desplegar el proceso en Flowable](#desplegar-el-proceso-en-flowable)).
 - **pgAdmin** se inicia con el profile `dev` y permite inspeccionar la base desde el navegador.
 
 Las tablas `ACT_*` y `*_DATABASECHANGELOG*` son de Flowable. Las tablas `empresas`, `cursos` y `schema_version` son de este proyecto.
@@ -49,8 +49,9 @@ Las tablas `ACT_*` y `*_DATABASECHANGELOG*` son de Flowable. Las tablas `empresa
 ### Levantar y verificar
 
 ```bash
-make dev-up      # inicia Postgres, Flowable y pgAdmin en segundo plano
+make dev-up      # compila (make build) e inicia Postgres, Flowable y pgAdmin en segundo plano
 make verify      # verifica configuración, tablas y disponibilidad de Flowable
+make deploy      # despliega el BPMN y las reglas en Flowable
 make dev-logs    # sigue los logs; Ctrl-C deja los contenedores ejecutándose
 make dev-psql    # abre psql conectado a Institucion
 make dev-down    # detiene y elimina los contenedores, conserva los volúmenes
@@ -130,7 +131,49 @@ La importación usa las credenciales de Flowable UI, no las de PostgreSQL. El us
 
 `ModelerImporter` autentica contra `http://localhost:8080/flowable-ui/` y hace un `POST` multipart a `/flowable-ui/modeler-app/rest/import-process-model`. El archivo se lee desde el classpath, así que volvé a compilar después de modificar el BPMN. Si las credenciales son inválidas, la importación se cancela; si el archivo no existe o la respuesta no es `200`/`201`, se informa el error y el cuerpo de la respuesta.
 
-Importar el modelo al Modeler **no lo despliega** en el motor ni crea una definición de proceso: solo deja el modelo disponible en la aplicación Modeler. El despliegue se hace aparte desde Flowable UI o su API por el momento. Volver a ejecutar `Main` repite la importación del archivo.
+Importar el modelo al Modeler **no lo despliega** en el motor ni crea una definición de proceso: solo deja el modelo disponible en la aplicación Modeler. El despliegue se hace con `make deploy` (ver la sección siguiente). Volver a ejecutar `Main` repite la importación del archivo.
+
+### Desplegar el proceso en Flowable
+
+Flowable es el que ejecuta el proceso: crea las instancias y las tareas, dispara los timers y evalúa las reglas. El sitio web, el simulador y las apps solo le piden cosas por la API REST o la API Java (iniciar una solicitud, completar una tarea, enviar un mensaje). Para eso, Flowable tiene que tener **desplegado** el proceso y poder encontrar **nuestro código** (listeners, reglas). Sin despliegue, iniciar una solicitud responde "no existe ese proceso".
+
+```bash
+make dev-up      # compila y levanta todo
+make deploy      # despliega BPMN + reglas; cada despliegue crea una versión nueva del proceso
+```
+
+Hay que volver a correr `make deploy` cada vez que cambia el BPMN o el `.drl`. Si cambia código Java (listeners, delegates), hay que recompilar y reiniciar Flowable, porque las clases se cargan al arrancar:
+
+```bash
+make build && docker compose restart flowable
+```
+
+Si el BPMN tiene errores, Flowable rechaza el despliegue y `make deploy` muestra la lista exacta de problemas (por ejemplo, un evento de mensaje sin `messageRef`). Sirve como chequeo del modelo antes de subirlo.
+
+#### Qué hace cada pieza y por qué
+
+| Pieza | Qué hace | Por qué hace falta |
+|---|---|---|
+| `make build` | Compila nuestro `.jar` y copia a `target/flowable-lib` las librerías de Drools que Flowable UI no trae (19 jars). | La imagen `flowable/flowable-ui:6.8.0` incluye los motores BPMN y DMN, pero **no Drools**. Sin esas librerías, desplegar un BPMN con la tarea de reglas falla con `NoClassDefFoundError: org/kie/api/...`. Solo se copian las que faltan: las que la imagen ya trae en otra versión no se tocan, para evitar conflictos. |
+| `entrypoint` del servicio `flowable` en `docker-compose.yml` | Arranca Flowable con el mismo comando que la imagen, pero suma `/opt/proyecto/lib/*` al classpath, donde se monta `target/flowable-lib`. | La imagen solo carga `/app/WEB-INF/lib/*`. Montar una carpeta ahí taparía las librerías de Flowable, y montar los jars uno por uno serían 20 líneas. |
+| `FLOWABLE_CHECK_PROCESS_DEFINITIONS: "false"` | Desactiva el autodespliegue de Flowable al arrancar. | Flowable despliega solo cualquier `processes/*.bpmn20.xml` que encuentre en el classpath, y nuestro `.jar` incluye el BPMN. Si el modelo tiene un error, Flowable no arranca y queda reiniciándose. El despliegue se hace explícitamente con `make deploy`. |
+| `RulesConfigurator` + `META-INF/services/org.flowable.common.engine.impl.EngineConfigurator` | Registra el `RulesDeployer` en el motor de procesos. Flowable encuentra la clase solo, gracias al archivo de `META-INF/services` (no se genera automáticamente: es parte del código). | Flowable trae el soporte para `.drl`, pero **apagado**. Sin el `RulesDeployer`, el `.drl` se guarda en el despliegue pero no se procesa, y la tarea falla con `deployment ... doesn't contain any rules`. Así no hace falta modificar la configuración de Flowable UI. |
+| `make deploy` | Arma `target/deploy.zip` con el BPMN y el `.drl` y lo envía a `POST /flowable-ui/process-api/repository/deployments`. | El `.drl` tiene que estar en el **mismo despliegue** que el BPMN. La API REST de Flowable 6.8 acepta un solo archivo por despliegue: si se mandan dos, **ignora el segundo sin avisar**. Un `.zip` es la forma que acepta para desplegar varios recursos juntos. |
+| Dependencias en `pom.xml` | `drools-mvel` y `flowable-engine-configurator` (`provided`). | Sin `drools-mvel`, Drools no puede compilar el `.drl`. `flowable-engine-configurator` ya viene en Flowable UI; se declara `provided` solo para compilar `RulesConfigurator`. |
+
+`make deploy` usa por defecto el usuario `admin`/`test` de Flowable UI. Se puede cambiar con `make deploy FLOWABLE_USER=... FLOWABLE_PASSWORD=...`.
+
+#### Problema conocido: Flowable se queda en "Waiting for changelog lock"
+
+Si Flowable se corta mientras crea o actualiza sus tablas (por ejemplo, porque se reinició varias veces seguidas), puede quedar un bloqueo en la base y el siguiente arranque espera para siempre. Para liberarlo:
+
+```bash
+make dev-psql
+# dentro de psql, buscar la tabla bloqueada (*_databasechangeloglock con locked = true) y liberarla, por ejemplo:
+UPDATE act_app_databasechangeloglock SET locked = false, lockgranted = NULL, lockedby = NULL;
+```
+
+y después `docker compose restart flowable`.
 
 ### Detener y empezar de cero
 
@@ -245,6 +288,8 @@ Usamos **un único repositorio (monorepo)**:
 - [ ] Acordar y escribir `docs/contrato.md`.
 - [x] Armar `docker-compose.yml` de desarrollo y el script de inicialización.
 - [x] Importar el BPMN al Modeler desde `Main`.
+- [x] Desplegar el BPMN y las reglas Drools en Flowable con `make deploy`.
+- [ ] Completar las asignaciones de tareas, las condiciones del gateway de recursos y `resultado` en los caminos de rechazo, sin respuesta y finalizado (ver `docs/contrato.md`).
 - [ ] Armar el ambiente de producción y el checklist de despliegue.
 - [ ] Probar un mini-proceso de compensación (cancelación a mitad del subproceso y fin normal) antes de construir el resto.
 - [ ] Decidir dónde corre el entorno compartido (PC con Tailscale o VPS).
