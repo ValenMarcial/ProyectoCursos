@@ -61,18 +61,17 @@ El listener se ejecuta al **iniciar** la tarea `Evaluar Viabilidad` (evento `sta
 
 1. Obtiene la key del proceso a partir del `processDefinitionId`, quitando la versión y el ID interno (`process-proyecto-curso:1:...` → `process-proyecto-curso`).
 2. Consulta al `RuntimeService` cuántas instancias activas hay para esa key.
-3. Resta 1 para descontar la instancia actual, es decir, la solicitud que se está evaluando.
+3. Excluye por ID la instancia actual, es decir, la solicitud que se está evaluando.
 4. Guarda el resultado en la variable local `amountCursos`, como una instancia de `AmountCursos`.
 
 En pseudocódigo:
 
 ```
-totalActivas      = count(instancias activas de process-proyecto-curso)
-otrasInstancias   = totalActivas - 1
+otrasInstancias   = count(instancias activas de process-proyecto-curso con id != instancia actual)
 execution.setVariableLocal("amountCursos", new AmountCursos(otrasInstancias))
 ```
 
-La cuenta **incluye** la instancia actual, por eso se descuenta. Así, `amountInstancesActives` representa los cursos que ya estaban activos antes de evaluar esta solicitud.
+No se resta 1: cuando corre el listener, la instancia actual todavía no está guardada en la base y no aparece en la consulta, así que restar 1 descontaría otro curso (el límite real quedaba en 6). Filtrar por ID es correcto en ambos casos. Así, `amountInstancesActives` representa los cursos que ya estaban activos antes de evaluar esta solicitud.
 
 La variable se guarda con `setVariableLocal`, por lo que `amountCursos` queda acotada a la ejecución de la tarea y no se propaga al resto de la instancia.
 
@@ -87,7 +86,7 @@ El archivo `rules/viability.drl` contiene dos reglas mutuamente excluyentes:
 
 La tarea `Evaluar Viabilidad` está configurada con:
 
-- `flowable:ruleVariablesInput="amountCursos"`: inserta el fact en la sesión Drools.
+- `flowable:ruleVariablesInput="${amountCursos}"`: inserta el fact en la sesión Drools. Tiene que ser una expresión: sin `${}` Flowable inserta el texto `"amountCursos"`, ninguna regla se activa y todas las solicitudes salen como no viables.
 - `flowable:rules="Is Viable,Is Not Viable"`: filtra por nombre de regla.
 - `flowable:resultVariable="isViable"`: guarda la salida de Drools.
 
@@ -122,7 +121,7 @@ Como el gateway es exclusivo, solo se toma uno de los dos caminos.
 
 ```
 EvaluateViability (start)
-  -> amountCursos (local) = N - 1
+  -> amountCursos (local) = otras instancias activas
 Drools
   -> insert(Boolean.TRUE / Boolean.FALSE)
 resultVariable
@@ -155,12 +154,12 @@ La variable pública del contrato es `isViable` como booleano. `amountCursos` y 
 
 ## 6. Regla de decisión
 
-Con `N` = instancias activas totales, incluida la solicitud actual:
+Con `N` = instancias activas sin contar la solicitud actual:
 
-| Instancias activas totales (`N`) | `amountInstancesActives` (`N - 1`) | Resultado | Camino |
+| Otras instancias activas (`N`) | `amountInstancesActives` | Resultado | Camino |
 |---|---|---|---|
-| 1 a 5 | 0 a 4 | Viable | Sí |
-| 6 o más | 5 o más | No viable | No |
+| 0 a 4 | 0 a 4 | Viable | Sí |
+| 5 o más | 5 o más | No viable | No |
 
 En otras palabras, se permiten hasta **5 instancias activas simultáneas**. La sexta solicitud se rechaza.
 
@@ -197,4 +196,16 @@ Para inspeccionar la decisión se puede consultar la variable `isViable` de la i
 La lógica de la sección está completa, pero la implementación todavía no es ejecutable de punta a punta. Antes de dar por cerrado el contrato hay que resolver:
 
 - **El DRL no se despliega junto al BPMN.** `ModelerImporter` solo importa el BPMN al Modeler. Si el deployment no contiene `rules/viability.drl`, Flowable no encuentra el `KieBase` y falla con `deployment ... doesn't contain any rules`.
-- **No hay tests JUnit** que cubran el camino viable y el no viable.
+- **El BPMN principal todavía tiene `flowable:ruleVariablesInput="amountCursos"`** sin `${}`. Hay que cambiarlo a `${amountCursos}` (ver 4.2).
+- **El motor tiene que registrar el `RulesDeployer`** (`setCustomPostDeployers`); si no, el `.drl` se ignora aunque esté en el deployment. Hay que verificar cómo configurarlo en el contenedor de Flowable UI.
+- **Drools 7 necesita `drools-mvel` y Java 11 o 17**: usa `java.lang.Compiler`, que no existe desde Java 21.
+
+### Tests
+
+`src/test/java/flowable/viability/ViabilityTest.java` despliega en un motor H2 en memoria una copia de la sección (`src/test/resources/processes/viabilidad-test.bpmn20.xml`, con las mismas clases, reglas y condiciones) y cubre: primera solicitud viable, 4 cursos activos viable, 5 cursos activos no viable e instancias finalizadas que no cuentan. Se usa una copia porque el modelo completo todavía no pasa la validación de Flowable.
+
+```bash
+mvn test   # con Java 11 o 17
+# sin JDK 11/17 instalado:
+docker run --rm -v "$PWD":/app -v "$HOME/.m2":/root/.m2 -w /app maven:3.9-eclipse-temurin-11 mvn test
+```

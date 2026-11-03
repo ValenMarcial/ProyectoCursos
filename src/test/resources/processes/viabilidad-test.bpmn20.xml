@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copia de la sección de viabilidad de ProyectoCursos.bpmn20.xml (mismas clases, reglas y condiciones)
+     para probarla aislada mientras el modelo completo no se puede desplegar. -->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-viabilidad" isExecutable="true">
+    <startEvent id="inicio"/>
+    <businessRuleTask id="evaluarViabilidad" name="Evaluar Viabilidad" flowable:ruleVariablesInput="${amountCursos}" flowable:rules="Is Viable,Is Not Viable" flowable:resultVariable="isViable">
+      <extensionElements>
+        <flowable:executionListener event="start" class="flowable.viability.EvaluateViability"/>
+        <flowable:executionListener event="end" class="flowable.viability.ViabilityResult"/>
+      </extensionElements>
+    </businessRuleTask>
+    <exclusiveGateway id="esViable"/>
+    <userTask id="registrarPropuesta" name="Registrar y Elaborar propuesta"/>
+    <endEvent id="finNoViable"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="evaluarViabilidad"/>
+    <sequenceFlow id="f2" sourceRef="evaluarViabilidad" targetRef="esViable"/>
+    <sequenceFlow id="si" sourceRef="esViable" targetRef="registrarPropuesta">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${isViable}]]></conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="no" sourceRef="esViable" targetRef="finNoViable">
+      <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!isViable}]]></conditionExpression>
+    </sequenceFlow>
+  </process>
+</definitions>
