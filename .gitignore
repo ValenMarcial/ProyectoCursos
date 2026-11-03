@@ -3,4 +3,6 @@
 /.metadato/
 .classpath
 .project
-.settings/.DS_Store
+.settings/
+.DS_Store
+ProyectoCursos_V2.pdf

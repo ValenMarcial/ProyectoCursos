@@ -196,7 +196,6 @@ Para inspeccionar la decisión se puede consultar la variable `isViable` de la i
 La lógica de la sección está completa, pero la implementación todavía no es ejecutable de punta a punta. Antes de dar por cerrado el contrato hay que resolver:
 
 - **El DRL no se despliega junto al BPMN.** `ModelerImporter` solo importa el BPMN al Modeler. Si el deployment no contiene `rules/viability.drl`, Flowable no encuentra el `KieBase` y falla con `deployment ... doesn't contain any rules`.
-- **El BPMN principal todavía tiene `flowable:ruleVariablesInput="amountCursos"`** sin `${}`. Hay que cambiarlo a `${amountCursos}` (ver 4.2).
 - **El motor tiene que registrar el `RulesDeployer`** (`setCustomPostDeployers`); si no, el `.drl` se ignora aunque esté en el deployment. Hay que verificar cómo configurarlo en el contenedor de Flowable UI.
 - **Drools 7 necesita `drools-mvel` y Java 11 o 17**: usa `java.lang.Compiler`, que no existe desde Java 21.
 
