@@ -1,0 +1,8 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+flowable:
+  rest:
+    base-url: ${FLOWABLE_REST_URL:http://localhost:8080/flowable-ui/process-api}
+    username: ${FLOWABLE_USER:admin}
+    password: ${FLOWABLE_PASSWORD:test}

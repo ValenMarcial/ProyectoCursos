@@ -49,7 +49,8 @@ Las tablas `ACT_*` y `*_DATABASECHANGELOG*` son de Flowable. Las tablas `empresa
 ### Levantar y verificar
 
 ```bash
-make dev-up      # compila (make build) e inicia Postgres, Flowable y pgAdmin en segundo plano
+make dev-up      # compila y levanta Postgres, Flowable, el backend y pgAdmin en segundo plano
+make backend-test # ejecuta las pruebas del backend REST (perfil Maven backend)
 make verify      # verifica configuración, tablas y disponibilidad de Flowable
 make deploy      # despliega el BPMN y las reglas en Flowable
 make dev-logs    # sigue los logs; Ctrl-C deja los contenedores ejecutándose
@@ -62,7 +63,31 @@ make dev-down    # detiene y elimina los contenedores, conserva los volúmenes
 Direcciones locales:
 
 - Flowable UI: <http://127.0.0.1:8080/flowable-ui>
+- Backend REST: <http://127.0.0.1:8081/api>
 - pgAdmin: <http://127.0.0.1:5050> (usuario `admin@localhost.com`, contraseña `admin123`)
+
+### Backend para iniciar solicitudes en Flowable
+
+El código Spring Boot está en el paquete `web.backend` dentro de `src/main/java/web` y se inicia junto con el entorno mediante `make dev-up`. Su única función es iniciar una solicitud en Flowable con el evento de mensaje `msgSolicitud`. Tanto el motor como el backend se configuran desde el POM raíz: el perfil predeterminado `flowable-engine` compila el motor y `mvn -Pbackend test` compila y prueba el backend, sin mezclar sus fuentes en el JAR que carga Flowable.
+
+Para ver los pasos de uso, mirá la [guía del backend Spring Boot](./docs/uso-web-springboot.md).
+
+Iniciar una solicitud:
+
+```bash
+curl -i -X POST http://127.0.0.1:8081/api/solicitudes \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "empresaId": 1,
+    "nombre": "Capacitación BPMN",
+    "descripcion": "Curso para el equipo de desarrollo",
+    "plazoRecordatorio": "PT1M"
+  }'
+```
+
+La respuesta incluye `processInstanceId` y `businessKey`. `plazoRecordatorio` es opcional. **El plazo normal del proceso es de cinco días (`P5D`):** si omitís la variable, la tarea BPMN `Enviar propuesta` la establece antes de activar el timer. Para probar sin esperar cinco días, podés pasar una duración corta como `PT1M` en el JSON; ese valor se usa solo para esa instancia. El backend verifica que `empresaId` sea positivo, pero no lo busca en PostgreSQL.
+
+Este backend no registra las respuestas posteriores de la empresa ni autentica a quien envía la solicitud. El envío de la propuesta también continúa simulado mediante un log de Flowable.
 
 Para ver PostgreSQL desde pgAdmin, iniciá sesión y registrá un servidor:
 Hacer click derecho sobre Server y seleccionar Register. En la pestaña **Connection** usá:
@@ -257,7 +282,7 @@ Usamos **un único repositorio (monorepo)**:
    Es lo que permite que cada uno avance sin esperar al resto.
 3. **Ramas por funcionalidad y pull requests a `main`**, con una revisión rápida de otro integrante. `main` siempre tiene que levantar con `docker compose up`.
 4. **Tests JUnit del motor.** Si alguien cambia el BPMN y se rompe, por ejemplo, el camino de aceptación, se entera antes de subirlo.
-5. **Plazos parametrizados.** Usar `${plazoRecordatorio}` en lugar de `PT5D` fijo. En desarrollo se usa `PT1M` sin tocar el modelo.
+5. **Plazos parametrizados.** El timer usa `${plazoRecordatorio}` y el BPMN asigna `P5D` (cinco días) si no se pasó un valor. El endpoint web permite enviar una duración corta como `PT1M` para pruebas, sin modificar el BPMN.
 
 ### Cuidados al redesplegar en el entorno compartido
 

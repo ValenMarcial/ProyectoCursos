@@ -4,6 +4,8 @@ En este documento se desarrolla el paso a paso de la realización de las activid
 
 Estos nombres son los que usan el sitio web y el simulador de comunicaciones para actuar sobre las instancias. Si se cambia alguno en el BPMN, hay que avisar al grupo y actualizar esta sección.
 
+Para iniciar una solicitud desde la web con Spring Boot, mirá la [guía de uso del backend](./uso-web-springboot.md).
+
 Son los valores mínimos que hicieron falta para que Flowable acepte desplegar el modelo (antes rechazaba el despliegue con 15 errores de validación). Las tareas automáticas todavía son simulaciones: escriben en el log de Flowable (`make dev-logs`) y, cuando corresponde, guardan variables.
 
 ## Mensajes
@@ -13,25 +15,29 @@ Todos los mensajes usan el mismo valor como id y como name.
 | Mensaje | Evento | Quién lo envía |
 |---|---|---|
 | `msgSolicitud` | Inicio "Solicitud recibida" | Sitio web, al enviar el formulario de solicitud |
-| `msgAceptacion` | Aceptación (gateway "Esperar respuesta") | Simulador. Tiene que enviar `fechaInicio` |
-| `msgRechazo` | Rechazo (gateway "Esperar respuesta") | Simulador |
-| `msgModificaciones` | Modificaciones (gateway "Esperar respuesta") | Simulador, con las observaciones |
+| `msgAceptacion` | Aceptación (gateway "Esperar respuesta") | Simulador externo. Tiene que enviar `fechaInicio` |
+| `msgRechazo` | Rechazo (gateway "Esperar respuesta") | Simulador externo |
+| `msgModificaciones` | Modificaciones (gateway "Esperar respuesta") | Simulador externo, con las observaciones |
 | `msgCancelacion` | Inicio del subproceso de evento "Cancelación", dentro de "Preparar curso" | Simulador |
 
-Por la API REST:
+La aplicación web usa el backend local (`http://127.0.0.1:8081`) únicamente para iniciar solicitudes. El backend se configura desde el POM raíz con el perfil Maven `backend`; el perfil predeterminado `flowable-engine` conserva por separado las fuentes y dependencias del motor. El backend se comunica con Flowable y no expone las credenciales del motor al navegador. Su única ruta es:
+
+| Operación | Ruta | Datos requeridos |
+|---|---|---|
+| Iniciar solicitud | `POST /api/solicitudes` | `empresaId`, `nombre`, `descripcion`; `plazoRecordatorio` opcional |
+
+El backend verifica los tipos y campos requeridos, pero no consulta PostgreSQL para verificar la existencia de la empresa por ahora. `empresaId` es una variable de proceso, no una autenticación. `plazoRecordatorio`, si se envía, debe ser una duración ISO-8601 positiva; si no, el BPMN asigna `P5D` (cinco días). Para pruebas puede enviarse `PT1M`. La API no recibe las respuestas posteriores.
+
+El backend llama por REST a Flowable con estas operaciones:
 
 ```bash
-# Iniciar una solicitud (lo que hace el sitio web)
+# Iniciar una solicitud con el evento msgSolicitud
 POST /flowable-ui/process-api/runtime/process-instances
-{"message": "msgSolicitud", "variables": [...]}
+{"message": "msgSolicitud", "businessKey": "solicitud-...", "variables": [...]}
 
-# Enviar un mensaje a una instancia en curso (lo que hace el simulador):
-# 1. buscar la ejecución que espera el mensaje
-GET /flowable-ui/process-api/runtime/executions?processInstanceId=<id>&messageEventSubscriptionName=msgAceptacion
-# 2. enviarle el mensaje con sus variables
-PUT /flowable-ui/process-api/runtime/executions/<executionId>
-{"action": "messageEventReceived", "messageName": "msgAceptacion", "variables": [{"name": "fechaInicio", "value": "2026-11-20T09:00:00"}]}
 ```
+
+La llamada REST directa es interna del backend; el navegador debe usar `/api/solicitudes`, no las credenciales/API de Flowable. Las respuestas posteriores se envían por un simulador externo, no por este backend.
 
 ## Timers
 
@@ -39,7 +45,7 @@ Los plazos usan variables y no valores fijos en el modelo, como pide el enunciad
 
 | Timer | Configuración | Variable |
 |---|---|---|
-| "5 días" (espera de respuesta) | Time duration `${plazoRecordatorio}` | Duración ISO-8601. Si no viene al iniciar, "Enviar propuesta" la define en `PT5D`. Para probar se puede iniciar el proceso con `PT1M`. |
+| "5 días" (espera de respuesta) | Time duration `${plazoRecordatorio}` | Duración ISO-8601. El script "Enviar propuesta" asigna `P5D` si la variable todavía no existe. El endpoint web permite sobrescribirla para pruebas. |
 | "Fecha programada" (inicio del curso) | Time date `${fechaInicio}` | Fecha ISO-8601, por ejemplo `2026-11-20T09:00:00`. La envía el simulador con `msgAceptacion`, así que está definida antes de llegar al timer. |
 
 ## Tareas automáticas
@@ -49,7 +55,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Tarea | Tipo | Qué hace hoy |
 |---|---|---|
 | Notificar Decisión | Script | Log y `resultado = "no_viable"` |
-| Enviar propuesta | Script | `recordatoriosEnviados = 0` (el contador se reinicia con cada versión nueva de la propuesta, como pide el enunciado), define `plazoRecordatorio = "PT5D"` si no existe, y log |
+| Enviar propuesta | Script | Simula el envío registrando en el log el programa, presupuesto y fechas de la propuesta; reinicia `recordatoriosEnviados = 0` y define `plazoRecordatorio = "P5D"` si no existe |
 | Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
 | Habilitar acceso de la empresa | Script | Log. Falta crear o reutilizar la cuenta de la empresa |
 | Enviar confirmación | Script | Log |
@@ -58,12 +64,29 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Reservar aula | Service task (expresión) | `aulaAsignada = "Aula 1"`. Falta la clase Java que simule el web service y lance el error por falta de aulas (escenario 7) |
 | Liberar Aula | Service task (expresión, compensación) | Elimina `aulaAsignada` |
 
+## Registrar y elaborar propuesta
+
+La tarea de usuario `Registrar y Elaborar propuesta` se asigna exclusivamente al usuario `jefeAdministrativo`. Su formulario requiere estos campos:
+
+| Campo | Tipo | Uso |
+|---|---|---|
+| `programa` | string | Programa del curso incluido en la propuesta |
+| `presupuesto` | long | Presupuesto propuesto |
+| `fechaInicioPosible` | date | Fecha posible de inicio |
+| `fechaFinPropuesta` | date | Fecha posible de finalización |
+
+Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cero y que `fechaFinPropuesta` sea posterior o igual a `fechaInicioPosible`; si alguna regla no se cumple, la tarea no se completa. Si la validación pasa, el flujo continúa automáticamente a `Enviar propuesta` y luego espera la respuesta de la empresa. El envío está simulado en el log de Flowable; todavía no integra correo u otro canal externo. Las fechas propuestas no son la fecha confirmada de inicio: `fechaInicio` sigue siendo la fecha que la empresa informa al aceptar la propuesta.
+
 ## Variables
 
 | Variable | Tipo | La define | La usa |
 |---|---|---|---|
 | `isViable` | boolean | Tarea "Evaluar Viabilidad" (ver sección de viabilidad) | Gateway "Es viable?" |
-| `plazoRecordatorio` | String (duración ISO-8601) | Inicio del proceso o "Enviar propuesta" | Timer "5 días" |
+| `programa` | string | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
+| `presupuesto` | long | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa y validación no negativa |
+| `fechaInicioPosible` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa y validación de fechas |
+| `fechaFinPropuesta` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
+| `plazoRecordatorio` | String (duración ISO-8601) | "Enviar propuesta" (`P5D`, si no existe) | Timer "5 días" |
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
@@ -77,7 +100,7 @@ Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los cam
 
 - Condiciones del gateway "Recursos necesarios" (por ejemplo, `${aulaFisica}`, `${aulaVirtual}`, `${equipamiento}`).
 - `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
-- Asignaciones y grupos candidatos de cada tarea de usuario.
+- Asignaciones y grupos candidatos de las demás tareas de usuario.
 - La clase Java de "Reservar aula" con el error por falta de aulas.
 
 # Sección de viabilidad
