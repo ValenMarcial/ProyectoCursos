@@ -52,6 +52,24 @@ services:
     networks:
       - flowable-net
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    depends_on:
+      flowable:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8081
+      FLOWABLE_REST_URL: http://flowable:8080/flowable-ui/process-api
+      FLOWABLE_USER: ${FLOWABLE_USER:-admin}
+      FLOWABLE_PASSWORD: ${FLOWABLE_PASSWORD:-test}
+    ports:
+      - "127.0.0.1:8081:8081"
+    networks:
+      - flowable-net
+
   pgadmin:
     image: dpage/pgadmin4
     profiles: ["dev"]

@@ -3,59 +3,201 @@
   <groupId>proyecto.cursos</groupId>
   <artifactId>ProyectoCursos</artifactId>
   <version>0.0.1-SNAPSHOT</version>
+  <!-- Configuración compartida por los perfiles. -->
   <properties>
-  	<maven.compiler.source>11</maven.compiler.source>
-  	<maven.compiler.target>11</maven.compiler.target>
-  	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <build.output.directory>${project.basedir}/target</build.output.directory>
   </properties>
-  <dependencies>
-  	<dependency>
-  		<groupId>org.flowable</groupId>
-		<artifactId>flowable-engine</artifactId>
-		<version>6.8.0</version>
-  	</dependency>
-  	<!-- Ya viene en Flowable UI; solo se usa para compilar RulesConfigurator -->
-  	<dependency>
-  		<groupId>org.flowable</groupId>
-		<artifactId>flowable-engine-configurator</artifactId>
-		<version>6.8.0</version>
-		<scope>provided</scope>
-  	</dependency>
-  	<dependency>
-  		<groupId>com.h2database</groupId>
-		<artifactId>h2</artifactId>
-		<version>2.1.214</version>
-  	</dependency>
-  	<dependency>
-		<groupId>org.junit.jupiter</groupId>
-		<artifactId>junit-jupiter</artifactId>
-		<version>5.9.2</version>
-		<scope>test</scope>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.postgresql</groupId>
-		<artifactId>postgresql</artifactId>
-		<version>42.7.4</version>
-  	</dependency>
-	<dependency>
-		<groupId>org.yaml</groupId>
-		<artifactId>snakeyaml</artifactId>
-		<version>1.27</version>
-	</dependency>
-	<dependency>
-        <groupId>org.drools</groupId>
-        <artifactId>drools-core</artifactId>
-        <version>7.63.0.Final</version>
-    </dependency>
-    <dependency>
-        <groupId>org.drools</groupId>
-        <artifactId>drools-compiler</artifactId>
-        <version>7.63.0.Final</version>
-    </dependency>
-    <dependency>
-        <groupId>org.drools</groupId>
-        <artifactId>drools-mvel</artifactId>
-        <version>7.63.0.Final</version>
-    </dependency>
-  </dependencies>
+  <!-- Cada perfil puede cambiar la carpeta de salida para mantener aislados los artefactos. -->
+  <build>
+    <directory>${build.output.directory}</directory>
+  </build>
+  <!-- Importa el catálogo de versiones de Spring Boot; así sus starters usan versiones compatibles
+       sin declarar una versión individual en cada dependencia. -->
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>2.7.18</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+  <!-- Los perfiles seleccionan qué aplicación se compila. El predeterminado es flowable-engine;
+       al ejecutar con -Pbackend, Maven desactiva automáticamente el perfil predeterminado. -->
+  <profiles>
+    <profile>
+      <!-- Artefacto Java que Flowable UI carga para registrar listeners y reglas del proceso.
+           Activado por defecto cuando no se especifica otro perfil Maven. -->
+      <id>flowable-engine</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <dependencies>
+        <!-- API del motor Flowable, necesaria para implementar extensiones del proceso. -->
+        <dependency>
+          <groupId>org.flowable</groupId>
+          <artifactId>flowable-engine</artifactId>
+          <version>6.8.0</version>
+        </dependency>
+        <!-- Ya viene en Flowable UI; solo se usa para compilar RulesConfigurator -->
+        <dependency>
+          <groupId>org.flowable</groupId>
+          <artifactId>flowable-engine-configurator</artifactId>
+          <version>6.8.0</version>
+          <scope>provided</scope>
+        </dependency>
+        <!-- Base embebida usada por las pruebas del motor Flowable. -->
+        <dependency>
+          <groupId>com.h2database</groupId>
+          <artifactId>h2</artifactId>
+          <version>2.1.214</version>
+        </dependency>
+        <!-- JUnit 5 para las pruebas del proceso y sus listeners. -->
+        <dependency>
+          <groupId>org.junit.jupiter</groupId>
+          <artifactId>junit-jupiter</artifactId>
+          <version>5.9.2</version>
+          <scope>test</scope>
+        </dependency>
+        <!-- Driver PostgreSQL usado por código del motor que interactúa con la base del proyecto. -->
+        <dependency>
+          <groupId>org.postgresql</groupId>
+          <artifactId>postgresql</artifactId>
+          <version>42.7.4</version>
+        </dependency>
+        <!-- Parser YAML requerido por la configuración que utiliza el motor. -->
+        <dependency>
+          <groupId>org.yaml</groupId>
+          <artifactId>snakeyaml</artifactId>
+          <version>1.27</version>
+        </dependency>
+        <!-- Componentes Drools para evaluar las reglas de viabilidad. -->
+        <dependency>
+          <groupId>org.drools</groupId>
+          <artifactId>drools-core</artifactId>
+          <version>7.63.0.Final</version>
+        </dependency>
+        <dependency>
+          <groupId>org.drools</groupId>
+          <artifactId>drools-compiler</artifactId>
+          <version>7.63.0.Final</version>
+        </dependency>
+        <dependency>
+          <groupId>org.drools</groupId>
+          <artifactId>drools-mvel</artifactId>
+          <version>7.63.0.Final</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <!-- El JAR que se incorpora a Flowable no necesita la configuración Spring del backend. -->
+        <resources>
+          <resource>
+            <directory>${project.basedir}/src/main/resources</directory>
+            <excludes>
+              <exclude>application.yml</exclude>
+            </excludes>
+          </resource>
+        </resources>
+        <plugins>
+          <!-- Limita este perfil a los paquetes del motor: las clases web no se compilan ni entran
+               en el artefacto que Flowable carga. El filtro equivalente también aplica a tests. -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.15.0</version>
+            <configuration>
+              <includes>
+                <include>**/*.java</include>
+              </includes>
+              <excludes>
+                <exclude>web/backend/**/*.java</exclude>
+              </excludes>
+              <testIncludes>
+                <testInclude>**/*.java</testInclude>
+              </testIncludes>
+              <testExcludes>
+                <testExclude>web/backend/**/*.java</testExclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <!-- Aplicación HTTP Spring Boot: inicia solicitudes en Flowable mediante msgSolicitud.
+           Activar explícitamente con -Pbackend. -->
+      <id>backend</id>
+      <properties>
+        <!-- Salida separada para que compilar el backend no sobrescriba el JAR del motor. -->
+        <build.output.directory>${project.basedir}/target/backend</build.output.directory>
+      </properties>
+      <build>
+        <!-- El backend necesita application.yml, no los BPMN ni recursos del motor. -->
+        <resources>
+          <resource>
+            <directory>${project.basedir}/src/main/resources</directory>
+            <includes>
+              <include>application.yml</include>
+            </includes>
+          </resource>
+        </resources>
+        <plugins>
+          <!-- Este perfil compila solo el paquete web.backend y sus pruebas. -->
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.15.0</version>
+            <configuration>
+              <includes>
+                <include>**/web/backend/**/*.java</include>
+              </includes>
+              <testIncludes>
+                <testInclude>**/web/backend/**/*.java</testInclude>
+              </testIncludes>
+            </configuration>
+          </plugin>
+          <!-- Convierte el JAR Maven en un JAR ejecutable con dependencias incluidas.
+               El classifier permite conservar también el JAR original sin repaquetar. -->
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>2.7.18</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>repackage</goal>
+                </goals>
+                <configuration>
+                  <classifier>backend</classifier>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+        <!-- Servidor HTTP, controladores REST y serialización JSON. -->
+        <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <!-- Validación de los DTO recibidos por la API (@Valid y restricciones). -->
+        <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <!-- Herramientas de pruebas Spring/JUnit/Mockito, solo para el ciclo de test. -->
+        <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-test</artifactId>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>

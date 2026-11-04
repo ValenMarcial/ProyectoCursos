@@ -6,7 +6,7 @@ FLOWABLE_REST := http://127.0.0.1:8080/flowable-ui/process-api
 FLOWABLE_USER ?= admin
 FLOWABLE_PASSWORD ?= test
 
-.PHONY: build dev-up dev-down dev-reset dev-logs dev-psql verify deploy
+.PHONY: build backend-test dev-up dev-down dev-reset dev-logs dev-psql verify deploy
 
 # Dejar en target/flowable-lib el .jar y las librerías de Drools que Flowable UI no trae
 build:
@@ -16,8 +16,11 @@ build:
 		-DoutputDirectory=target/flowable-lib
 	cp target/ProyectoCursos-*.jar target/flowable-lib/
 
+backend-test:
+	mvn -Pbackend clean test
+
 dev-up: build
-	$(DEV_COMPOSE) up -d --wait --wait-timeout 120
+	$(DEV_COMPOSE) up -d --build --wait --wait-timeout 120
 
 # Desplegar BPMN y reglas en el motor (cada despliegue crea una versión nueva).
 # En un .zip, la API REST recibe un solo archivo por despliegue y el .drl va junto al BPMN.
