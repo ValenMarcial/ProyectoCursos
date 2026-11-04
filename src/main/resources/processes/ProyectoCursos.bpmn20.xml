@@ -86,13 +86,21 @@
       </extensionElements>
     </businessRuleTask>
     <exclusiveGateway id="sid-9CF3938A-D55A-46D1-A063-DD4464916986" name="Es viable?"></exclusiveGateway>
-    <userTask id="sid-F96A6968-13D6-4EA4-929E-69230127C208" name="Registrar y Elaborar propuesta" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-F96A6968-13D6-4EA4-929E-69230127C208" name="Registrar y Elaborar propuesta" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true">
+      <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.proposal.ValidateProposalDates"></flowable:taskListener>
+        <flowable:formProperty id="programa" name="Programa del curso" type="string" required="true"></flowable:formProperty>
+        <flowable:formProperty id="presupuesto" name="Presupuesto" type="long" required="true"></flowable:formProperty>
+        <flowable:formProperty id="fechaInicioPosible" name="Fecha de inicio posible" type="date" required="true"></flowable:formProperty>
+        <flowable:formProperty id="fechaFinPropuesta" name="Fecha de finalización posible" type="date" required="true"></flowable:formProperty>
+      </extensionElements>
+    </userTask>
     <scriptTask id="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F" name="Notificar Decisión" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[println "No viable: " + execution.processInstanceId; execution.setVariable("resultado", "no_viable")]]></script>
     </scriptTask>
     <endEvent id="sid-32693999-A94F-4509-B0B9-B915626A33BA"></endEvent>
     <scriptTask id="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3" name="Enviar propuesta" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[execution.setVariable("recordatoriosEnviados", 0); if (!execution.hasVariable("plazoRecordatorio")) execution.setVariable("plazoRecordatorio", "PT5D"); println "Propuesta enviada: " + execution.processInstanceId]]></script>
+      <script><![CDATA[execution.setVariable("recordatoriosEnviados", 0); if (!execution.hasVariable("plazoRecordatorio")) execution.setVariable("plazoRecordatorio", "P5D"); println "Propuesta enviada a empresa: " + execution.processInstanceId + " | Programa: " + execution.getVariable("programa") + " | Presupuesto: " + execution.getVariable("presupuesto") + " | Fechas posibles: " + execution.getVariable("fechaInicioPosible") + " a " + execution.getVariable("fechaFinPropuesta")]]></script>
     </scriptTask>
     <eventBasedGateway id="sid-8E7F098B-B495-4B18-9D81-09D9B338C643" name="Esperar respuesta"></eventBasedGateway>
     <intermediateCatchEvent id="sid-AE90424C-2654-4C64-909C-BD085A34654C" name="5 días">
