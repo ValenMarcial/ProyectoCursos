@@ -37,6 +37,16 @@ services:
         jdbc:postgresql://postgres:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # No autodesplegar el BPMN que viene dentro del .jar: se despliega con `make deploy`
+      FLOWABLE_CHECK_PROCESS_DEFINITIONS: "false"
+    # Mismo arranque que /flowable-entrypoint.sh de la imagen, sumando /opt/proyecto/lib al classpath
+    entrypoint:
+      - sh
+      - -c
+      - exec java $$JAVA_OPTS -Djava.awt.headless=true -Dfile.encoding=UTF-8 -cp '/app:/app/WEB-INF/classes:/app/WEB-INF/lib/*:/opt/proyecto/lib/*' org.flowable.ui.application.FlowableUiApplication
+    volumes:
+      # Nuestro .jar + Drools (se genera con `make build`)
+      - ./target/flowable-lib:/opt/proyecto/lib:ro
     ports:
       - "127.0.0.1:8080:8080"
     networks:
