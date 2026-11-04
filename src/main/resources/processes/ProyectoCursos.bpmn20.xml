@@ -74,7 +74,7 @@
     <startEvent id="sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79" isInterrupting="true">
       <messageEventDefinition></messageEventDefinition>
     </startEvent>
-    <businessRuleTask id="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0" name="Evaluar Viabilidad" flowable:ruleVariablesInput="amountCursos" flowable:rules="Is Viable,Is Not Viable" flowable:resultVariable="isViable">
+    <businessRuleTask id="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0" name="Evaluar Viabilidad" flowable:ruleVariablesInput="${amountCursos}" flowable:rules="Is Viable,Is Not Viable" flowable:resultVariable="isViable">
       <extensionElements>
         <flowable:executionListener event="start" class="flowable.viability.EvaluateViability"></flowable:executionListener>
         <flowable:executionListener event="end" class="flowable.viability.ViabilityResult"></flowable:executionListener>

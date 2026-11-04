@@ -12,13 +12,13 @@ public class EvaluateViability implements ExecutionListener {
 
         RuntimeService runtimeService = CommandContextUtil.getProcessEngineConfiguration().getRuntimeService();
 
-        // Consulta al RuntimeService las instancias activas del proceso
-        long totalActives = runtimeService.createProcessInstanceQuery()
+        // Consultar al RuntimeService las instancias activas del proceso, excluyendo la actual por su ID
+        long othersInstancesActives = runtimeService.createProcessInstanceQuery()
                 .processDefinitionKey(processDefinitionKey)
+                .list()
+                .stream()
+                .filter(instance -> !instance.getId().equals(execution.getProcessInstanceId()))
                 .count();
-
-        // Descuenta la instancia actual
-        long othersInstancesActives = totalActives > 0 ? totalActives - 1 : 0;
 
         // Instanciamos el objeto AmountCursos con la cantidad de instancias activas para Drools
         execution.setVariableLocal("amountCursos", new AmountCursos(othersInstancesActives));
