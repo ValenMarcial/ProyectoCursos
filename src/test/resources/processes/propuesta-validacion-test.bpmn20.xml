@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-validacion-propuesta" isExecutable="true">
+    <startEvent id="inicio"/>
+    <userTask id="registrarPropuesta" flowable:assignee="jefeAdministrativo">
+      <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.proposal.ValidateProposalDates"/>
+        <flowable:formProperty id="presupuesto" type="long" required="true"/>
+      </extensionElements>
+    </userTask>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="registrarPropuesta"/>
+    <sequenceFlow id="f2" sourceRef="registrarPropuesta" targetRef="fin"/>
+  </process>
+</definitions>
