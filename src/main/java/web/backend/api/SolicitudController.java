@@ -2,7 +2,6 @@ package web.backend.api;
 
 import java.time.Duration;
 import java.time.format.DateTimeParseException;
-import java.util.UUID;
 
 import javax.validation.Valid;
 
@@ -17,25 +16,29 @@ import org.springframework.web.bind.annotation.RestController;
 
 import web.backend.api.dto.IniciarSolicitudRequest;
 import web.backend.api.dto.IniciarSolicitudResponse;
-import web.backend.flowable.FlowableRestClient;
+import web.backend.service.SolicitudService;
+import web.backend.service.SolicitudPendienteException;
 
 @RestController
 @RequestMapping("/api/solicitudes")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class SolicitudController {
-    private final FlowableRestClient flowable;
+    private final SolicitudService solicitudes;
 
-    public SolicitudController(FlowableRestClient flowable) {
-        this.flowable = flowable;
+    public SolicitudController(SolicitudService solicitudes) {
+        this.solicitudes = solicitudes;
     }
 
     @PostMapping
     public ResponseEntity<IniciarSolicitudResponse> iniciar(@Valid @RequestBody IniciarSolicitudRequest request) {
         validarPlazo(request.getPlazoRecordatorio());
-        String businessKey = "solicitud-" + UUID.randomUUID();
-        String processInstanceId = flowable.iniciarSolicitud(businessKey, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new IniciarSolicitudResponse(processInstanceId, businessKey, "INICIADA"));
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(solicitudes.iniciar(request));
+        } catch (SolicitudPendienteException exception) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(new IniciarSolicitudResponse(
+                            exception.getProcessInstanceId(), exception.getBusinessKey(), "PENDIENTE"));
+        }
     }
 
     private void validarPlazo(String plazo) {
