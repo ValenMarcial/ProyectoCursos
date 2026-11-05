@@ -27,6 +27,15 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+  <dependencies>
+    <!-- Driver compartido por el backend Spring y el código cargado por Flowable. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.4</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
   <!-- Los perfiles seleccionan qué aplicación se compila. El predeterminado es flowable-engine;
        al ejecutar con -Pbackend, Maven desactiva automáticamente el perfil predeterminado. -->
   <profiles>
@@ -51,6 +60,12 @@
           <version>6.8.0</version>
           <scope>provided</scope>
         </dependency>
+        <!-- Spring JDBC para el repositorio del delegate; Flowable UI ya lo trae en runtime. -->
+        <dependency>
+          <groupId>org.springframework</groupId>
+          <artifactId>spring-jdbc</artifactId>
+          <scope>provided</scope>
+        </dependency>
         <!-- Base embebida usada por las pruebas del motor Flowable. -->
         <dependency>
           <groupId>com.h2database</groupId>
@@ -63,12 +78,6 @@
           <artifactId>junit-jupiter</artifactId>
           <version>5.9.2</version>
           <scope>test</scope>
-        </dependency>
-        <!-- Driver PostgreSQL usado por código del motor que interactúa con la base del proyecto. -->
-        <dependency>
-          <groupId>org.postgresql</groupId>
-          <artifactId>postgresql</artifactId>
-          <version>42.7.4</version>
         </dependency>
         <!-- Parser YAML requerido por la configuración que utiliza el motor. -->
         <dependency>
@@ -186,6 +195,11 @@
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Acceso JDBC a la base institucional desde el backend. -->
+        <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
         <!-- Validación de los DTO recibidos por la API (@Valid y restricciones). -->
         <dependency>
           <groupId>org.springframework.boot</groupId>
@@ -195,6 +209,12 @@
         <dependency>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-starter-test</artifactId>
+          <scope>test</scope>
+        </dependency>
+        <!-- Base embebida para probar el repositorio sin depender de PostgreSQL. -->
+        <dependency>
+          <groupId>com.h2database</groupId>
+          <artifactId>h2</artifactId>
           <scope>test</scope>
         </dependency>
       </dependencies>

@@ -6,7 +6,7 @@ FLOWABLE_REST := http://127.0.0.1:8080/flowable-ui/process-api
 FLOWABLE_USER ?= admin
 FLOWABLE_PASSWORD ?= test
 
-.PHONY: build backend-test dev-up dev-down dev-reset dev-logs dev-psql verify deploy
+.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy
 
 # Dejar en target/flowable-lib el .jar y las librerías de Drools que Flowable UI no trae
 build:
@@ -18,6 +18,9 @@ build:
 
 backend-test:
 	mvn -Pbackend clean test
+
+db-migrate:
+	bash infra/db/migrate.sh
 
 dev-up: build
 	$(DEV_COMPOSE) up -d --build --wait --wait-timeout 120

@@ -1,6 +1,12 @@
 server:
   port: ${SERVER_PORT:8081}
 
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/institucion}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
 flowable:
   rest:
     base-url: ${FLOWABLE_REST_URL:http://localhost:8080/flowable-ui/process-api}
