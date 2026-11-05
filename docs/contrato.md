@@ -26,7 +26,7 @@ La aplicación web usa el backend local (`http://127.0.0.1:8081`) únicamente pa
 |---|---|---|
 | Iniciar solicitud | `POST /api/solicitudes` | `empresaNombre`, `contactoNombre`, `contactoEmail`, `tematica`, `descripcion`, `participantesEstimados`, `fechasPreferidas`; `contactoTelefono` y `plazoRecordatorio` opcionales |
 
-El backend busca la empresa por nombre normalizado y la crea si no existe. Guarda los datos del formulario en `solicitudes` antes de llamar a Flowable; después registra allí `business_key` e `instancia_flowable_id`. También envía `solicitudId` y el ID interno de la empresa como variables; ninguno lo aporta el cliente. `plazoRecordatorio`, si se envía, debe ser una duración ISO-8601 positiva; si no, el BPMN asigna `P5D` (cinco días). Para pruebas puede enviarse `PT1M`. En esta entrega `cursos` es independiente de `solicitudes` y “Habilitar acceso de la empresa” sigue siendo una actividad simulada.
+El backend busca la empresa por nombre normalizado y la crea si no existe. Guarda los datos del formulario en `solicitudes` antes de llamar a Flowable; después registra allí `business_key` e `instancia_flowable_id`. También envía `solicitudId` y el ID interno de la empresa como variables; ninguno lo aporta el cliente. `plazoRecordatorio`, si se envía, debe ser una duración ISO-8601 positiva; si no, el BPMN asigna `P5D` (cinco días). Para pruebas puede enviarse `PT1M`. Cuando la empresa acepta, “Habilitar acceso de la empresa” crea el curso y guarda su ID en `solicitudes.curso_id` (variable de proceso `cursoId`).
 
 Las variables del mensaje `msgSolicitud` son `solicitudId`, `empresaId`, `empresaNombre`, `tematica`, `descripcion`, `contactoNombre`, `contactoEmail`, `participantesEstimados`, `fechasPreferidas` y, si se informaron, `contactoTelefono` y `plazoRecordatorio`.
 
@@ -61,7 +61,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Notificar Decisión | Script | Log y `resultado = "no_viable"` |
 | Enviar propuesta | Script | Simula el envío registrando en el log el programa, presupuesto y fechas de la propuesta; reinicia `recordatoriosEnviados = 0` y define `plazoRecordatorio = "P5D"` si no existe |
 | Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
-| Habilitar acceso de la empresa | Script | Simula la habilitación; crear el curso y asociarlo a la solicitud queda fuera de esta entrega |
+| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con la propuesta aceptada (nombre y descripción de la solicitud; programa, presupuesto y fechas de la propuesta) y asigna su ID a `solicitudes.curso_id`. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
 | Enviar confirmación | Script | Log |
 | Notificar Cierre | Script | Log y `resultado = "cancelado"` |
 | Liberar Aula Virtual | Script (compensación) | Log |
