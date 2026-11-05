@@ -44,12 +44,13 @@ Estas credenciales son solo para desarrollo local.
 - **Flowable UI 6.8** se conecta a esa misma base y crea/actualiza sus tablas internas al arrancar. Además carga nuestro `.jar` y las librerías de Drools desde `target/flowable-lib` (ver [Desplegar el proceso en Flowable](#desplegar-el-proceso-en-flowable)).
 - **pgAdmin** se inicia con el profile `dev` y permite inspeccionar la base desde el navegador.
 
-Las tablas `ACT_*` y `*_DATABASECHANGELOG*` son de Flowable. Las tablas `empresas`, `cursos` y `schema_version` son de este proyecto.
+Las tablas `ACT_*` y `*_DATABASECHANGELOG*` son de Flowable. Las tablas `empresas`, `solicitudes`, `cursos` y `schema_version` son de este proyecto.
 
 ### Levantar y verificar
 
 ```bash
 make dev-up      # compila y levanta Postgres, Flowable, el backend y pgAdmin en segundo plano
+make db-migrate  # aplica en orden las migraciones pendientes del schema
 make backend-test # ejecuta las pruebas del backend REST (perfil Maven backend)
 make verify      # verifica configuración, tablas y disponibilidad de Flowable
 make deploy      # despliega el BPMN y las reglas en Flowable
@@ -78,14 +79,19 @@ Iniciar una solicitud:
 curl -i -X POST http://127.0.0.1:8081/api/solicitudes \
   -H 'Content-Type: application/json' \
   -d '{
-    "empresaId": 1,
-    "nombre": "Capacitación BPMN",
+    "empresaNombre": "Tech Solutions S.A.",
+    "contactoNombre": "Ana Pérez",
+    "contactoEmail": "ana@example.com",
+    "contactoTelefono": "555-0101",
+    "tematica": "Capacitación BPMN",
     "descripcion": "Curso para el equipo de desarrollo",
+    "participantesEstimados": 12,
+    "fechasPreferidas": "Marzo de 2027",
     "plazoRecordatorio": "PT1M"
   }'
 ```
 
-La respuesta incluye `processInstanceId` y `businessKey`. `plazoRecordatorio` es opcional. **El plazo normal del proceso es de cinco días (`P5D`):** si omitís la variable, la tarea BPMN `Enviar propuesta` la establece antes de activar el timer. Para probar sin esperar cinco días, podés pasar una duración corta como `PT1M` en el JSON; ese valor se usa solo para esa instancia. El backend verifica que `empresaId` sea positivo, pero no lo busca en PostgreSQL.
+El backend busca o crea la empresa por nombre, guarda una fila en `solicitudes` y vincula esa fila con el `processInstanceId` y `businessKey` devueltos por Flowable. En esta entrega no crea cursos: todavía no hay una relación entre `solicitudes` y `cursos`, y `Habilitar acceso de la empresa` sigue simulada. Ante un timeout en el inicio intenta reconciliar consultando Flowable por la clave; si no confirma el resultado, devuelve `502` con esa clave y estado `PENDIENTE`. Verificá una solicitud pendiente antes de reenviar. `plazoRecordatorio` es opcional. **El plazo normal del proceso es de cinco días (`P5D`):** si omitís la variable, la tarea BPMN `Enviar propuesta` la establece antes de activar el timer. Para probar sin esperar cinco días, podés pasar una duración corta como `PT1M` en el JSON; ese valor se usa solo para esa instancia.
 
 Este backend no registra las respuestas posteriores de la empresa ni autentica a quien envía la solicitud. El envío de la propuesta también continúa simulado mediante un log de Flowable.
 
@@ -106,14 +112,14 @@ El host `postgres` funciona desde el contenedor de pgAdmin en la red de Compose.
 
 En el primer arranque con un volumen vacío, PostgreSQL ejecuta automáticamente, en orden:
 
-1. `infra/db/init/01-institucion-schema.sh` ejecuta `infra/db/sql/institucion-schema.sql` en `Institucion`. Crea `schema_version`, `empresas` y `cursos`, incluyendo claves primarias, claves foráneas, restricciones de fechas, presupuesto y estado, y la unicidad de `(empresa_id, nombre)`.
-2. `infra/db/init/02-seed.sh` ejecuta `infra/db/sql/seed.sql` si `LOAD_SEED_DATA=true`. Inserta cuatro empresas y tres cursos de ejemplo.
+1. `infra/db/init/01-institucion-schema.sh` ejecuta `infra/db/sql/institucion-schema.sql` en `Institucion`. Crea `schema_version`, `empresas`, `solicitudes` y `cursos`, incluyendo claves primarias, claves foráneas, restricciones y claves de negocio/instancia.
+2. `infra/db/init/02-seed.sh` ejecuta `infra/db/sql/seed.sql` si `LOAD_SEED_DATA=true`. Inserta cuatro empresas, tres solicitudes y tres cursos de ejemplo independientes.
 
 Para no insertar esos datos al crear una base nueva, poné `LOAD_SEED_DATA=false` en `.env` antes de iniciar PostgreSQL por primera vez. Esto omite solo la seed SQL; el schema se crea igual. Cambiar esa variable con un volumen ya inicializado no borra filas ni vuelve a ejecutar los scripts.
 
-La seed SQL es **idempotente**: usa `ON CONFLICT DO NOTHING` sobre `empresas.nombre` y sobre `cursos (empresa_id, nombre)`, así que se puede volver a ejecutar sin duplicar filas ni fallar por claves repetidas.
+La seed SQL es **idempotente**: evita duplicar empresas y solicitudes por sus claves normalizadas/de negocio, y omite cursos de ejemplo que ya existen para la misma empresa, nombre y fecha de inicio.
 
-Los scripts de inicialización solo corren con un volumen vacío. Si ya tenías un volumen con la versión anterior del schema, ejecutá `make dev-reset` para recrearlo con las columnas `empresa_id` y `estado`. `schema_version` registra la versión `2`.
+Los scripts de inicialización solo corren con un volumen vacío y crean el schema base actual, registrado como versión `0` en `schema_version`. Los cambios posteriores se agregan como `infra/db/migrations/NNN-nombre.sql` (empezando por `001`) y se aplican con `make db-migrate`, que los ejecuta en orden y conserva el volumen y sus datos. Cada migración debe registrar su propio número en `schema_version`. Si tenés un volumen creado antes de este baseline, recrealo una vez con `make dev-reset`; ese comando elimina todos los volúmenes. Las migraciones no usan Flyway y no se ejecutan automáticamente al arrancar Spring Boot.
 
 ### Seed Java: usuarios, grupos e importación del modelo
 
@@ -212,23 +218,22 @@ Este comando equivale a detener Compose y eliminar sus volúmenes (`docker compo
 
 ### Tablas propias de la base `Institucion`
 
-Además de las tablas `ACT_*` que administra Flowable, el schema define tres tablas propias:
+Además de las tablas `ACT_*` que administra Flowable, el schema define cuatro tablas propias:
 
 | Tabla | Columnas principales | Para qué sirve |
 |---|---|---|
-| `schema_version` | `version` (PK), `applied_at` | Registra qué versión del schema se aplicó. El script inserta la versión `2` con `ON CONFLICT DO NOTHING`. |
-| `empresas` | `id` (PK identity), `nombre` (único, obligatorio), `cantidad_empleados` (entero `>= 0`) | Empresas que solicitan cursos. |
-| `cursos` | `id` (PK identity), `empresa_id` (FK a `empresas`), `nombre`, `descripcion`, `programa`, `presupuesto` (entero `> 0`), `fecha_inicio`, `fecha_fin`, `resultados`, `instancia_flowable_id` (único), `estado` | Cada fila representa una solicitud/contratación concreta de una empresa y su vínculo con la instancia del proceso en Flowable. `CHECK (fecha_inicio <= fecha_fin)` valida el rango de fechas y `UNIQUE (empresa_id, nombre)` permite que dos empresas pidan un curso con el mismo nombre. |
+| `schema_version` | `version` (PK), `applied_at` | Registra las versiones del schema aplicadas; la inicialización nueva registra la versión `0` y las migraciones futuras empiezan en `001`. |
+| `empresas` | `id` (PK identity), `nombre` (único sin distinguir mayúsculas ni espacios externos), `cantidad_empleados` (entero `>= 0`, opcional) | Empresas que solicitan cursos; se reutilizan por nombre normalizado. |
+| `solicitudes` | `id` (PK identity), `empresa_id` (FK), `business_key` (único), temática/descripción, contacto, participantes, fechas preferidas, `instancia_flowable_id` (único), estado de integración | Datos del formulario público. Se crea al recibir la solicitud y se vincula inmediatamente con su instancia Flowable. |
+| `cursos` | `id` (PK identity), `empresa_id` (FK), nombre, descripción, programa, presupuesto, fechas, resultados, `instancia_flowable_id` (único), estado de negocio | Cursos existentes/registrados. En esta entrega no tienen relación con solicitudes; esa asociación y la creación tras la aceptación quedan para otra PR. |
 
-`instancia_flowable_id` guarda el ID de la instancia de proceso de Flowable asociada al curso (por ejemplo `PROC_INST_1001` en la seed) y es `NULL` mientras el curso no tenga una instancia creada.
+`solicitudes.instancia_flowable_id` guarda el ID de la instancia de Flowable desde que se inicia el proceso. `solicitudes.business_key` se genera antes del inicio y permite correlacionar el proceso con la solicitud local. `integracion_flowable_estado` diferencia `pendiente`, `iniciada` y `legacy`.
 
-La relación entre `cursos` e instancias de Flowable es **1:1 a propósito**: según el enunciado (secciones 3.2 y 4.1.1), cada curso debe estar vinculado con su correspondiente instancia y cada solicitud inicia una instancia propia. El `UNIQUE` sobre `instancia_flowable_id` refuerza esa invariante: impide que dos cursos apunten a la misma instancia. Un curso sin instancia todavía es válido porque PostgreSQL admite varios `NULL` en una columna `UNIQUE`.
+La relación entre `solicitudes` e instancias de Flowable es **1:1**: cada formulario inicia su propia instancia. En esta entrega todavía no existe una relación entre `solicitudes` y `cursos`.
 
 `estado` refleja el avance del curso y lo actualiza el Execution Listener al cerrar la instancia. Valores permitidos: `solicitado`, `en_preparacion`, `confirmado`, `pendiente_de_inicio`, `en_desarrollo`, `en_elaboracion_informe`, `finalizado`, `cancelado`, `rechazado`, `cerrado_por_falta_de_respuesta` y `no_viable`.
 
-`solicitado` es el estado inicial y el `DEFAULT` de la columna. La fila del curso se crea cuando una empresa envía la solicitud y se inicia su instancia (sección 4.1.1), pero en ese momento todavía no se evaluó la viabilidad ni hubo acuerdo o confirmación, así que `en_preparacion` sería incorrecto. No figura en la lista de estados de la sección 4.1.2 porque esa lista aplica después de habilitar el acceso de la empresa; lo agregamos como extensión para representar la solicitud recién registrada.
-
-> **Anotación pendiente de consultar:** ¿una misma empresa puede contratar el mismo curso más de una vez? Si la respuesta es sí, `UNIQUE (empresa_id, nombre)` no alcanza y habría que guiarse por las fechas: por ejemplo, permitir la repetición cuando los rangos `fecha_inicio`/`fecha_fin` no se superponen, o incluir la fecha de inicio en la clave de unicidad. Si la respuesta es no, la restricción actual queda bien.
+La solicitud no tiene un estado de curso: su integración con Flowable se controla por separado. Los estados de `cursos` corresponden al ciclo de vida de los cursos existentes.
 
 > **Sobre `resultados`:** es un `VARCHAR(255)` y en la seed ya contiene una ruta de ejemplo. La idea es que guarde la **ruta donde se va a guardar el PDF** con el informe de resultados del curso, no el contenido del informe en sí. Podriamos mover los PDFs a un storage externo por ejemplo MinIO, ahi conviene reemplazar esa ruta por la clave o URL del objeto y agregar una columna para el **hash** que permita verificar que el archivo no se corrompió.
 

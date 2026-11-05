@@ -13,6 +13,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
       - ./infra/db/sql:/db-sql:ro
+      - ./infra/db/migrations:/db-migrations:ro
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
@@ -58,10 +59,15 @@ services:
       dockerfile: Dockerfile.backend
     restart: unless-stopped
     depends_on:
+      postgres:
+        condition: service_healthy
       flowable:
         condition: service_started
     environment:
       SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       FLOWABLE_REST_URL: http://flowable:8080/flowable-ui/process-api
       FLOWABLE_USER: ${FLOWABLE_USER:-admin}
       FLOWABLE_PASSWORD: ${FLOWABLE_PASSWORD:-test}
