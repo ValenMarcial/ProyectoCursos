@@ -1,6 +1,10 @@
 package flowable.assignment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Set;
 
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.ProcessEngine;
@@ -63,11 +67,11 @@ class AssignToLeastBusyAdministrativeTest {
     }
 
     @Test
-    void enEmpateEligePorOrdenAlfabetico() {
+    void enEmpateEligeAlAzarEntreLosMenosOcupados() {
         assignTasks("jefeAdministrativo", 1);
         assignTasks("empleadoAdministrativo", 1);
 
-        assertEquals("empleadoAdministrativo", startAndGetAssignee());
+        assertTrue(Set.of("jefeAdministrativo", "empleadoAdministrativo").contains(startAndGetAssignee()));
     }
 
     @Test
@@ -76,7 +80,7 @@ class AssignToLeastBusyAdministrativeTest {
         assignTasks("jefeAdministrativo", 1);
         assignTasks("empleadoAdministrativo", 1);
 
-        assertEquals("empleadoAdministrativo", startAndGetAssignee());
+        assertTrue(Set.of("jefeAdministrativo", "empleadoAdministrativo").contains(startAndGetAssignee()));
     }
 
     @Test
@@ -87,6 +91,20 @@ class AssignToLeastBusyAdministrativeTest {
                 .forEach(task -> taskService.complete(task.getId()));
 
         assertEquals("empleadoAdministrativo", startAndGetAssignee());
+    }
+
+    @Test
+    void sinIntegrantesDejaLaTareaSinAsignarPeroDisponibleParaElGrupo() {
+        IdentityService identityService = engine.getIdentityService();
+        identityService.deleteMembership("jefeAdministrativo", "Administracion");
+        identityService.deleteMembership("empleadoAdministrativo", "Administracion");
+
+        String instanceId = engine.getRuntimeService().startProcessInstanceByKey("test-lista-definitiva").getId();
+        Task task = taskService.createTaskQuery().processInstanceId(instanceId).singleResult();
+
+        assertNull(task.getAssignee());
+        assertTrue(taskService.getIdentityLinksForTask(task.getId()).stream()
+                .anyMatch(link -> "Administracion".equals(link.getGroupId())));
     }
 
     private void assignTasks(String userId, int amount) {
