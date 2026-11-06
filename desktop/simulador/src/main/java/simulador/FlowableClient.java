@@ -81,6 +81,16 @@ public class FlowableClient {
         put("/runtime/executions/" + enc(ejecucionId), cuerpo);
     }
 
+    /** Nombres de las tareas de usuario abiertas de la instancia (las que tiene que hacer la institución). */
+    public List<String> nombresDeTareasActivas(String instanciaId) {
+        JsonNode respuesta = get("/runtime/tasks?processInstanceId=" + enc(instanciaId) + "&size=50");
+        List<String> nombres = new ArrayList<>();
+        for (JsonNode tarea : respuesta.path("data")) {
+            nombres.add(tarea.path("name").asText());
+        }
+        return nombres;
+    }
+
     private List<String> ejecuciones(String filtros) {
         JsonNode respuesta = get("/runtime/executions?" + filtros);
         List<String> ids = new ArrayList<>();
