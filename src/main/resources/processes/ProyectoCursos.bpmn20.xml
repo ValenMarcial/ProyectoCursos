@@ -201,13 +201,17 @@
       <compensateEventDefinition></compensateEventDefinition>
     </intermediateThrowEvent>
     <endEvent id="sid-343EF313-279B-45FF-9F2C-343A3C2804DB"></endEvent>
-    <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:assignee="jefeDeEquipo" flowable:owner="jefeDeEquipo" flowable:candidateGroups="Docentes" flowable:formFieldValidation="true">
+      <extensionElements>
+        <flowable:taskListener event="assignment" class="flowable.assignment.CaptureDelegatedTeacher"></flowable:taskListener>
+      </extensionElements>
+    </userTask>
     <intermediateCatchEvent id="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" name="Fecha programada">
       <timerEventDefinition>
         <timeDate>${fechaInicio}</timeDate>
       </timerEventDefinition>
     </intermediateCatchEvent>
-    <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:assignee="${docenteSeleccionado}" flowable:formFieldValidation="true"></userTask>
     <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:formFieldValidation="true"></userTask>
     <sequenceFlow id="sid-E5A3C140-9E9E-4805-9ED2-985472F5E53D" sourceRef="sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79" targetRef="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0"></sequenceFlow>
     <sequenceFlow id="sid-238BC821-60B2-4E86-8722-76F353C8A724" sourceRef="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F" targetRef="sid-32693999-A94F-4509-B0B9-B915626A33BA"></sequenceFlow>
