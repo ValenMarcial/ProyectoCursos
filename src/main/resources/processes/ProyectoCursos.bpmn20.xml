@@ -128,14 +128,18 @@
     <subProcess id="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF" name="Preparar curso">
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
-      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <receiveTask id="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" name="Recibir nómina"></receiveTask>
       <inclusiveGateway id="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" name="Recursos necesarios"></inclusiveGateway>
       <parallelGateway id="sid-420D072A-C42B-404D-BBDA-B884DD90C410" name="Preparación completa"></parallelGateway>
-      <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true">
+        <extensionElements>
+          <flowable:taskListener event="create" class="flowable.assignment.AssignToLeastBusyAdministrative"></flowable:taskListener>
+        </extensionElements>
+      </userTask>
+      <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:expression="${execution.setVariable(&quot;aulaAsignada&quot;, &quot;Aula 1&quot;)}"></serviceTask>
       <boundaryEvent id="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" name="Liberar recursos" attachedToRef="sid-065649F8-9F01-4C34-B290-C37474CC479D" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
@@ -146,7 +150,7 @@
       <boundaryEvent id="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" name="Liberar recursos" attachedToRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
-      <userTask id="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" name="Liberar Equipamiento" isForCompensation="true" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" name="Liberar Equipamiento" isForCompensation="true" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <scriptTask id="sid-892710F9-B2AE-4002-82D0-131829D8FA29" name="Liberar Aula Virtual" isForCompensation="true" scriptFormat="groovy" flowable:autoStoreVariables="false">
         <script><![CDATA[println "Aula virtual liberada: " + execution.processInstanceId]]></script>
       </scriptTask>
