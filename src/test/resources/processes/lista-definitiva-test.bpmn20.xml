@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Tarea "Confeccionar lista definitiva" aislada, con el mismo listener que el modelo completo. -->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-lista-definitiva" isExecutable="true">
+    <startEvent id="inicio"/>
+    <userTask id="confeccionarLista" name="Confeccionar lista definitiva" flowable:candidateGroups="Administracion">
+      <extensionElements>
+        <flowable:taskListener event="create" class="flowable.assignment.AssignToLeastBusyAdministrative"/>
+      </extensionElements>
+    </userTask>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="confeccionarLista"/>
+    <sequenceFlow id="f2" sourceRef="confeccionarLista" targetRef="fin"/>
+  </process>
+</definitions>

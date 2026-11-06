@@ -81,6 +81,24 @@ La tarea de usuario `Registrar y Elaborar propuesta` se asigna exclusivamente al
 
 Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cero y que `fechaFinPropuesta` sea posterior o igual a `fechaInicioPosible`; si alguna regla no se cumple, la tarea no se completa. Si la validación pasa, el flujo continúa automáticamente a `Enviar propuesta` y luego espera la respuesta de la empresa. El envío está simulado en el log de Flowable; todavía no integra correo u otro canal externo. Las fechas propuestas no son la fecha confirmada de inicio: `fechaInicio` sigue siendo la fecha que la empresa informa al aceptar la propuesta.
 
+## Confeccionar lista definitiva
+
+Al crearse la tarea, el Task Listener `flowable.assignment.AssignToLeastBusyAdministrative` (enunciado 3.4) la asigna al integrante del grupo `Administracion` con menos tareas de usuario pendientes asignadas en el motor. Por eso no requiere reclamo.
+
+- **Qué cuenta:** solo las tareas activas con `assignee` igual a ese usuario. Las que tienen al grupo como candidato y nadie reclamó no cuentan, porque no tienen `assignee`.
+- **Empate:** gana el ID de usuario que va primero en orden alfabético (con la seed, `empleadoAdministrativo` antes que `jefeAdministrativo`).
+- **Sin integrantes en el grupo:** la tarea queda sin asignar, para que la reclame cualquiera de `Administracion`.
+
+En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listener no asigna a nadie):
+
+```xml
+<userTask id="..." name="Confeccionar lista definitiva" flowable:candidateGroups="Administracion">
+  <extensionElements>
+    <flowable:taskListener event="create" class="flowable.assignment.AssignToLeastBusyAdministrative"/>
+  </extensionElements>
+</userTask>
+```
+
 ## Variables
 
 | Variable | Tipo | La define | La usa |
