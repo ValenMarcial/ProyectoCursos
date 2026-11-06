@@ -27,8 +27,14 @@ public final class Solicitud {
     }
 
     public String nombre() {
-        Object nombre = variables.get("nombre");
-        return nombre == null ? "(sin nombre)" : nombre.toString();
+        // El backend guarda el nombre de la empresa en empresaNombre; "nombre" queda por compatibilidad
+        for (String variable : new String[] {"empresaNombre", "nombre"}) {
+            Object valor = variables.get(variable);
+            if (valor != null) {
+                return valor.toString();
+            }
+        }
+        return "(sin nombre)";
     }
 
     @Override
