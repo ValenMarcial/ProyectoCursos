@@ -61,7 +61,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Notificar Decisión | Script | Log y `resultado = "no_viable"` |
 | Enviar propuesta | Script | Simula el envío registrando en el log el programa, presupuesto y fechas de la propuesta; reinicia `recordatoriosEnviados = 0` y define `plazoRecordatorio = "P5D"` si no existe |
 | Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
-| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con la propuesta aceptada (nombre y descripción de la solicitud; programa, presupuesto y fechas de la propuesta) y asigna su ID a `solicitudes.curso_id`. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
+| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
 | Enviar confirmación | Script | Log |
 | Notificar Cierre | Script | Log y `resultado = "cancelado"` |
 | Liberar Aula Virtual | Script (compensación) | Log |
@@ -92,7 +92,7 @@ Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cer
 | `fechaFinPropuesta` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
 | `plazoRecordatorio` | String (duración ISO-8601) | "Enviar propuesta" (`P5D`, si no existe) | Timer "5 días" |
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
-| `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" |
+| `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
 

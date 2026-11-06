@@ -45,7 +45,7 @@ class CreateCourseOnAcceptanceTest {
     }
 
     @Test
-    void creaCursoConLaPropuestaAceptadaYNoDuplicaAlReintentarLaActividad() throws SQLException {
+    void creaCursoConLaFechaAcordadaYNoDuplicaAlReintentarLaActividad() throws SQLException {
         Map<String, Object> variables = variables(1L);
 
         delegate.execute(execution("proc-1", variables));
@@ -57,13 +57,14 @@ class CreateCourseOnAcceptanceTest {
             cursos.next();
             assertEquals(1, cursos.getInt(1));
             var curso = statement.executeQuery(
-                    "SELECT c.nombre, c.programa, c.presupuesto, c.empresa_id, c.id, s.curso_id "
+                    "SELECT c.nombre, c.programa, c.presupuesto, c.empresa_id, c.id, c.fecha_inicio, s.curso_id "
                             + "FROM cursos c JOIN solicitudes s ON s.curso_id = c.id");
             curso.next();
             assertEquals("BPMN", curso.getString("nombre"));
             assertEquals("Cloud", curso.getString("programa"));
             assertEquals(5000, curso.getInt("presupuesto"));
             assertEquals(7L, curso.getLong("empresa_id"));
+            assertEquals("2027-01-15", curso.getDate("fecha_inicio").toString());
             assertEquals(curso.getLong("id"), variables.get("cursoId"));
         }
     }
@@ -73,12 +74,21 @@ class CreateCourseOnAcceptanceTest {
         assertThrows(FlowableException.class, () -> delegate.execute(execution("proc-2", variables(99L))));
     }
 
+    @Test
+    void noUsaFechaPosibleSiFaltaLaFechaAcordada() {
+        Map<String, Object> variables = variables(1L);
+        variables.remove("fechaInicio");
+
+        assertThrows(FlowableException.class, () -> delegate.execute(execution("proc-3", variables)));
+    }
+
     private Map<String, Object> variables(long solicitudId) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("solicitudId", solicitudId);
         variables.put("programa", "Cloud");
         variables.put("presupuesto", 5000L);
-        variables.put("fechaInicioPosible", new Date(1_800_000_000_000L));
+        variables.put("fechaInicioPosible", new Date(1_800_432_000_000L));
+        variables.put("fechaInicio", "2027-01-15T09:00:00");
         variables.put("fechaFinPropuesta", new Date(1_800_900_000_000L));
         return variables;
     }

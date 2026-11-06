@@ -6,6 +6,9 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.function.Supplier;
 
 import org.flowable.common.engine.api.FlowableException;
@@ -40,7 +43,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
     public void execute(DelegateExecution execution) {
         Long solicitudId = asLong(execution.getVariable("solicitudId"));
         Long budget = asLong(execution.getVariable("presupuesto"));
-        java.util.Date start = (java.util.Date) execution.getVariable("fechaInicioPosible");
+        Date start = asSqlDate(execution.getVariable("fechaInicio"));
         java.util.Date end = (java.util.Date) execution.getVariable("fechaFinPropuesta");
         String program = (String) execution.getVariable("programa");
         if (solicitudId == null || budget == null || start == null || end == null || program == null) {
@@ -64,7 +67,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
     }
 
     private long crearYVincular(Connection connection, String processInstanceId, long solicitudId, long budget,
-            java.util.Date start, java.util.Date end, String program) throws SQLException {
+            Date start, java.util.Date end, String program) throws SQLException {
         long empresaId;
         String tematica;
         String descripcion;
@@ -93,7 +96,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
                 insert.setString(3, descripcion);
                 insert.setString(4, program);
                 insert.setInt(5, Math.toIntExact(budget));
-                insert.setDate(6, new Date(start.getTime()));
+                insert.setDate(6, start);
                 insert.setDate(7, new Date(end.getTime()));
                 insert.setString(8, processInstanceId);
                 insert.executeUpdate();
@@ -123,6 +126,27 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
 
     private static Long asLong(Object value) {
         return value instanceof Number ? ((Number) value).longValue() : null;
+    }
+
+    private static Date asSqlDate(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (!(value instanceof String)) {
+            throw new FlowableException("fechaInicio debe ser un texto con formato ISO-8601.");
+        }
+        String dateValue = ((String) value).trim();
+        try {
+            LocalDate date;
+            try {
+                date = LocalDate.from(DateTimeFormatter.ISO_DATE_TIME.parse(dateValue));
+            } catch (DateTimeParseException exception) {
+                date = LocalDate.parse(dateValue, DateTimeFormatter.ISO_DATE);
+            }
+            return Date.valueOf(date);
+        } catch (DateTimeParseException exception) {
+            throw new FlowableException("fechaInicio debe tener un formato de fecha ISO-8601 válido.", exception);
+        }
     }
 
     private static Connection connectFromEnvironment() {
