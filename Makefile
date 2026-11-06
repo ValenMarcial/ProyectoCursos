@@ -6,7 +6,7 @@ FLOWABLE_REST := http://127.0.0.1:8080/flowable-ui/process-api
 FLOWABLE_USER ?= admin
 FLOWABLE_PASSWORD ?= test
 
-.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy
+.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy seed import
 
 # Dejar en target/flowable-lib el .jar y las librerías de Drools que Flowable UI no trae
 build:
@@ -33,6 +33,15 @@ deploy:
 	curl -sS --fail-with-body -u $(FLOWABLE_USER):$(FLOWABLE_PASSWORD) \
 		-F "file=@target/deploy.zip" \
 		$(FLOWABLE_REST)/repository/deployments
+
+# Crear usuarios y grupos, corregir las flechas de compensación del BPMN e importarlo al Modeler.
+# Pide usuario y contraseña de Flowable para la importación.
+seed:
+	mvn -q compile exec:java -Dexec.mainClass=flowable.seed.Main
+
+# Solo corregir el BPMN e importarlo al Modeler, sin tocar usuarios ni grupos.
+import:
+	mvn -q compile exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
 
 dev-down:
 	$(DEV_COMPOSE) down
