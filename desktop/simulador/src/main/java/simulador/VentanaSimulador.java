@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.Box;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
@@ -22,7 +23,6 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
@@ -37,6 +37,7 @@ import javax.swing.Timer;
 public class VentanaSimulador extends JFrame {
     private static final long serialVersionUID = 1L;
     private static final int REFRESCO_MS = 5000;
+    private static final String TITULO_DERECHA = "Comunicaciones habilitadas";
 
     private final JTextField urlCampo = new JTextField(32);
     private final JTextField usuarioCampo = new JTextField(8);
@@ -49,6 +50,8 @@ public class VentanaSimulador extends JFrame {
     private final JButton enviar = new JButton("Enviar comunicación");
     private final JCheckBox autoRefresco = new JCheckBox("Actualizar automáticamente", true);
     private final JLabel estado = new JLabel(" ");
+    private final javax.swing.JTextArea registro = new javax.swing.JTextArea(5, 40);
+    private final JPanel panelDerecha = new JPanel(new BorderLayout(0, 8));
 
     private final Map<String, JTextField> camposActuales = new LinkedHashMap<>();
     private List<Comunicacion> habilitadasActuales = new ArrayList<>();
@@ -72,6 +75,7 @@ public class VentanaSimulador extends JFrame {
         enviar.addActionListener(e -> enviarElegida());
         tabla.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && !cargandoLista) {
+                actualizarTitulo();
                 cargarHabilitadas(true);
             }
         });
@@ -83,7 +87,7 @@ public class VentanaSimulador extends JFrame {
             }
         }).start();
 
-        setMinimumSize(new Dimension(820, 460));
+        setMinimumSize(new Dimension(1000, 620));
         pack();
         setLocationRelativeTo(null);
     }
@@ -107,7 +111,7 @@ public class VentanaSimulador extends JFrame {
         JPanel izquierda = new JPanel(new BorderLayout(0, 4));
         izquierda.setBorder(BorderFactory.createTitledBorder("Solicitudes"));
         JScrollPane scroll = new JScrollPane(tabla);
-        scroll.setPreferredSize(new Dimension(420, 300));
+        scroll.setPreferredSize(new Dimension(640, 300));
         izquierda.add(scroll, BorderLayout.CENTER);
         JButton actualizar = new JButton("Actualizar");
         actualizar.addActionListener(e -> {
@@ -120,8 +124,8 @@ public class VentanaSimulador extends JFrame {
         izquierda.add(acciones, BorderLayout.SOUTH);
 
         panelComunicaciones.setLayout(new BoxLayout(panelComunicaciones, BoxLayout.Y_AXIS));
-        JPanel derecha = new JPanel(new BorderLayout(0, 8));
-        derecha.setBorder(BorderFactory.createTitledBorder("Comunicaciones habilitadas"));
+        JPanel derecha = panelDerecha;
+        derecha.setBorder(BorderFactory.createTitledBorder(TITULO_DERECHA));
         JPanel arriba = new JPanel(new BorderLayout(0, 8));
         arriba.add(panelComunicaciones, BorderLayout.NORTH);
         arriba.add(panelCampos, BorderLayout.CENTER);
@@ -138,10 +142,32 @@ public class VentanaSimulador extends JFrame {
     }
 
     private JPanel construirPie() {
+        registro.setEditable(false);
+        registro.setFont(new java.awt.Font(java.awt.Font.MONOSPACED, java.awt.Font.PLAIN, 12));
+        JScrollPane scrollRegistro = new JScrollPane(registro);
+        scrollRegistro.setBorder(BorderFactory.createTitledBorder("Registro"));
+
         JPanel pie = new JPanel(new BorderLayout());
-        pie.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-        pie.add(estado, BorderLayout.CENTER);
+        pie.setBorder(BorderFactory.createEmptyBorder(0, 8, 6, 8));
+        pie.add(scrollRegistro, BorderLayout.CENTER);
+        JPanel linea = new JPanel(new BorderLayout());
+        linea.setBorder(BorderFactory.createEmptyBorder(4, 4, 0, 4));
+        linea.add(estado, BorderLayout.CENTER);
+        pie.add(linea, BorderLayout.SOUTH);
         return pie;
+    }
+
+    /** Agrega una línea con la hora al registro de lo que hizo el simulador. */
+    private void registrar(String texto) {
+        registro.append(java.time.LocalTime.now().withNano(0) + "  " + texto + "\n");
+        registro.setCaretPosition(registro.getDocument().getLength());
+    }
+
+    private void actualizarTitulo() {
+        Solicitud solicitud = tabla.seleccionada();
+        String titulo = solicitud == null ? TITULO_DERECHA : solicitud.nombre() + " – " + TITULO_DERECHA.toLowerCase();
+        panelDerecha.setBorder(BorderFactory.createTitledBorder(titulo));
+        panelDerecha.repaint();
     }
 
     // ---- Conexión y carga de datos --------------------------------------------------------
@@ -150,6 +176,7 @@ public class VentanaSimulador extends JFrame {
         simulador = new Simulador(new FlowableClient(
                 urlCampo.getText().trim(), usuarioCampo.getText().trim(), new String(passwordCampo.getPassword())));
         mostrar("Conectando...", false);
+        registrar("Conectando a " + urlCampo.getText().trim());
         refrescarSolicitudes();
     }
 
@@ -162,7 +189,7 @@ public class VentanaSimulador extends JFrame {
         new SwingWorker<List<Solicitud>, Void>() {
             @Override
             protected List<Solicitud> doInBackground() {
-                return actual.solicitudes();
+                return actual.solicitudesConEtapa();
             }
 
             @Override
@@ -186,6 +213,7 @@ public class VentanaSimulador extends JFrame {
         } finally {
             cargandoLista = false;
         }
+        actualizarTitulo();
         if (habiaSeleccion && tabla.seleccionada() == null) {
             mostrarHabilitadas(new ArrayList<>(), true);
         }
@@ -232,23 +260,45 @@ public class VentanaSimulador extends JFrame {
         ButtonGroup grupo = new ButtonGroup();
         elegida = null;
         for (Comunicacion comunicacion : habilitadas) {
-            JRadioButton opcion = new JRadioButton(comunicacion.titulo());
+            BotonComunicacion opcion = new BotonComunicacion(comunicacion.titulo(), color(comunicacion));
             opcion.addActionListener(e -> elegir(comunicacion));
             grupo.add(opcion);
             panelComunicaciones.add(opcion);
+            panelComunicaciones.add(Box.createVerticalStrut(8));
             if (comunicacion == anterior) {
                 opcion.setSelected(true);
                 elegida = comunicacion;
             }
         }
         if (habilitadas.isEmpty()) {
-            String texto = tabla.seleccionada() == null
-                    ? "Elegí una solicitud." : "Ninguna comunicación habilitada en este momento.";
-            panelComunicaciones.add(new JLabel(texto));
+            Solicitud elegidaFila = tabla.seleccionada();
+            String texto = "Elegí una solicitud.";
+            if (elegidaFila != null) {
+                texto = "La empresa no tiene nada para enviar ahora.";
+                if (elegidaFila.etapa() != null) {
+                    texto += " " + elegidaFila.etapa().texto() + ".";
+                }
+            }
+            panelComunicaciones.add(new JLabel("<html><body style='width:300px'>" + texto + "</body></html>"));
         }
         armarCampos();
         panelComunicaciones.revalidate();
         panelComunicaciones.repaint();
+    }
+
+    private static Color color(Comunicacion comunicacion) {
+        switch (comunicacion) {
+            case ACEPTACION:
+                return new Color(0x2E7D32);
+            case RECHAZO:
+                return new Color(0xC62828);
+            case MODIFICACIONES:
+                return new Color(0xEF8F00);
+            case NOMINA:
+                return new Color(0x1565C0);
+            default:
+                return new Color(0x6D4C41);
+        }
     }
 
     private void elegir(Comunicacion comunicacion) {
@@ -323,10 +373,12 @@ public class VentanaSimulador extends JFrame {
                 try {
                     get();
                     mostrar("Enviado: " + comunicacion.titulo() + " (" + solicitud.nombre() + ").", false);
+                    registrar("Enviado a " + solicitud.nombre() + ": " + comunicacion.titulo());
                     refrescarSolicitudes();
                     cargarHabilitadas(true);
                 } catch (Exception e) {
                     mostrar(mensaje(e), true);
+                    registrar("ERROR al enviar " + comunicacion.titulo() + " a " + solicitud.nombre() + ": " + mensaje(e));
                     enviar.setEnabled(elegida != null);
                 }
             }
@@ -348,6 +400,10 @@ public class VentanaSimulador extends JFrame {
 
     /** Abre la ventana en el hilo de la interfaz. */
     public static void abrir(String url, String usuario, String password) {
-        SwingUtilities.invokeLater(() -> new VentanaSimulador(url, usuario, password).setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            VentanaSimulador ventana = new VentanaSimulador(url, usuario, password);
+            ventana.setVisible(true);
+            ventana.conectar();
+        });
     }
 }
