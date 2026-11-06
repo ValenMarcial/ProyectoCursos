@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- "Reservar aula" con su compensación "Liberar Aula" y un catch del error SIN_AULAS. -->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <error id="sinAulas" errorCode="SIN_AULAS"/>
+  <process id="test-reserva-aula" isExecutable="true">
+    <startEvent id="inicio"/>
+    <serviceTask id="reservarAula" name="Reservar aula" flowable:class="flowable.classroom.ReserveClassroom"/>
+    <!-- El boundary de error va antes que el de compensación: en el orden inverso Flowable 6.8 no encuentra
+         la actividad de la compensación ("Parent activity for boundary compensation event could not be found") -->
+    <boundaryEvent id="errorSinAulas" attachedToRef="reservarAula">
+      <errorEventDefinition errorRef="sinAulas"/>
+    </boundaryEvent>
+    <boundaryEvent id="liberarRecursos" attachedToRef="reservarAula" cancelActivity="false">
+      <compensateEventDefinition/>
+    </boundaryEvent>
+    <serviceTask id="liberarAula" name="Liberar Aula" isForCompensation="true" flowable:class="flowable.classroom.ReleaseClassroom"/>
+    <userTask id="cursoEnPreparacion"/>
+    <intermediateThrowEvent id="compensar">
+      <compensateEventDefinition/>
+    </intermediateThrowEvent>
+    <userTask id="recursosLiberados"/>
+    <userTask id="sinAulasDisponibles"/>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="reservarAula"/>
+    <sequenceFlow id="f2" sourceRef="reservarAula" targetRef="cursoEnPreparacion"/>
+    <sequenceFlow id="f3" sourceRef="cursoEnPreparacion" targetRef="compensar"/>
+    <sequenceFlow id="f4" sourceRef="compensar" targetRef="recursosLiberados"/>
+    <sequenceFlow id="f5" sourceRef="recursosLiberados" targetRef="fin"/>
+    <sequenceFlow id="f6" sourceRef="errorSinAulas" targetRef="sinAulasDisponibles"/>
+    <sequenceFlow id="f7" sourceRef="sinAulasDisponibles" targetRef="fin"/>
+    <!-- Para Flowable la compensación se vincula con una association, no con un sequenceFlow -->
+    <association id="a1" sourceRef="liberarRecursos" targetRef="liberarAula" associationDirection="One"/>
+  </process>
+</definitions>
