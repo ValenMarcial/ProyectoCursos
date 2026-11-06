@@ -3,6 +3,7 @@ package flowable.seed;
 import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.idm.engine.IdmEngine;
 import org.flowable.idm.engine.IdmEngineConfiguration;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 public class Main {
@@ -81,8 +82,9 @@ public class Main {
                     String password = scanner.nextLine();
 
                     // Importar el modelo BPMN al Modeler de Flowable
+                    // Se usa el archivo del repo (no el copiado a target) para poder corregirlo en el lugar
                     ModelerImporter.importModelToModeler(
-                            "processes/ProyectoCursos.bpmn20.xml",
+                            Path.of("src/main/resources/processes/ProyectoCursos.bpmn20.xml"),
                             user,
                             password);
                 }

@@ -8,7 +8,7 @@
   <message id="msgRechazo" name="msgRechazo"></message>
   <message id="msgModificaciones" name="msgModificaciones"></message>
   <message id="msgCancelacion" name="msgCancelacion"></message>
-  <process id="process-proyecto-curso" name="Institución de capacitación" isExecutable="true">
+  <process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
     <laneSet id="laneSet_process-proyecto-curso">
       <lane id="sid-16EED2DB-CECD-46D1-B6ED-AD042E6C8943" name="Administración">
         <flowNodeRef>sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79</flowNodeRef>
@@ -124,9 +124,7 @@
       <script><![CDATA[execution.setVariable("recordatoriosEnviados", execution.getVariable("recordatoriosEnviados") + 1); println "Recordatorio enviado: " + execution.processInstanceId]]></script>
     </scriptTask>
     <endEvent id="sid-4AE2563B-27A7-4FE6-8F56-F852E09E7AD5" name="Solicitud cerrada"></endEvent>
-    <scriptTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[println "Acceso habilitado: " + execution.processInstanceId]]></script>
-    </scriptTask>
+    <serviceTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" flowable:class="flowable.proposal.CreateCourseOnAcceptance"></serviceTask>
     <subProcess id="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF" name="Preparar curso">
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
@@ -182,11 +180,11 @@
       <sequenceFlow id="sid-E2B47526-371F-47AF-8C32-E6F5C0519458" sourceRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" targetRef="sid-DD45928D-A46B-4C2B-8803-2D0B1AF12979"></sequenceFlow>
       <sequenceFlow id="sid-7B95748F-58AF-456D-A8CD-8DB8475E0044" sourceRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" targetRef="sid-DD45928D-A46B-4C2B-8803-2D0B1AF12979"></sequenceFlow>
       <sequenceFlow id="sid-64C3EC05-83FF-4257-A85F-B7E7B726E97B" sourceRef="sid-065649F8-9F01-4C34-B290-C37474CC479D" targetRef="sid-DD45928D-A46B-4C2B-8803-2D0B1AF12979"></sequenceFlow>
-      <sequenceFlow id="sid-E789439A-BAF1-43A8-8CA7-EA9C357EAFA9" sourceRef="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" targetRef="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E"></sequenceFlow>
-      <sequenceFlow id="sid-E4D85088-E658-444F-96E5-77B8878DD596" sourceRef="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" targetRef="sid-CF527638-CD0A-48BF-9EF6-DDB557838793"></sequenceFlow>
       <sequenceFlow id="sid-3C97E828-12AA-47B5-8A72-50EA00ED7BC4" name="Todos los recursos seleccionados listos" sourceRef="sid-DD45928D-A46B-4C2B-8803-2D0B1AF12979" targetRef="sid-420D072A-C42B-404D-BBDA-B884DD90C410"></sequenceFlow>
       <sequenceFlow id="sid-B26B971B-ED43-4601-B1FA-9791F90C645E" sourceRef="sid-420D072A-C42B-404D-BBDA-B884DD90C410" targetRef="sid-85D22149-CBE0-424A-9E0D-9C03CFB275CD"></sequenceFlow>
-      <sequenceFlow id="sid-4E267965-16EE-4BEF-AE22-F345834D8441" sourceRef="sid-79D40E03-33A5-476E-AC89-3F44F73680A0" targetRef="sid-892710F9-B2AE-4002-82D0-131829D8FA29"></sequenceFlow>
+      <association id="sid-E789439A-BAF1-43A8-8CA7-EA9C357EAFA9" sourceRef="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" targetRef="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" associationDirection="One"></association>
+      <association id="sid-E4D85088-E658-444F-96E5-77B8878DD596" sourceRef="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" targetRef="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" associationDirection="One"></association>
+      <association id="sid-4E267965-16EE-4BEF-AE22-F345834D8441" sourceRef="sid-79D40E03-33A5-476E-AC89-3F44F73680A0" targetRef="sid-892710F9-B2AE-4002-82D0-131829D8FA29" associationDirection="One"></association>
     </subProcess>
     <boundaryEvent id="sid-E73C6721-C020-4CF3-A3FB-1C279A1153DD" attachedToRef="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF">
       <errorEventDefinition flowable:errorVariableLocalScope="true" flowable:errorVariableTransient="true"></errorEventDefinition>

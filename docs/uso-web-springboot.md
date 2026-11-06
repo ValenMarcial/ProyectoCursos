@@ -89,7 +89,7 @@ Guardá el `processInstanceId` para localizar la instancia en Flowable. Si Postg
 
 ## 3. Qué ocurre después
 
-Una vez iniciada la instancia, el proceso continúa en Flowable según el BPMN. El jefe administrativo completa allí la tarea **“Registrar y Elaborar propuesta”** con programa, presupuesto y fechas posibles. En esta entrega, **“Habilitar acceso de la empresa”** sigue simulada y no crea ni asocia un curso; esa funcionalidad queda para otra PR. El paso **“Enviar propuesta”** actualmente solo registra datos en los logs; no manda un correo.
+Una vez iniciada la instancia, el proceso continúa en Flowable según el BPMN. El jefe administrativo completa allí la tarea **“Registrar y Elaborar propuesta”** con programa, presupuesto y fechas posibles. Cuando la empresa acepta, **“Habilitar acceso de la empresa”** crea el curso y guarda su ID en `solicitudes.curso_id`; el motor de Flowable necesita `SPRING_DATASOURCE_URL/USERNAME/PASSWORD`. El paso **“Enviar propuesta”** actualmente solo registra datos en los logs; no manda un correo.
 
 Esta API termina su responsabilidad al iniciar el proceso. No tiene una ruta para registrar `ACEPTACION`, `RECHAZO` o `MODIFICACIONES`; la recepción de esos mensajes debe integrarse por separado.
 

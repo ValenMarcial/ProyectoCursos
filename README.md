@@ -91,7 +91,7 @@ curl -i -X POST http://127.0.0.1:8081/api/solicitudes \
   }'
 ```
 
-El backend busca o crea la empresa por nombre, guarda una fila en `solicitudes` y vincula esa fila con el `processInstanceId` y `businessKey` devueltos por Flowable. En esta entrega no crea cursos: todavía no hay una relación entre `solicitudes` y `cursos`, y `Habilitar acceso de la empresa` sigue simulada. Ante un timeout en el inicio intenta reconciliar consultando Flowable por la clave; si no confirma el resultado, devuelve `502` con esa clave y estado `PENDIENTE`. Verificá una solicitud pendiente antes de reenviar. `plazoRecordatorio` es opcional. **El plazo normal del proceso es de cinco días (`P5D`):** si omitís la variable, la tarea BPMN `Enviar propuesta` la establece antes de activar el timer. Para probar sin esperar cinco días, podés pasar una duración corta como `PT1M` en el JSON; ese valor se usa solo para esa instancia.
+El backend busca o crea la empresa por nombre, guarda una fila en `solicitudes` y vincula esa fila con el `processInstanceId` y `businessKey` devueltos por Flowable. El curso se crea más adelante: cuando la empresa acepta, `Habilitar acceso de la empresa` lo crea y guarda su ID en `solicitudes.curso_id`. Ante un timeout en el inicio intenta reconciliar consultando Flowable por la clave; si no confirma el resultado, devuelve `502` con esa clave y estado `PENDIENTE`. Verificá una solicitud pendiente antes de reenviar. `plazoRecordatorio` es opcional. **El plazo normal del proceso es de cinco días (`P5D`):** si omitís la variable, la tarea BPMN `Enviar propuesta` la establece antes de activar el timer. Para probar sin esperar cinco días, podés pasar una duración corta como `PT1M` en el JSON; ese valor se usa solo para esa instancia.
 
 Este backend no registra las respuestas posteriores de la empresa ni autentica a quien envía la solicitud. El envío de la propuesta también continúa simulado mediante un log de Flowable.
 
@@ -231,7 +231,7 @@ Además de las tablas `ACT_*` que administra Flowable, el schema define cuatro t
 
 La relación entre `solicitudes` e instancias de Flowable es **1:1**: cada formulario inicia su propia instancia. En esta entrega todavía no existe una relación entre `solicitudes` y `cursos`.
 
-`estado` refleja el avance del curso y lo actualiza el Execution Listener al cerrar la instancia. Valores permitidos: `solicitado`, `en_preparacion`, `confirmado`, `pendiente_de_inicio`, `en_desarrollo`, `en_elaboracion_informe`, `finalizado`, `cancelado`, `rechazado`, `cerrado_por_falta_de_respuesta` y `no_viable`.
+`estado` refleja el avance del curso y lo actualiza el Execution Listener al cerrar la instancia. Valores permitidos: `en_preparacion`, `confirmado`, `pendiente_de_inicio`, `en_desarrollo`, `en_elaboracion_informe`, `finalizado`, `cancelado`, `rechazado`, `cerrado_por_falta_de_respuesta` y `no_viable`.
 
 La solicitud no tiene un estado de curso: su integración con Flowable se controla por separado. Los estados de `cursos` corresponden al ciclo de vida de los cursos existentes.
 
