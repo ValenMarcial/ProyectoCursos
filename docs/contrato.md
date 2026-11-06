@@ -158,6 +158,16 @@ Después de resolver la delegación y completar la tarea de definición, `Desarr
 |---|---|---|---|
 | `docenteSeleccionado` | String (ID de usuario) | Delegación de "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
 
+## Asignaciones directas de tareas
+
+Las siguientes tareas tienen responsables fijos en el modelo BPMN:
+
+| Tarea | Responsable |
+|---|---|
+| Revisar propuesta | `jefeAdministrativo` |
+| Enviar informe a empresa y Archivar expediente | `jefeAdministrativo` |
+| Elaborar informe de resultados | `jefeDeEquipo` |
+
 Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
 
 ## Pendiente para que el proceso corra completo
