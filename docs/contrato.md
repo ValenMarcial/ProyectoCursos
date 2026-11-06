@@ -65,8 +65,40 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Enviar confirmación | Script | Log |
 | Notificar Cierre | Script | Log y `resultado = "cancelado"` |
 | Liberar Aula Virtual | Script (compensación) | Log |
-| Reservar aula | Service task (expresión) | `aulaAsignada = "Aula 1"`. Falta la clase Java que simule el web service y lance el error por falta de aulas (escenario 7) |
-| Liberar Aula | Service task (expresión, compensación) | Elimina `aulaAsignada` |
+| Reservar aula | Service task (`flowable.classroom.ReserveClassroom`) | Simula el web service de aulas: asigna la primera aula libre en `aulaAsignada` o lanza el error `SIN_AULAS` (escenario 7). Ver "Reservar y liberar aula" |
+| Liberar Aula | Service task (`flowable.classroom.ReleaseClassroom`, compensación) | Simula la liberación en el web service y elimina `aulaAsignada` |
+
+## Reservar y liberar aula
+
+El web service de aulas está simulado (enunciado 4.1.3) y deja el log `[WS Aulas]`.
+
+- **Aulas:** hay dos, `Aula 1` y `Aula 2`.
+- **Cuándo un aula está ocupada:** mientras alguna instancia activa la tenga en `aulaAsignada`.
+- **Reservar aula** asigna la primera libre. Si no queda ninguna, lanza `BpmnError("SIN_AULAS")`.
+- **Escenario 7:** con dos cursos que ya reservaron aula, el tercero que llega a "Reservar aula" se queda sin aula.
+- **Liberar Aula** elimina `aulaAsignada`, con lo que el aula vuelve a quedar libre.
+
+Cambios en el BPMN:
+
+```xml
+<!-- dentro de <definitions>, junto a los <message> -->
+<error id="errSinAulas" errorCode="SIN_AULAS"/>
+
+<serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:class="flowable.classroom.ReserveClassroom"/>
+<serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true" flowable:class="flowable.classroom.ReleaseClassroom"/>
+```
+
+Flowable 6.8 vincula el boundary de compensación con su tarea mediante una `association`, no mediante un `sequenceFlow`. Con `sequenceFlow`, la instancia falla al llegar a la tarea con el error `Parent activity for boundary compensation event could not be found`. Lo reproduje en un test aislado.
+
+Hay que reemplazar los tres `sequenceFlow` que salen de los boundaries "Liberar recursos" por associations dentro del `<subProcess>`:
+
+```xml
+<association id="assocLiberarAula" sourceRef="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" targetRef="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" associationDirection="One"/>
+<association id="assocLiberarAulaVirtual" sourceRef="sid-79D40E03-33A5-476E-AC89-3F44F73680A0" targetRef="sid-892710F9-B2AE-4002-82D0-131829D8FA29" associationDirection="One"/>
+<association id="assocLiberarEquipamiento" sourceRef="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" targetRef="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" associationDirection="One"/>
+```
+
+**Manejo de `SIN_AULAS`:** el boundary de error del subproceso "Preparar curso" no tiene `errorRef`, así que hoy ya atrapa cualquier error. Eso incluye `SIN_AULAS`, que termina en "Notificar Cierre" con `resultado = "cancelado"`. Si se agrega un boundary de error propio sobre "Reservar aula", tiene que declararse antes que el boundary de compensación. En el orden inverso, Flowable 6.8 falla con el mismo error de arriba.
 
 ## Registrar y elaborar propuesta
 
@@ -105,7 +137,7 @@ Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los cam
 - Condiciones del gateway "Recursos necesarios" (por ejemplo, `${aulaFisica}`, `${aulaVirtual}`, `${equipamiento}`).
 - `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
 - Asignaciones y grupos candidatos de las demás tareas de usuario.
-- La clase Java de "Reservar aula" con el error por falta de aulas.
+- Enganchar en el BPMN las clases de "Reservar aula" y "Liberar Aula", y vincular las compensaciones con `association` (ver "Reservar y liberar aula").
 
 # Sección de viabilidad
 
