@@ -26,7 +26,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
             "SELECT id FROM cursos WHERE instancia_flowable_id = ?";
     private static final String INSERT_CURSO =
             "INSERT INTO cursos (empresa_id, nombre, descripcion, programa, presupuesto, fecha_inicio, fecha_fin, "
-                    + "instancia_flowable_id, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'solicitado')";
+                    + "instancia_flowable_id, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'en_preparacion')";
     private static final String UPDATE_SOLICITUD = "UPDATE solicitudes SET curso_id = ? WHERE id = ?";
 
     private final Supplier<Connection> connections;

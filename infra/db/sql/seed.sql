@@ -110,7 +110,7 @@ FROM (VALUES
     '2026-05-15'::DATE,
     NULL,
     NULL,
-    'solicitado'
+    'en_preparacion'
   )
 ) AS seed(empresa_id, nombre, descripcion, programa, presupuesto, fecha_inicio,
           fecha_fin, resultados, instancia_flowable_id, estado)

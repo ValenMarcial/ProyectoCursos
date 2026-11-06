@@ -40,11 +40,10 @@ CREATE TABLE IF NOT EXISTS cursos (
   fecha_fin DATE NOT NULL,
   resultados VARCHAR(255),
   instancia_flowable_id VARCHAR(64) UNIQUE,
-  estado TEXT NOT NULL DEFAULT 'solicitado',
+  estado TEXT NOT NULL DEFAULT 'en_preparacion',
   CONSTRAINT fechas_validas CHECK (fecha_inicio <= fecha_fin),
   CONSTRAINT cursos_estado_valido CHECK (
     estado IN (
-      'solicitado',
       'en_preparacion',
       'confirmado',
       'pendiente_de_inicio',
