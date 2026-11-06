@@ -119,7 +119,7 @@
     </intermediateCatchEvent>
     <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <exclusiveGateway id="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" name="¿Se enviaron 2 recordatorios?"></exclusiveGateway>
-    <userTask id="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" name="Archivar solicitud" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" name="Archivar solicitud" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <scriptTask id="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" name="Enviar recordatorio" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[execution.setVariable("recordatoriosEnviados", execution.getVariable("recordatoriosEnviados") + 1); println "Recordatorio enviado: " + execution.processInstanceId]]></script>
     </scriptTask>
