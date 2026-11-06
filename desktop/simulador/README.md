@@ -45,8 +45,15 @@ mvn -q compile exec:java -Dexec.args="enviar <instanciaId> RECHAZO"
 
 Por defecto usa `http://127.0.0.1:8080/flowable-ui/process-api` con `admin`/`test`. Se cambia con las variables de entorno `FLOWABLE_REST_URL`, `FLOWABLE_USER` y `FLOWABLE_PASSWORD`.
 
+## Probado contra Flowable real
+
+Con `make dev-up` y `make deploy`, iniciando solicitudes con `POST /api/solicitudes` y completando "Registrar y Elaborar propuesta":
+
+- Aceptación, rechazo, nómina y cancelación se envían bien desde la ventana y desde la consola; el proceso avanza y guarda `fechaInicio` y `participantes`.
+- La fecha de aceptación se envía con zona horaria: si se escribe sin zona se usa la de esta máquina. Se comprobó que Flowable lee una fecha sin zona como UTC, así que una hora local quedaba corrida.
+- Después de la cancelación la instancia queda detenida en el subproceso "Cancelación" (no termina ni define `resultado`). Es del modelo BPMN, no del simulador.
+
 ## Pendiente
 
-- Probarlo contra un Flowable real: hasta ahora la lógica se probó contra un servidor falso y la ventana solo con una prueba de humo (se construye sin errores). Las instancias deben iniciarse con `POST /api/solicitudes` del backend para que la aceptación funcione de punta a punta.
 - "Recibir nómina" es un receive task identificado por el id de la actividad (`Comunicacion.NOMINA`). Si cambia el id en el BPMN, hay que actualizarlo acá. Alternativa más estable: convertirlo en un evento de mensaje `msgNomina` (lo decide el dueño del BPMN).
-- `participantes` y `observaciones` no están todavía en `docs/contrato.md`.
+- La lista muestra también las solicitudes que ya no esperan nada de la empresa.

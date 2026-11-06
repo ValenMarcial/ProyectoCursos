@@ -17,7 +17,7 @@ Todos los mensajes usan el mismo valor como id y como name.
 | `msgSolicitud` | Inicio "Solicitud recibida" | Sitio web, al enviar el formulario de solicitud |
 | `msgAceptacion` | Aceptación (gateway "Esperar respuesta") | Simulador externo. Tiene que enviar `fechaInicio` |
 | `msgRechazo` | Rechazo (gateway "Esperar respuesta") | Simulador externo |
-| `msgModificaciones` | Modificaciones (gateway "Esperar respuesta") | Simulador externo, con las observaciones |
+| `msgModificaciones` | Modificaciones (gateway "Esperar respuesta") | Simulador externo. Envía `observaciones` |
 | `msgCancelacion` | Inicio del subproceso de evento "Cancelación", dentro de "Preparar curso" | Simulador |
 
 La aplicación web usa el backend local (`http://127.0.0.1:8081`) únicamente para iniciar solicitudes. El backend se configura desde el POM raíz con el perfil Maven `backend`; el perfil predeterminado `flowable-engine` conserva por separado las fuentes y dependencias del motor. El backend se comunica con Flowable y no expone las credenciales del motor al navegador. Su única ruta es:
@@ -143,6 +143,8 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
 | `plazoRecordatorio` | String (duración ISO-8601) | "Enviar propuesta" (`P5D`, si no existe) | Timer "5 días" |
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
+| `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
+| `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
 

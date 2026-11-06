@@ -1,6 +1,9 @@
 package simulador;
 
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -75,15 +78,28 @@ public class Simulador {
             }
             valor = valor.trim();
             if (comunicacion == Comunicacion.ACEPTACION && campo.variable().equals("fechaInicio")) {
-                try {
-                    LocalDateTime.parse(valor);
-                } catch (DateTimeParseException e) {
-                    throw new IllegalArgumentException("fechaInicio debe tener formato ISO-8601, por ejemplo "
-                            + "2026-11-20T09:00:00 (recibido: " + valor + ").");
-                }
+                valor = normalizarFecha(valor, ZoneId.systemDefault());
             }
             variables.put(campo.variable(), valor);
         }
         return variables;
+    }
+
+    /**
+     * Devuelve la fecha con zona horaria. Flowable interpreta una fecha sin zona con la hora del servidor
+     * (UTC en Docker), así que una hora local quedaría corrida. Si el usuario no indica zona, se usa la
+     * de esta máquina.
+     */
+    static String normalizarFecha(String valor, ZoneId zonaLocal) {
+        try {
+            return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(OffsetDateTime.parse(valor));
+        } catch (DateTimeParseException conZona) {
+            try {
+                return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(LocalDateTime.parse(valor).atZone(zonaLocal));
+            } catch (DateTimeParseException sinZona) {
+                throw new IllegalArgumentException("fechaInicio debe tener formato ISO-8601, por ejemplo "
+                        + "2026-11-20T09:00:00 (recibido: " + valor + ").");
+            }
+        }
     }
 }

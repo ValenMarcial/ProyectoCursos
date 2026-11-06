@@ -79,7 +79,7 @@ class SimuladorTest {
         respuestas.put("GET /flowable-ui/process-api/runtime/process-instances?processDefinitionKey=process-proyecto-curso"
                 + "&includeProcessVariables=true&size=200&sort=startTime&order=desc",
                 "{\"data\":[{\"id\":\"inst-1\",\"businessKey\":\"solicitud-abc\",\"variables\":["
-                        + "{\"name\":\"nombre\",\"value\":\"Curso BPMN\"},"
+                        + "{\"name\":\"empresaNombre\",\"value\":\"Acme SA\"},"
                         + "{\"name\":\"empresaId\",\"value\":7}]},"
                         + "{\"id\":\"inst-2\",\"businessKey\":null,\"variables\":[]}]}");
 
@@ -88,7 +88,7 @@ class SimuladorTest {
         assertEquals(2, solicitudes.size());
         assertEquals("inst-1", solicitudes.get(0).id());
         assertEquals("solicitud-abc", solicitudes.get(0).businessKey());
-        assertEquals("Curso BPMN", solicitudes.get(0).nombre());
+        assertEquals("Acme SA", solicitudes.get(0).nombre());
         assertEquals(7, ((Number) solicitudes.get(0).variables().get("empresaId")).intValue());
         assertEquals(null, solicitudes.get(1).businessKey());
         assertEquals("(sin nombre)", solicitudes.get(1).nombre());
@@ -130,7 +130,19 @@ class SimuladorTest {
         assertEquals("messageEventReceived", cuerpo.get("action").asText());
         assertEquals("msgAceptacion", cuerpo.get("messageName").asText());
         assertEquals("fechaInicio", cuerpo.get("variables").get(0).get("name").asText());
-        assertEquals("2026-11-20T09:00:00", cuerpo.get("variables").get(0).get("value").asText());
+        // Se envía con zona horaria (la de esta máquina) para que Flowable no la lea como UTC
+        assertEquals(java.time.LocalDateTime.parse("2026-11-20T09:00:00").atZone(java.time.ZoneId.systemDefault())
+                        .toInstant(),
+                java.time.OffsetDateTime.parse(cuerpo.get("variables").get(0).get("value").asText()).toInstant());
+    }
+
+    @Test
+    void laFechaSinZonaSeInterpretaEnLaZonaLocalYLaQueTraeZonaSeRespeta() {
+        java.time.ZoneId buenosAires = java.time.ZoneId.of("America/Argentina/Buenos_Aires");
+
+        assertEquals("2026-11-20T09:00:00-03:00", Simulador.normalizarFecha("2026-11-20T09:00:00", buenosAires));
+        assertEquals("2026-11-20T09:00:00Z", Simulador.normalizarFecha("2026-11-20T09:00:00Z", buenosAires));
+        assertEquals("2026-11-20T09:00:00+01:00", Simulador.normalizarFecha("2026-11-20T09:00:00+01:00", buenosAires));
     }
 
     @Test
