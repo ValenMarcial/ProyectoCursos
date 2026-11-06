@@ -148,6 +148,16 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
 
+## Definir el docente del curso
+
+La tarea `Definir Docente que desarrolla el curso` queda asignada a `jefeDeEquipo`, que también es miembro del grupo `Docentes`. La tarea tiene como grupo candidato a `Docentes`; el jefe selecciona al docente desde la acción **Delegate** de Flowable. El listener `flowable.assignment.CaptureDelegatedTeacher` guarda el ID del usuario delegado en la variable de proceso `docenteSeleccionado`.
+
+Después de resolver la delegación y completar la tarea de definición, `Desarrollar curso` toma `${docenteSeleccionado}` como assignee. La selección se realiza desde Flowable con los candidatos del grupo, sin una validación de membresía adicional en código.
+
+| Variable | Tipo | La define | La usa |
+|---|---|---|---|
+| `docenteSeleccionado` | String (ID de usuario) | Delegación de "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
+
 Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
 
 ## Pendiente para que el proceso corra completo
