@@ -26,11 +26,13 @@ Java 11 o 17 y Maven, con el entorno levantado (`make dev-up`) y el proceso desp
 mvn -q compile exec:java                    # sin argumentos abre la ventana
 ```
 
-1. Completar URL, usuario y contraseña de Flowable (vienen con los valores por defecto) y apretar **Conectar**.
-2. Elegir una solicitud de la lista. Aparecen solo las comunicaciones que el proceso espera ahora.
-3. Elegir una comunicación, completar sus datos y apretar **Enviar comunicación**. En la aceptación, la fecha viene sugerida (dos minutos adelante) para probar el timer sin esperar.
+Al abrirse se conecta sola con los valores por defecto. Si Flowable está en otra dirección o con otras credenciales, se cambian arriba y se aprieta **Conectar**.
 
-La lista y las comunicaciones se actualizan solas cada 5 segundos (se puede desactivar) y después de cada envío.
+1. En la tabla de solicitudes se ve la empresa, la temática, el contacto y la **etapa** del proceso (verde: le toca a la empresa; naranja: le toca a la institución; gris: nada pendiente).
+2. Al elegir una solicitud aparecen, como botones de colores, solo las comunicaciones que el proceso espera ahora.
+3. Elegir una comunicación, completar sus datos y apretar **Enviar comunicación**. En la aceptación, la fecha viene sugerida (dos minutos adelante, en hora local) para probar el timer sin esperar.
+
+La tabla y las comunicaciones se actualizan solas cada 5 segundos (se puede desactivar) y después de cada envío. El panel **Registro** guarda, con hora, lo que hizo el simulador.
 
 ### Consola
 
@@ -56,4 +58,3 @@ Con `make dev-up` y `make deploy`, iniciando solicitudes con `POST /api/solicitu
 ## Pendiente
 
 - "Recibir nómina" es un receive task identificado por el id de la actividad (`Comunicacion.NOMINA`). Si cambia el id en el BPMN, hay que actualizarlo acá. Alternativa más estable: convertirlo en un evento de mensaje `msgNomina` (lo decide el dueño del BPMN).
-- La lista muestra también las solicitudes que ya no esperan nada de la empresa.

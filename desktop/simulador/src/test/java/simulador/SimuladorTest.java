@@ -213,4 +213,27 @@ class SimuladorTest {
 
         assertTrue(error.getMessage().contains("No se pudo conectar"), error.getMessage());
     }
+
+    @Test
+    void laEtapaDependeDeLoQueElProcesoEspera() {
+        assertEquals("Sin actividad pendiente", simulador.etapa(INSTANCIA).texto());
+        assertEquals(Etapa.Turno.NADIE, simulador.etapa(INSTANCIA).turno());
+
+        respuestas.put("GET /flowable-ui/process-api/runtime/tasks?processInstanceId=" + INSTANCIA + "&size=50",
+                "{\"data\":[{\"name\":\"Archivar solicitud\"}]}");
+        assertEquals("Pendiente de la institución: Archivar solicitud", simulador.etapa(INSTANCIA).texto());
+        assertEquals(Etapa.Turno.INSTITUCION, simulador.etapa(INSTANCIA).turno());
+
+        respuestas.put("GET /flowable-ui/process-api/runtime/executions?processInstanceId=" + INSTANCIA
+                + "&messageEventSubscriptionName=msgCancelacion", ejecucion("c1"));
+        assertEquals("Preparando curso", simulador.etapa(INSTANCIA).texto());
+
+        respuestas.put("GET /flowable-ui/process-api/runtime/executions?processInstanceId=" + INSTANCIA
+                + "&activityId=" + Comunicacion.NOMINA.actividadId(), ejecucion("n1"));
+        assertEquals("Preparando curso: falta la nómina", simulador.etapa(INSTANCIA).texto());
+        assertEquals(Etapa.Turno.EMPRESA, simulador.etapa(INSTANCIA).turno());
+
+        respuestas.put(consultaMensaje("msgAceptacion"), ejecucion("a1"));
+        assertEquals("Esperando respuesta de la empresa", simulador.etapa(INSTANCIA).texto());
+    }
 }
