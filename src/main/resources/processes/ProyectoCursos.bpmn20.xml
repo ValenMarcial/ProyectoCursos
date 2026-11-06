@@ -124,9 +124,7 @@
       <script><![CDATA[execution.setVariable("recordatoriosEnviados", execution.getVariable("recordatoriosEnviados") + 1); println "Recordatorio enviado: " + execution.processInstanceId]]></script>
     </scriptTask>
     <endEvent id="sid-4AE2563B-27A7-4FE6-8F56-F852E09E7AD5" name="Solicitud cerrada"></endEvent>
-    <scriptTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[println "Acceso habilitado: " + execution.processInstanceId]]></script>
-    </scriptTask>
+    <serviceTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" flowable:class="flowable.proposal.CreateCourseOnAcceptance"></serviceTask>
     <subProcess id="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF" name="Preparar curso">
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
