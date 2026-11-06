@@ -26,6 +26,12 @@ public final class Solicitud {
         return variables;
     }
 
+    /** Valor de una variable como texto, o "-" si la solicitud no la tiene. */
+    public String variable(String nombre) {
+        Object valor = variables.get(nombre);
+        return valor == null ? "-" : valor.toString();
+    }
+
     public String nombre() {
         // El backend guarda el nombre de la empresa en empresaNombre; "nombre" queda por compatibilidad
         for (String variable : new String[] {"empresaNombre", "nombre"}) {

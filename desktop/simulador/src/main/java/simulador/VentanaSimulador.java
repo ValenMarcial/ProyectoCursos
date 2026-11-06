@@ -16,18 +16,15 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.Timer;
@@ -45,8 +42,7 @@ public class VentanaSimulador extends JFrame {
     private final JTextField usuarioCampo = new JTextField(8);
     private final JPasswordField passwordCampo = new JPasswordField(8);
 
-    private final DefaultListModel<Solicitud> solicitudes = new DefaultListModel<>();
-    private final JList<Solicitud> listaSolicitudes = new JList<>(solicitudes);
+    private final TablaSolicitudes tabla = new TablaSolicitudes();
 
     private final JPanel panelComunicaciones = new JPanel();
     private final JPanel panelCampos = new JPanel(new GridBagLayout());
@@ -74,7 +70,7 @@ public class VentanaSimulador extends JFrame {
 
         enviar.setEnabled(false);
         enviar.addActionListener(e -> enviarElegida());
-        listaSolicitudes.addListSelectionListener(e -> {
+        tabla.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && !cargandoLista) {
                 cargarHabilitadas(true);
             }
@@ -110,9 +106,8 @@ public class VentanaSimulador extends JFrame {
     private JPanel construirCentro() {
         JPanel izquierda = new JPanel(new BorderLayout(0, 4));
         izquierda.setBorder(BorderFactory.createTitledBorder("Solicitudes"));
-        listaSolicitudes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        JScrollPane scroll = new JScrollPane(listaSolicitudes);
-        scroll.setPreferredSize(new Dimension(330, 300));
+        JScrollPane scroll = new JScrollPane(tabla);
+        scroll.setPreferredSize(new Dimension(420, 300));
         izquierda.add(scroll, BorderLayout.CENTER);
         JButton actualizar = new JButton("Actualizar");
         actualizar.addActionListener(e -> {
@@ -174,7 +169,7 @@ public class VentanaSimulador extends JFrame {
             protected void done() {
                 try {
                     reemplazarSolicitudes(get());
-                    mostrar(solicitudes.size() + " solicitud(es) en curso.", false);
+                    mostrar(tabla.cantidad() + " solicitud(es) en curso.", false);
                 } catch (Exception e) {
                     mostrar(mensaje(e), true);
                 }
@@ -183,33 +178,22 @@ public class VentanaSimulador extends JFrame {
     }
 
     private void reemplazarSolicitudes(List<Solicitud> nuevas) {
-        Solicitud seleccionada = listaSolicitudes.getSelectedValue();
-        String idSeleccionado = seleccionada == null ? null : seleccionada.id();
+        boolean habiaSeleccion = tabla.seleccionada() != null;
 
         cargandoLista = true;
         try {
-            solicitudes.clear();
-            int indice = -1;
-            for (Solicitud solicitud : nuevas) {
-                solicitudes.addElement(solicitud);
-                if (solicitud.id().equals(idSeleccionado)) {
-                    indice = solicitudes.size() - 1;
-                }
-            }
-            if (indice >= 0) {
-                listaSolicitudes.setSelectedIndex(indice);
-            }
+            tabla.reemplazar(nuevas);
         } finally {
             cargandoLista = false;
         }
-        if (idSeleccionado != null && listaSolicitudes.getSelectedValue() == null) {
+        if (habiaSeleccion && tabla.seleccionada() == null) {
             mostrarHabilitadas(new ArrayList<>(), true);
         }
     }
 
     /** @param forzar reconstruir el formulario aunque las comunicaciones no hayan cambiado */
     private void cargarHabilitadas(boolean forzar) {
-        Solicitud solicitud = listaSolicitudes.getSelectedValue();
+        Solicitud solicitud = tabla.seleccionada();
         Simulador actual = simulador;
         if (solicitud == null || actual == null) {
             mostrarHabilitadas(new ArrayList<>(), true);
@@ -224,7 +208,7 @@ public class VentanaSimulador extends JFrame {
             @Override
             protected void done() {
                 try {
-                    Solicitud ahora = listaSolicitudes.getSelectedValue();
+                    Solicitud ahora = tabla.seleccionada();
                     if (ahora != null && ahora.id().equals(solicitud.id())) {
                         mostrarHabilitadas(get(), forzar);
                     }
@@ -258,7 +242,7 @@ public class VentanaSimulador extends JFrame {
             }
         }
         if (habilitadas.isEmpty()) {
-            String texto = listaSolicitudes.getSelectedValue() == null
+            String texto = tabla.seleccionada() == null
                     ? "Elegí una solicitud." : "Ninguna comunicación habilitada en este momento.";
             panelComunicaciones.add(new JLabel(texto));
         }
@@ -316,7 +300,7 @@ public class VentanaSimulador extends JFrame {
     }
 
     private void enviarElegida() {
-        Solicitud solicitud = listaSolicitudes.getSelectedValue();
+        Solicitud solicitud = tabla.seleccionada();
         Simulador actual = simulador;
         Comunicacion comunicacion = elegida;
         if (solicitud == null || actual == null || comunicacion == null) {
