@@ -7,11 +7,27 @@ public final class Solicitud {
     private final String id;
     private final String businessKey;
     private final Map<String, Object> variables;
+    private final Etapa etapa;
 
     public Solicitud(String id, String businessKey, Map<String, Object> variables) {
+        this(id, businessKey, variables, null);
+    }
+
+    private Solicitud(String id, String businessKey, Map<String, Object> variables, Etapa etapa) {
         this.id = id;
         this.businessKey = businessKey;
         this.variables = variables;
+        this.etapa = etapa;
+    }
+
+    /** Copia de la solicitud con la etapa en que está el proceso. */
+    public Solicitud conEtapa(Etapa nueva) {
+        return new Solicitud(id, businessKey, variables, nueva);
+    }
+
+    /** Etapa del proceso, o null si todavía no se consultó. */
+    public Etapa etapa() {
+        return etapa;
     }
 
     public String id() {
