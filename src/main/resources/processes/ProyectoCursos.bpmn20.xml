@@ -117,7 +117,7 @@
     <intermediateCatchEvent id="sid-B1226B89-72C5-427D-85EF-783C6E99CC5D" name="Modificaciones">
       <messageEventDefinition messageRef="msgModificaciones"></messageEventDefinition>
     </intermediateCatchEvent>
-    <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <exclusiveGateway id="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" name="¿Se enviaron 2 recordatorios?"></exclusiveGateway>
     <userTask id="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" name="Archivar solicitud" flowable:formFieldValidation="true"></userTask>
     <scriptTask id="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" name="Enviar recordatorio" scriptFormat="groovy" flowable:autoStoreVariables="false">
@@ -196,7 +196,7 @@
     <scriptTask id="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" name="Enviar confirmación" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[println "Confirmación enviada: " + execution.processInstanceId]]></script>
     </scriptTask>
-    <userTask id="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" name="Enviar informe a empreasa y Archivar expediente" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" name="Enviar informe a empresa y Archivar expediente" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <intermediateThrowEvent id="sid-88F847B3-5FE2-4251-A612-120F9DD46CA9" name="Liberar recursos">
       <compensateEventDefinition></compensateEventDefinition>
     </intermediateThrowEvent>
@@ -212,7 +212,7 @@
       </timerEventDefinition>
     </intermediateCatchEvent>
     <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:assignee="${docenteSeleccionado}" flowable:formFieldValidation="true"></userTask>
-    <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true"></userTask>
     <sequenceFlow id="sid-E5A3C140-9E9E-4805-9ED2-985472F5E53D" sourceRef="sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79" targetRef="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0"></sequenceFlow>
     <sequenceFlow id="sid-238BC821-60B2-4E86-8722-76F353C8A724" sourceRef="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F" targetRef="sid-32693999-A94F-4509-B0B9-B915626A33BA"></sequenceFlow>
     <sequenceFlow id="sid-3D7DAD80-958E-436C-98D5-7AA0395347B1" sourceRef="sid-F96A6968-13D6-4EA4-929E-69230127C208" targetRef="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3"></sequenceFlow>
