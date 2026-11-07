@@ -140,7 +140,7 @@
       </userTask>
       <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
-      <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:expression="${execution.setVariable(&quot;aulaAsignada&quot;, &quot;Aula 1&quot;)}"></serviceTask>
+      <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:class="flowable.classroom.ReserveClassroom"></serviceTask>
       <boundaryEvent id="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" name="Liberar recursos" attachedToRef="sid-065649F8-9F01-4C34-B290-C37474CC479D" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
@@ -154,7 +154,7 @@
       <scriptTask id="sid-892710F9-B2AE-4002-82D0-131829D8FA29" name="Liberar Aula Virtual" isForCompensation="true" scriptFormat="groovy" flowable:autoStoreVariables="false">
         <script><![CDATA[println "Aula virtual liberada: " + execution.processInstanceId]]></script>
       </scriptTask>
-      <serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true" flowable:expression="${execution.removeVariable(&quot;aulaAsignada&quot;)}"></serviceTask>
+      <serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true" flowable:class="flowable.classroom.ReleaseClassroom"></serviceTask>
       <inclusiveGateway id="sid-DD45928D-A46B-4C2B-8803-2D0B1AF12979"></inclusiveGateway>
       <endEvent id="sid-85D22149-CBE0-424A-9E0D-9C03CFB275CD"></endEvent>
       <subProcess id="sid-98039E66-3765-4C9A-8061-7280782D1D67" name="Cancelación" triggeredByEvent="true">
