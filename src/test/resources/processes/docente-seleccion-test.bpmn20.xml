@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://flowable.org/test">
+  <process id="test-seleccion-docente" isExecutable="true">
+    <startEvent id="inicio"/>
+    <userTask id="definirDocente"
+              flowable:assignee="jefeDeEquipo"
+              flowable:formFieldValidation="true">
+      <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.assignment.ValidateSelectedTeacher"/>
+        <flowable:formProperty id="docenteSeleccionado" name="ID del docente seleccionado"
+                               type="string" required="true"/>
+      </extensionElements>
+    </userTask>
+    <userTask id="desarrollarCurso" flowable:assignee="${docenteSeleccionado}"/>
+    <sequenceFlow id="iniciar" sourceRef="inicio" targetRef="definirDocente"/>
+    <sequenceFlow id="desarrollar" sourceRef="definirDocente" targetRef="desarrollarCurso"/>
+  </process>
+</definitions>

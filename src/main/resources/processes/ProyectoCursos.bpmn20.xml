@@ -117,9 +117,9 @@
     <intermediateCatchEvent id="sid-B1226B89-72C5-427D-85EF-783C6E99CC5D" name="Modificaciones">
       <messageEventDefinition messageRef="msgModificaciones"></messageEventDefinition>
     </intermediateCatchEvent>
-    <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <exclusiveGateway id="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" name="¿Se enviaron 2 recordatorios?"></exclusiveGateway>
-    <userTask id="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" name="Archivar solicitud" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" name="Archivar solicitud" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <scriptTask id="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" name="Enviar recordatorio" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[execution.setVariable("recordatoriosEnviados", execution.getVariable("recordatoriosEnviados") + 1); println "Recordatorio enviado: " + execution.processInstanceId]]></script>
     </scriptTask>
@@ -128,14 +128,18 @@
     <subProcess id="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF" name="Preparar curso">
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
-      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <receiveTask id="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" name="Recibir nómina"></receiveTask>
       <inclusiveGateway id="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" name="Recursos necesarios"></inclusiveGateway>
       <parallelGateway id="sid-420D072A-C42B-404D-BBDA-B884DD90C410" name="Preparación completa"></parallelGateway>
-      <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true">
+        <extensionElements>
+          <flowable:taskListener event="create" class="flowable.assignment.AssignToLeastBusyAdministrative"></flowable:taskListener>
+        </extensionElements>
+      </userTask>
+      <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:expression="${execution.setVariable(&quot;aulaAsignada&quot;, &quot;Aula 1&quot;)}"></serviceTask>
       <boundaryEvent id="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" name="Liberar recursos" attachedToRef="sid-065649F8-9F01-4C34-B290-C37474CC479D" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
@@ -146,7 +150,7 @@
       <boundaryEvent id="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" name="Liberar recursos" attachedToRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" cancelActivity="false">
         <compensateEventDefinition></compensateEventDefinition>
       </boundaryEvent>
-      <userTask id="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" name="Liberar Equipamiento" isForCompensation="true" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" name="Liberar Equipamiento" isForCompensation="true" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <scriptTask id="sid-892710F9-B2AE-4002-82D0-131829D8FA29" name="Liberar Aula Virtual" isForCompensation="true" scriptFormat="groovy" flowable:autoStoreVariables="false">
         <script><![CDATA[println "Aula virtual liberada: " + execution.processInstanceId]]></script>
       </scriptTask>
@@ -196,19 +200,24 @@
     <scriptTask id="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" name="Enviar confirmación" scriptFormat="groovy" flowable:autoStoreVariables="false">
       <script><![CDATA[println "Confirmación enviada: " + execution.processInstanceId]]></script>
     </scriptTask>
-    <userTask id="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" name="Enviar informe a empreasa y Archivar expediente" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" name="Enviar informe a empresa y Archivar expediente" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true"></userTask>
     <intermediateThrowEvent id="sid-88F847B3-5FE2-4251-A612-120F9DD46CA9" name="Liberar recursos">
       <compensateEventDefinition></compensateEventDefinition>
     </intermediateThrowEvent>
     <endEvent id="sid-343EF313-279B-45FF-9F2C-343A3C2804DB"></endEvent>
-    <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true">
+      <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.assignment.ValidateSelectedTeacher"></flowable:taskListener>
+        <flowable:formProperty id="docenteSeleccionado" name="ID del docente seleccionado" type="string" required="true"></flowable:formProperty>
+      </extensionElements>
+    </userTask>
     <intermediateCatchEvent id="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" name="Fecha programada">
       <timerEventDefinition>
         <timeDate>${fechaInicio}</timeDate>
       </timerEventDefinition>
     </intermediateCatchEvent>
-    <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:formFieldValidation="true"></userTask>
-    <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:assignee="${docenteSeleccionado}" flowable:formFieldValidation="true"></userTask>
+    <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true"></userTask>
     <sequenceFlow id="sid-E5A3C140-9E9E-4805-9ED2-985472F5E53D" sourceRef="sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79" targetRef="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0"></sequenceFlow>
     <sequenceFlow id="sid-238BC821-60B2-4E86-8722-76F353C8A724" sourceRef="sid-D4A460A6-6451-48B2-BD5D-F76FDEC3887F" targetRef="sid-32693999-A94F-4509-B0B9-B915626A33BA"></sequenceFlow>
     <sequenceFlow id="sid-3D7DAD80-958E-436C-98D5-7AA0395347B1" sourceRef="sid-F96A6968-13D6-4EA4-929E-69230127C208" targetRef="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3"></sequenceFlow>
