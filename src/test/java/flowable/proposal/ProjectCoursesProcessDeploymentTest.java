@@ -7,6 +7,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.flowable.bpmn.model.BpmnModel;
+import org.flowable.bpmn.model.Activity;
+import org.flowable.bpmn.model.Association;
+import org.flowable.bpmn.model.ServiceTask;
 import org.flowable.bpmn.model.SubProcess;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.ProcessEngine;
@@ -94,6 +97,61 @@ class ProjectCoursesProcessDeploymentTest {
         assertCandidateGroup(prepararCurso, "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
         assertCandidateGroup(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
     }
+
+        @Test
+        void conectaLasTareasDeAulaConSusDelegates() {
+        SubProcess prepararCurso = getPrepararCurso();
+
+        assertServiceTaskClass(prepararCurso, "sid-065649F8-9F01-4C34-B290-C37474CC479D",
+            "flowable.classroom.ReserveClassroom");
+        assertServiceTaskClass(prepararCurso, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793",
+            "flowable.classroom.ReleaseClassroom");
+        }
+
+        @Test
+        void conectaLosEventosDeCompensacionConSusTareas() {
+        SubProcess prepararCurso = getPrepararCurso();
+
+        assertCompensationAssociation(prepararCurso, "sid-6EF58547-6206-4065-BC46-BDE7A86300E7",
+            "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+        assertCompensationAssociation(prepararCurso, "sid-79D40E03-33A5-476E-AC89-3F44F73680A0",
+            "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
+        assertCompensationAssociation(prepararCurso, "sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619",
+            "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+
+        assertCompensationTask(prepararCurso, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+        assertCompensationTask(prepararCurso, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
+        assertCompensationTask(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        }
+
+        private SubProcess getPrepararCurso() {
+        ProcessDefinition processDefinition = engine.getRepositoryService()
+            .createProcessDefinitionQuery()
+            .processDefinitionKey("process-proyecto-curso")
+            .singleResult();
+        BpmnModel model = engine.getRepositoryService().getBpmnModel(processDefinition.getId());
+        return (SubProcess) model.getMainProcess().getFlowElement("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+        }
+
+        private static void assertServiceTaskClass(SubProcess process, String taskId, String expectedClass) {
+        ServiceTask task = (ServiceTask) process.getFlowElement(taskId);
+        assertEquals("class", task.getImplementationType());
+        assertEquals(expectedClass, task.getImplementation());
+        }
+
+        private static void assertCompensationAssociation(SubProcess process, String sourceId, String targetId) {
+        assertTrue(process.getArtifacts().stream()
+            .filter(Association.class::isInstance)
+            .map(Association.class::cast)
+            .anyMatch(association -> sourceId.equals(association.getSourceRef())
+                && targetId.equals(association.getTargetRef())),
+            "Asociación de compensación " + sourceId + " -> " + targetId);
+        }
+
+        private static void assertCompensationTask(SubProcess process, String taskId) {
+        Activity task = (Activity) process.getFlowElement(taskId);
+        assertTrue(task.isForCompensation(), "Tarea de compensación " + task.getName());
+        }
 
     private static void assertAssignee(BpmnModel model, String taskId, String expectedAssignee) {
         UserTask task = (UserTask) model.getMainProcess().getFlowElement(taskId);
