@@ -115,11 +115,11 @@ Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cer
 
 ## Confeccionar lista definitiva
 
-Al crearse la tarea, el Task Listener `flowable.assignment.AssignToLeastBusyAdministrative` (enunciado 3.4) la asigna al integrante del grupo `Administracion` con menos tareas de usuario pendientes asignadas en el motor. Por eso no requiere reclamo.
+Al crearse la tarea, el Task Listener `flowable.assignment.AssignToLeastBusyAdministrative` (enunciado 3.4) la asigna a un integrante del grupo `Administracion` con menos tareas de usuario pendientes asignadas en el motor. Si varios integrantes comparten la menor carga, el listener elige uno al azar entre ellos.
 
 - **Qué cuenta:** solo las tareas activas con `assignee` igual a ese usuario. Las que tienen al grupo como candidato y nadie reclamó no cuentan, porque no tienen `assignee`.
-- **Empate:** gana el ID de usuario que va primero en orden alfabético (con la seed, `empleadoAdministrativo` antes que `jefeAdministrativo`).
-- **Sin integrantes en el grupo:** la tarea queda sin asignar, para que la reclame cualquiera de `Administracion`.
+- **Empate:** se elige aleatoriamente entre los integrantes empatados en la menor cantidad de tareas asignadas.
+- **Sin integrantes en el grupo:** la tarea queda sin assignee y conserva `Administracion` como grupo candidato. Cuando haya integrantes disponibles, podrán encontrar y reclamar esa tarea.
 
 En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listener no asigna a nadie):
 
@@ -130,6 +130,19 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
   </extensionElements>
 </userTask>
 ```
+
+## Tareas del curso disponibles para Administración
+
+Las siguientes tareas tienen al grupo `Administracion` como grupo candidato en Flowable:
+
+- `Confeccionar lista definitiva` (además, se asigna automáticamente a un miembro menos ocupado).
+- `Prepara materiales`.
+- `Evaluar Recursos`.
+- `Solicitar Aula Virtual`.
+- `Contratar equipamiento`.
+- `Liberar Equipamiento` (tarea de compensación).
+
+Las tareas sin asignación explícita permanecen sin responsable/grupo candidato configurado hasta que se definan.
 
 ## Variables
 
@@ -147,6 +160,26 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
+
+## Definir el docente del curso
+
+La tarea `Definir Docente que desarrolla el curso` queda asignada a `jefeDeEquipo`, que también es miembro del grupo `Docentes`. La tarea tiene como grupo candidato a `Docentes`; el jefe selecciona al docente desde la acción **Delegate** de Flowable. El listener `flowable.assignment.CaptureDelegatedTeacher` guarda el ID del usuario delegado en la variable de proceso `docenteSeleccionado`.
+
+Después de resolver la delegación y completar la tarea de definición, `Desarrollar curso` toma `${docenteSeleccionado}` como assignee. La selección se realiza desde Flowable con los candidatos del grupo, sin una validación de membresía adicional en código.
+
+| Variable | Tipo | La define | La usa |
+|---|---|---|---|
+| `docenteSeleccionado` | String (ID de usuario) | Delegación de "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
+
+## Asignaciones directas de tareas
+
+Las siguientes tareas tienen responsables fijos en el modelo BPMN:
+
+| Tarea | Responsable |
+|---|---|
+| Revisar propuesta | `jefeAdministrativo` |
+| Enviar informe a empresa y Archivar expediente | `jefeAdministrativo` |
+| Elaborar informe de resultados | `jefeDeEquipo` |
 
 Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
 

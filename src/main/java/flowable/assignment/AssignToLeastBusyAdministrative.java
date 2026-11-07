@@ -1,6 +1,10 @@
 package flowable.assignment;
 
-import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 import org.flowable.engine.TaskService;
 import org.flowable.engine.delegate.TaskListener;
@@ -11,7 +15,8 @@ import org.flowable.task.service.delegate.DelegateTask;
 
 /**
  * Task Listener de creación de "Confeccionar lista definitiva" (enunciado 3.4): asigna la tarea
- * al integrante de Administracion con menos tareas pendientes asignadas.
+ * al integrante de Administracion con menos tareas pendientes asignadas,
+ * eligiendo al azar entre los integrantes empatados.
  */
 public class AssignToLeastBusyAdministrative implements TaskListener {
     private static final long serialVersionUID = 1L;
@@ -22,13 +27,24 @@ public class AssignToLeastBusyAdministrative implements TaskListener {
         ProcessEngineConfigurationImpl config = CommandContextUtil.getProcessEngineConfiguration();
         TaskService taskService = config.getTaskService();
 
-        // Solo cuentan las tareas asignadas al usuario: las que tienen al grupo como candidato
-        // y nadie reclamó no tienen assignee. En empate, gana el primer ID en orden alfabético.
-        config.getIdentityService().createUserQuery().memberOfGroup(GROUP).list().stream()
+        List<String> administrativeUsers = config.getIdentityService().createUserQuery().memberOfGroup(GROUP).list().stream()
                 .map(User::getId)
-                .min(Comparator.comparingLong((String userId) -> taskService.createTaskQuery().taskAssignee(userId).count())
-                        .thenComparing(Comparator.naturalOrder()))
-                // Sin integrantes en el grupo, la tarea queda para que la reclame cualquiera de Administracion
-                .ifPresent(delegateTask::setAssignee);
+                .collect(Collectors.toList());
+        if (administrativeUsers.isEmpty()) {
+            return;
+        }
+
+        Map<String, Long> taskCounts = new HashMap<>();
+        for (String userId : administrativeUsers) {
+            taskCounts.put(userId, taskService.createTaskQuery().taskAssignee(userId).count());
+        }
+        long minimumTaskCount = taskCounts.values().stream().mapToLong(Long::longValue).min().getAsLong();
+
+        List<String> leastBusyUsers = taskCounts.entrySet().stream()
+                .filter(entry -> entry.getValue() == minimumTaskCount)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        String assignee = leastBusyUsers.get(ThreadLocalRandom.current().nextInt(leastBusyUsers.size()));
+        delegateTask.setAssignee(assignee);
     }
 }
