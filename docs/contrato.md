@@ -158,13 +158,15 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
 | `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
-| `docenteSeleccionado` | String (ID de usuario) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
+| `docenteSeleccionado` | String (ID de usuario del grupo `Docentes`) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
 
 ## Definir el docente del curso
 
 La tarea `Definir Docente que desarrolla el curso` está asignada a `jefeDeEquipo`. El jefe ingresa en el campo obligatorio `docenteSeleccionado` el ID exacto del usuario elegido y completa la tarea. Es un campo de texto, no una lista de docentes. El jefe también puede elegirse a sí mismo si pertenece al grupo `Docentes`; no necesita delegar la tarea.
+
+**Contrato para la web:** al completar «Definir docente», debe enviarse la variable de proceso `docenteSeleccionado` como string, con el ID de un usuario perteneciente al grupo `Docentes` (por ejemplo, `docente2`). El backend web actual solo inicia solicitudes; todavía no expone una ruta para completar esta tarea.
 
 Al completar la tarea, el listener `flowable.assignment.ValidateSelectedTeacher` consulta la identidad de Flowable y exige que el ID corresponda a un usuario del grupo **`Docentes`**. La validación también se ejecuta cuando una aplicación completa la tarea pasando la variable de proceso como string:
 
