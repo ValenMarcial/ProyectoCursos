@@ -158,18 +158,24 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
 | `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
+| `docenteSeleccionado` | String (ID de usuario) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
 
 ## Definir el docente del curso
 
-La tarea `Definir Docente que desarrolla el curso` queda asignada a `jefeDeEquipo`, que también es miembro del grupo `Docentes`. La tarea tiene como grupo candidato a `Docentes`; el jefe selecciona al docente desde la acción **Delegate** de Flowable. El listener `flowable.assignment.CaptureDelegatedTeacher` guarda el ID del usuario delegado en la variable de proceso `docenteSeleccionado`.
+La tarea `Definir Docente que desarrolla el curso` está asignada a `jefeDeEquipo`. El jefe ingresa en el campo obligatorio `docenteSeleccionado` el ID exacto del usuario elegido y completa la tarea. Es un campo de texto, no una lista de docentes. El jefe también puede elegirse a sí mismo si pertenece al grupo `Docentes`; no necesita delegar la tarea.
 
-Después de resolver la delegación y completar la tarea de definición, `Desarrollar curso` toma `${docenteSeleccionado}` como assignee. La selección se realiza desde Flowable con los candidatos del grupo, sin una validación de membresía adicional en código.
+Al completar la tarea, el listener `flowable.assignment.ValidateSelectedTeacher` consulta la identidad de Flowable y exige que el ID corresponda a un usuario del grupo **`Docentes`**. La validación también se ejecuta cuando una aplicación completa la tarea pasando la variable de proceso como string:
 
-| Variable | Tipo | La define | La usa |
-|---|---|---|---|
-| `docenteSeleccionado` | String (ID de usuario) | Delegación de "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
+```java
+taskService.complete(taskId, Map.of("docenteSeleccionado", "docente2"));
+```
+
+Si el ID falta, está vacío, no es un string, no existe o no pertenece a `Docentes`, se informa un error y la tarea permanece pendiente. El jefe debe corregir el valor antes de completarla. La pertenencia se verifica al completar la definición; no se vuelve a verificar si cambia el grupo del usuario después.
+
+Una vez completada, el proceso espera el timer `Fecha programada` y asigna `Desarrollar curso` al usuario guardado en `docenteSeleccionado`.
+
 
 ## Asignaciones directas de tareas
 
@@ -178,7 +184,9 @@ Las siguientes tareas tienen responsables fijos en el modelo BPMN:
 | Tarea | Responsable |
 |---|---|
 | Revisar propuesta | `jefeAdministrativo` |
+| Archivar solicitud | `jefeAdministrativo` |
 | Enviar informe a empresa y Archivar expediente | `jefeAdministrativo` |
+| Definir Docente que desarrolla el curso | `jefeDeEquipo` |
 | Elaborar informe de resultados | `jefeDeEquipo` |
 
 Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
