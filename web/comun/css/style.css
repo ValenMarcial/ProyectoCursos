@@ -1,0 +1,117 @@
+:root {
+  --fondo: #f5f6f8;
+  --superficie: #ffffff;
+  --texto: #1f2933;
+  --texto-suave: #52606d;
+  --borde: #d9dee3;
+  --acento: #1d4ed8;
+  --acento-texto: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #14181d;
+    --superficie: #1d232a;
+    --texto: #e6e9ec;
+    --texto-suave: #a3adb8;
+    --borde: #323b45;
+    --acento: #6b9bff;
+    --acento-texto: #0d1117;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+  line-height: 1.5;
+}
+
+.cabecera {
+  padding: 2.5rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+.cabecera h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+}
+
+.cabecera p {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.contenedor {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem;
+}
+
+.bloque {
+  margin-top: 2rem;
+}
+
+.bloque h2 {
+  font-size: 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.tarjeta h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.tarjeta p {
+  margin: 0 0 1rem;
+  color: var(--texto-suave);
+  flex: 1;
+}
+
+.boton {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--acento);
+  background: var(--acento);
+  color: var(--acento-texto);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.boton:hover {
+  opacity: 0.9;
+}
+
+.boton-secundario {
+  background: transparent;
+  color: var(--acento);
+}
+
+.pie {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
