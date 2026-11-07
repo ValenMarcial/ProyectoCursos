@@ -205,9 +205,10 @@
       <compensateEventDefinition></compensateEventDefinition>
     </intermediateThrowEvent>
     <endEvent id="sid-343EF313-279B-45FF-9F2C-343A3C2804DB"></endEvent>
-    <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:assignee="jefeDeEquipo" flowable:owner="jefeDeEquipo" flowable:candidateGroups="Docentes" flowable:formFieldValidation="true">
+    <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true">
       <extensionElements>
-        <flowable:taskListener event="assignment" class="flowable.assignment.CaptureDelegatedTeacher"></flowable:taskListener>
+        <flowable:taskListener event="complete" class="flowable.assignment.ValidateSelectedTeacher"></flowable:taskListener>
+        <flowable:formProperty id="docenteSeleccionado" name="ID del docente seleccionado" type="string" required="true"></flowable:formProperty>
       </extensionElements>
     </userTask>
     <intermediateCatchEvent id="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" name="Fecha programada">

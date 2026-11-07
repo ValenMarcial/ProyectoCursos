@@ -53,8 +53,29 @@ class ProjectCoursesProcessDeploymentTest {
         BpmnModel model = engine.getRepositoryService().getBpmnModel(processDefinition.getId());
 
         assertAssignee(model, "sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6", "jefeAdministrativo");
+        assertAssignee(model, "sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62", "jefeAdministrativo");
         assertAssignee(model, "sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63", "jefeAdministrativo");
         assertAssignee(model, "sid-8EE040F3-0293-488C-AE3F-3BD79DB56897", "jefeDeEquipo");
+        assertAssignee(model, "sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85", "jefeDeEquipo");
+        assertAssignee(model, "sid-378C089F-415C-4EC6-B426-E2D989460B8C", "${docenteSeleccionado}");
+    }
+
+    @Test
+    void elModeloRealDefineElDocenteConUnFormularioObligatorio() {
+        ProcessDefinition definition = engine.getRepositoryService().createProcessDefinitionQuery()
+                .processDefinitionKey("process-proyecto-curso").singleResult();
+        BpmnModel model = engine.getRepositoryService().getBpmnModel(definition.getId());
+        UserTask task = (UserTask) model.getMainProcess()
+                .getFlowElement("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85");
+
+        assertTrue(task.getCandidateGroups().isEmpty());
+        assertEquals(1, task.getTaskListeners().size());
+        assertEquals("complete", task.getTaskListeners().get(0).getEvent());
+        assertEquals("flowable.assignment.ValidateSelectedTeacher", task.getTaskListeners().get(0).getImplementation());
+        assertEquals(1, task.getFormProperties().size());
+        assertEquals("docenteSeleccionado", task.getFormProperties().get(0).getId());
+        assertEquals("string", task.getFormProperties().get(0).getType());
+        assertTrue(task.getFormProperties().get(0).isRequired());
     }
 
     @Test

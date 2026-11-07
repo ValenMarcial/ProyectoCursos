@@ -3,15 +3,15 @@
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xmlns:flowable="http://flowable.org/bpmn"
              targetNamespace="http://flowable.org/test">
-  <process id="test-delegacion-docente" isExecutable="true">
+  <process id="test-seleccion-docente" isExecutable="true">
     <startEvent id="inicio"/>
     <userTask id="definirDocente"
               flowable:assignee="jefeDeEquipo"
-              flowable:owner="jefeDeEquipo"
-              flowable:candidateGroups="Docentes">
+              flowable:formFieldValidation="true">
       <extensionElements>
-        <flowable:taskListener event="assignment"
-                               class="flowable.assignment.CaptureDelegatedTeacher"/>
+        <flowable:taskListener event="complete" class="flowable.assignment.ValidateSelectedTeacher"/>
+        <flowable:formProperty id="docenteSeleccionado" name="ID del docente seleccionado"
+                               type="string" required="true"/>
       </extensionElements>
     </userTask>
     <userTask id="desarrollarCurso" flowable:assignee="${docenteSeleccionado}"/>
