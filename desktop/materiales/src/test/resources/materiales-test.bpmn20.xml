@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="test">
+  <process id="materialesTest" name="Materiales (prueba)" isExecutable="true">
+    <startEvent id="inicio"/>
+    <sequenceFlow sourceRef="inicio" targetRef="materiales"/>
+    <userTask id="materiales" name="Prepara materiales" flowable:candidateGroups="Administracion"/>
+    <sequenceFlow sourceRef="materiales" targetRef="fin"/>
+    <endEvent id="fin"/>
+  </process>
+</definitions>
