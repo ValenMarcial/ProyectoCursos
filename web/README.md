@@ -17,8 +17,6 @@ web/
 └── teachers/           Funciones para el equipo docente
 ```
 
-Cada carpeta tiene un responsable (ver la tabla de abajo). Lo que está en `comun/` se modifica avisando al grupo.
-
 ## Sección pública
 
 ### Sección de capacitación
@@ -79,7 +77,6 @@ python3 -m http.server 8000
 Después entrar a `http://localhost:8000`.
 
 La portada se puede ver abriendo `index.html` directamente, pero las páginas que se conectan al backend necesitan el servidor.
-
 
 ## Pendiente
 
