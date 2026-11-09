@@ -55,7 +55,7 @@ class ViabilityTest {
 
     @Test
     void conCuatroCursosActivosSigueSiendoViable() {
-        startActiveInstances(4);
+        startCoursesWithAccess(4);
 
         ProcessInstance instance = runtimeService.startProcessInstanceByKey(PROCESS_KEY);
 
@@ -65,7 +65,7 @@ class ViabilityTest {
 
     @Test
     void conCincoCursosActivosNoEsViable() {
-        startActiveInstances(5);
+        startCoursesWithAccess(5);
 
         ProcessInstance instance = runtimeService.startProcessInstanceByKey(PROCESS_KEY);
 
@@ -78,8 +78,20 @@ class ViabilityTest {
     }
 
     @Test
+    void lasSolicitudesEnEvaluacionNoCuentan() {
+        // Cinco solicitudes que todavía no llegaron a "Habilitar acceso de la empresa"
+        for (int i = 0; i < 5; i++) {
+            runtimeService.startProcessInstanceByKey(PROCESS_KEY);
+        }
+
+        ProcessInstance instance = runtimeService.startProcessInstanceByKey(PROCESS_KEY);
+
+        assertFalse(instance.isEnded(), "Las solicitudes sin curso creado no son cursos en ejecución");
+    }
+
+    @Test
     void lasInstanciasFinalizadasNoCuentan() {
-        startActiveInstances(5);
+        startCoursesWithAccess(5);
         // Se termina una: quedan 4 activas
         String id = runtimeService.createProcessInstanceQuery().processDefinitionKey(PROCESS_KEY)
                 .list().get(0).getId();
@@ -90,10 +102,12 @@ class ViabilityTest {
         assertFalse(instance.isEnded());
     }
 
-    private void startActiveInstances(int amount) {
+    // Simula cursos que ya pasaron por "Habilitar acceso de la empresa": CreateCourseOnAcceptance guarda cursoId
+    private void startCoursesWithAccess(int amount) {
         for (int i = 0; i < amount; i++) {
             ProcessInstance instance = runtimeService.startProcessInstanceByKey(PROCESS_KEY);
             assertFalse(instance.isEnded(), "La instancia previa " + (i + 1) + " debería quedar activa");
+            runtimeService.setVariable(instance.getId(), "cursoId", (long) (i + 1));
         }
     }
 
