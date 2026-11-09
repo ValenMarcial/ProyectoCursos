@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="test">
+  <!-- Misma estructura que "Preparar curso": una rama de materiales, otra de lista, y una unión asíncrona
+       seguida de un script Groovy (que esta app no puede ejecutar: no trae Groovy). -->
+  <process id="materialesTest" name="Materiales (prueba)" isExecutable="true">
+    <startEvent id="inicio"/>
+    <sequenceFlow sourceRef="inicio" targetRef="reparto"/>
+    <parallelGateway id="reparto"/>
+    <sequenceFlow sourceRef="reparto" targetRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB"/>
+    <sequenceFlow sourceRef="reparto" targetRef="otraRama"/>
+    <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Nombre cualquiera" flowable:candidateGroups="Administracion"/>
+    <userTask id="otraRama" name="Otra rama" flowable:candidateGroups="Administracion"/>
+    <sequenceFlow sourceRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" targetRef="union"/>
+    <sequenceFlow sourceRef="otraRama" targetRef="union"/>
+    <parallelGateway id="union" flowable:async="true"/>
+    <sequenceFlow sourceRef="union" targetRef="confirmacion"/>
+    <scriptTask id="confirmacion" name="Enviar confirmación" scriptFormat="groovy">
+      <script>println "confirmado"</script>
+    </scriptTask>
+    <sequenceFlow sourceRef="confirmacion" targetRef="fin"/>
+    <endEvent id="fin"/>
+  </process>
+</definitions>
