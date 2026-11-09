@@ -67,6 +67,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Liberar Aula Virtual | Script (compensación) | Log |
 | Reservar aula | Service task (`flowable.classroom.ReserveClassroom`) | Simula el web service de aulas: asigna la primera aula libre en `aulaAsignada` o lanza el error `SIN_AULAS` (escenario 7). Ver "Reservar y liberar aula" |
 | Liberar Aula | Service task (`flowable.classroom.ReleaseClassroom`, compensación) | Simula la liberación en el web service y elimina `aulaAsignada` |
+| Entrada a Preparar curso | Execution listener | Inicializa la variable de proceso `cancelada = false` al iniciar el subproceso |
 
 ## Reservar y liberar aula
 

@@ -126,6 +126,9 @@
     <endEvent id="sid-4AE2563B-27A7-4FE6-8F56-F852E09E7AD5" name="Solicitud cerrada"></endEvent>
     <serviceTask id="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" name="Habilitar acceso de la empresa" flowable:class="flowable.proposal.CreateCourseOnAcceptance"></serviceTask>
     <subProcess id="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF" name="Preparar curso">
+      <extensionElements>
+        <flowable:executionListener event="start" expression="${execution.setVariable('cancelada', false)}"></flowable:executionListener>
+      </extensionElements>
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
       <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
