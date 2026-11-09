@@ -273,18 +273,19 @@ La rama agrega cinco piezas:
 El listener se ejecuta al **iniciar** la tarea `Evaluar Viabilidad` (evento `start`). Sus pasos son:
 
 1. Obtiene la key del proceso a partir del `processDefinitionId`, quitando la versión y el ID interno (`process-proyecto-curso:1:...` → `process-proyecto-curso`).
-2. Consulta al `RuntimeService` cuántas instancias activas hay para esa key.
-3. Excluye por ID la instancia actual, es decir, la solicitud que se está evaluando.
-4. Guarda el resultado en la variable local `amountCursos`, como una instancia de `AmountCursos`.
+2. Consulta al `RuntimeService` cuántas instancias activas de esa key tienen la variable `cursoId`, es decir, ya pasaron por "Habilitar acceso de la empresa".
+3. Guarda el resultado en la variable local `amountCursos`, como una instancia de `AmountCursos`.
 
 En pseudocódigo:
 
 ```
-otrasInstancias   = count(instancias activas de process-proyecto-curso con id != instancia actual)
-execution.setVariableLocal("amountCursos", new AmountCursos(otrasInstancias))
+cursosEnEjecucion = count(instancias activas de process-proyecto-curso con la variable cursoId)
+execution.setVariableLocal("amountCursos", new AmountCursos(cursosEnEjecucion))
 ```
 
-No se resta 1: cuando corre el listener, la instancia actual todavía no está guardada en la base y no aparece en la consulta, así que restar 1 descontaría otro curso (el límite real quedaba en 6). Filtrar por ID es correcto en ambos casos. Así, `amountInstancesActives` representa los cursos que ya estaban activos antes de evaluar esta solicitud.
+**Qué cuenta como curso en ejecución.** El enunciado (3.1) habla de las instancias que no finalizaron. El profesor aclaró que una solicitud cuenta recién cuando la empresa acepta: mientras está en evaluación o negociación no ocupa lugar. El punto de corte es "Habilitar acceso de la empresa", que crea el curso y guarda `cursoId` (`CreateCourseOnAcceptance`).
+
+La instancia que se está evaluando queda afuera sola, porque todavía no tiene `cursoId`; no hace falta filtrar por ID. Las instancias terminadas (finalizadas, canceladas, rechazadas) tampoco cuentan, porque dejan de estar activas. Se consideran todas las versiones desplegadas del proceso, porque la consulta es por key.
 
 La variable se guarda con `setVariableLocal`, por lo que `amountCursos` queda acotada a la ejecución de la tarea y no se propaga al resto de la instancia.
 
@@ -359,7 +360,7 @@ La variable pública del contrato es `isViable` como booleano. `amountCursos` y 
 
 | Campo | Tipo | Descripción |
 |---|---|---|
-| `amountInstancesActives` | `long` | Cantidad de instancias activas del proceso, sin contar la actual. |
+| `amountInstancesActives` | `long` | Cantidad de cursos en ejecución: instancias activas con `cursoId`. |
 
 > **Nota de nombre:** el campo se llama `amountInstancesActives` (con `s` final) y así se usa en el DRL. Si se renombra, hay que actualizar la clase y las reglas al mismo tiempo.
 
@@ -367,14 +368,14 @@ La variable pública del contrato es `isViable` como booleano. `amountCursos` y 
 
 ## 6. Regla de decisión
 
-Con `N` = instancias activas sin contar la solicitud actual:
+Con `N` = cursos en ejecución (instancias activas que ya pasaron por "Habilitar acceso de la empresa"):
 
-| Otras instancias activas (`N`) | `amountInstancesActives` | Resultado | Camino |
+| Cursos en ejecución (`N`) | `amountInstancesActives` | Resultado | Camino |
 |---|---|---|---|
 | 0 a 4 | 0 a 4 | Viable | Sí |
 | 5 o más | 5 o más | No viable | No |
 
-En otras palabras, se permiten hasta **5 instancias activas simultáneas**. La sexta solicitud se rechaza.
+En otras palabras, se permiten hasta **5 cursos en ejecución simultáneos**. Las solicitudes en evaluación o negociación no cuentan, así que puede haber más de 5 instancias activas.
 
 El umbral está fijado en las reglas Drools. Para cambiarlo hay que modificar `viability.drl`, volver a compilar y redesplegar el recurso.
 
@@ -398,23 +399,19 @@ El umbral está fijado en las reglas Drools. Para cambiarlo hay que modificar `v
 
 3. Iniciar una instancia del proceso. La primera solicitud debe tomar el camino **Sí** (`amountInstancesActives = 0`).
 
-4. Dejar instancias activas y volver a iniciar solicitudes. Mientras haya 4 o menos instancias previas, el camino es **Sí**.
+4. Iniciar 5 solicitudes y dejarlas en "Registrar y Elaborar propuesta": la siguiente sigue siendo **Sí**, porque no son cursos en ejecución.
 
-5. Con 5 instancias previas activas, la siguiente debe tomar el camino **No** y terminar en `Notificar Decisión`.
+5. Llevar esas 5 hasta "Habilitar acceso de la empresa" (completar la propuesta y enviar `msgAceptacion` con `fechaInicio` desde el simulador). La siguiente solicitud debe tomar el camino **No** y terminar en `Notificar Decisión`.
 
 Para inspeccionar la decisión se puede consultar la variable `isViable` de la instancia desde Flowable UI o la API. La colección intermedia se sobrescribe al terminar la tarea, así que el valor observable es el booleano final.
 
-## 9. Estado actual y ajustes pendientes
+## 9. Estado actual
 
-La lógica de la sección está completa, pero la implementación todavía no es ejecutable de punta a punta. Antes de dar por cerrado el contrato hay que resolver:
-
-- **El DRL no se despliega junto al BPMN.** `ModelerImporter` solo importa el BPMN al Modeler. Si el deployment no contiene `rules/viability.drl`, Flowable no encuentra el `KieBase` y falla con `deployment ... doesn't contain any rules`.
-- **El motor tiene que registrar el `RulesDeployer`** (`setCustomPostDeployers`); si no, el `.drl` se ignora aunque esté en el deployment. Hay que verificar cómo configurarlo en el contenedor de Flowable UI.
-- **Drools 7 necesita `drools-mvel` y Java 11 o 17**: usa `java.lang.Compiler`, que no existe desde Java 21.
+La sección funciona de punta a punta en Flowable UI: `make deploy` despliega el BPMN y el `.drl` juntos, y `RulesConfigurator` registra el `RulesDeployer`. Drools 7 necesita `drools-mvel` y Java 11 o 17: usa `java.lang.Compiler`, que no existe desde Java 21.
 
 ### Tests
 
-`src/test/java/flowable/viability/ViabilityTest.java` despliega en un motor H2 en memoria una copia de la sección (`src/test/resources/processes/viabilidad-test.bpmn20.xml`, con las mismas clases, reglas y condiciones) y cubre: primera solicitud viable, 4 cursos activos viable, 5 cursos activos no viable e instancias finalizadas que no cuentan. Se usa una copia porque el modelo completo todavía no pasa la validación de Flowable.
+`src/test/java/flowable/viability/ViabilityTest.java` despliega en un motor H2 en memoria una copia de la sección (`src/test/resources/processes/viabilidad-test.bpmn20.xml`, con las mismas clases, reglas y condiciones) y cubre: primera solicitud viable, 4 cursos en ejecución viable, 5 cursos en ejecución no viable, solicitudes en evaluación que no cuentan e instancias finalizadas que no cuentan. Los tests simulan el paso por "Habilitar acceso" guardando `cursoId` en la instancia.
 
 ```bash
 mvn test   # con Java 11 o 17
