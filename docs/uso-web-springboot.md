@@ -93,6 +93,117 @@ Una vez iniciada la instancia, el proceso continúa en Flowable según el BPMN. 
 
 Esta API termina su responsabilidad al iniciar el proceso. No tiene una ruta para registrar `ACEPTACION`, `RECHAZO` o `MODIFICACIONES`; la recepción de esos mensajes debe integrarse por separado.
 
+## 4. Simular manualmente hasta “Evaluar Recursos”
+
+Estos pasos permiten recorrer el proceso desde la terminal, sin depender de las pantallas administrativas del sitio. Requieren Docker, Java 11 o 17 y Maven.
+
+### Preparar el entorno
+
+Desde la raíz del proyecto:
+
+```bash
+make dev-up
+make db-migrate
+make verify
+make build
+make seed # carga los usuarios e importa el bpmn
+make deploy
+```
+
+El build y reinicio hacen que Flowable cargue el listener Java de validación de recursos. Volvé a ejecutar `make deploy` después de cada cambio al BPMN.
+
+### Iniciar la solicitud
+
+```bash
+curl -i -X POST http://127.0.0.1:8081/api/solicitudes \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "empresaNombre": "Tech Solutions S.A.",
+    "contactoNombre": "Ana Pérez",
+    "contactoEmail": "ana@example.com",
+    "contactoTelefono": "555-0101",
+    "tematica": "Capacitación BPMN",
+    "descripcion": "Curso para el equipo de desarrollo",
+    "participantesEstimados": 12,
+    "fechasPreferidas": "Marzo de 2027",
+    "plazoRecordatorio": "PT10M"
+  }'
+```
+
+Guardá el valor `processInstanceId` de la respuesta `201 Created`; se usa en los pasos siguientes. Si la instancia resulta no viable, el proceso termina antes de crear la tarea de propuesta. La regla actual permite la solicitud cuando hay menos de cinco instancias activas previas.
+
+### Completar “Registrar y Elaborar propuesta”
+
+En los ejemplos siguientes, el usuario local creado por la seed es `jefeAdministrativo` y su contraseña es `JefeA`. Definí el prefijo de la API REST de Flowable y consultá sus tareas:
+
+```bash
+FLOWABLE=http://127.0.0.1:8080/flowable-ui/process-api
+
+curl -sS -u jefeAdministrativo:JefeA \
+  "$FLOWABLE/runtime/tasks?assignee=jefeAdministrativo"
+```
+
+Copiá el `id` de la tarea **Registrar y Elaborar propuesta** y completala reemplazando `TASK_ID`:
+
+```bash
+curl -i -u jefeAdministrativo:JefeA \
+  -H 'Content-Type: application/json' \
+  -X POST "$FLOWABLE/runtime/tasks/TASK_ID" \
+  -d '{
+    "action": "complete",
+    "variables": [
+      {"name": "programa", "type": "string", "value": "Capacitación BPMN"},
+      {"name": "presupuesto", "type": "long", "value": 150000},
+      {"name": "fechaInicioPosible", "type": "date", "value": "2026-11-20T00:00:00.000+0000"},
+      {"name": "fechaFinPropuesta", "type": "date", "value": "2026-11-25T00:00:00.000+0000"}
+    ]
+  }'
+```
+
+El presupuesto debe ser cero o mayor y la fecha final no puede ser anterior a la inicial. Al completar la tarea, el proceso envía la propuesta de forma simulada y queda esperando la respuesta de la empresa.
+
+### Aceptar la propuesta
+
+Desde otra terminal, enviá `msgAceptacion` con el simulador. Reemplazá `PROCESS_INSTANCE_ID` por el valor guardado al iniciar la solicitud:
+
+```bash
+cd desktop/simulador
+mvn -q compile exec:java -Dexec.args="enviar PROCESS_INSTANCE_ID ACEPTACION fechaInicio=2026-11-20T09:00:00"
+```
+
+La comunicación solo está habilitada mientras la instancia espera una respuesta. El simulador también permite consultar las comunicaciones disponibles:
+
+```bash
+mvn -q compile exec:java -Dexec.args="habilitadas PROCESS_INSTANCE_ID"
+```
+
+### Completar “Evaluar Recursos”
+
+La aceptación inicia “Preparar curso”; sus ramas corren en paralelo. Consultá las tareas candidatas de Administración y copiá el `id` de **Evaluar Recursos**:
+
+```bash
+curl -sS -u jefeAdministrativo:JefeA \
+  "$FLOWABLE/runtime/tasks?candidateGroup=Administracion"
+```
+
+Completá la tarea enviando los tres booleanos. Debe haber al menos uno en `true`; el gateway inclusivo puede activar varias ramas:
+
+```bash
+curl -i -u jefeAdministrativo:JefeA \
+  -H 'Content-Type: application/json' \
+  -X POST "$FLOWABLE/runtime/tasks/RESOURCE_TASK_ID" \
+  -d '{
+    "action": "complete",
+    "variables": [
+      {"name": "aulaFisica", "type": "boolean", "value": true},
+      {"name": "aulaVirtual", "type": "boolean", "value": false},
+      {"name": "equipamiento", "type": "boolean", "value": false}
+    ]
+  }'
+```
+
+Si las tres opciones son falsas o no se envían, el listener rechaza la finalización y la tarea queda pendiente. Si la tarea no aparece, verificá que la solicitud haya sido viable, que se haya completado la propuesta y que el simulador haya enviado la aceptación a esa misma instancia.
+
 ## Consideraciones
 
 - La empresa se identifica por nombre, pero esto no autentica a quien envía la solicitud.
