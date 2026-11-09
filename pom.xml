@@ -154,6 +154,14 @@
               <include>application.yml</include>
             </includes>
           </resource>
+          <resource>
+            <directory>${project.basedir}/web</directory>
+            <targetPath>static</targetPath>
+            <excludes>
+              <exclude>README.md</exclude>
+              <exclude>**/.gitkeep</exclude>
+            </excludes>
+          </resource>
         </resources>
         <plugins>
           <!-- Este perfil compila solo el paquete web.backend y sus pruebas. -->
