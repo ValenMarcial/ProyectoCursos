@@ -63,6 +63,8 @@ function crearDatosIniciales() {
     variable(nombres.fechaInicioPosible, 'date', '2027-03-01T00:00:00.000Z'),
     variable(nombres.fechaFinPropuesta, 'date', '2027-03-31T00:00:00.000Z'),
   ];
+  // Fecha que envía la empresa al aceptar: existe desde "Preparar curso" en adelante.
+  const aceptacion = variable('fechaInicio', 'string', '2027-03-08T09:00:00');
 
   return {
     tareas: [
@@ -78,8 +80,8 @@ function crearDatosIniciales() {
       'instancia-1': [...solicitud],
       'instancia-2': [...solicitud, ...propuesta, variable('observaciones', 'string', 'Reducir el presupuesto')],
       'instancia-3': [...solicitud, variable('resultado', 'string', 'rechazado')],
-      'instancia-4': [...solicitud, ...propuesta],
-      'instancia-5': [...solicitud, ...propuesta],
+      'instancia-4': [...solicitud, ...propuesta, aceptacion],
+      'instancia-5': [...solicitud, ...propuesta, aceptacion],
       'instancia-6': [...solicitud, ...propuesta, variable('participantes', 'string', 'Ana Pérez, Juan Gómez')],
       'instancia-7': [...solicitud, ...propuesta, variable(nombres.informeResultados, 'string', 'El curso se dictó con normalidad.')],
     },
@@ -156,6 +158,18 @@ function validarPropuesta(nuevas) {
 }
 
 /**
+ * Busca el rechazo que daría ValidateResourceSelection.
+ * Recibe: variables nuevas que se quieren guardar en la instancia.
+ * Devuelve: la respuesta 500, o null si hay al menos un recurso en true.
+ */
+function validarRecursos(nuevas) {
+  const recursos = [nombres.aulaFisica, nombres.aulaVirtual, nombres.equipamiento];
+  // Como Boolean.TRUE.equals en el listener: una variable ausente no cuenta como marcada.
+  const hayRecurso = nuevas.some((item) => recursos.includes(item.name) && item.value === true);
+  return hayRecurso ? null : errorInterno('Debe seleccionar al menos un recurso.');
+}
+
+/**
  * Simula GET de tareas.
  * Recibe: parámetros de la consulta.
  * Devuelve: la respuesta con el sobre de paginación de Flowable.
@@ -202,12 +216,12 @@ function reclamar(item) {
  * Devuelve: 200 sin cuerpo, o 500 si el listener rechaza.
  */
 function completar(item, nuevas = []) {
-  // Solo Registrar tiene el listener en el BPMN actual.
-  if (item.taskDefinitionKey === tareas.registrarPropuesta) {
-    const rechazo = validarPropuesta(nuevas);
-    // Se corta antes de escribir: tras un rechazo no cambia nada, como en la transacción real.
-    if (rechazo) return rechazo;
-  }
+  // Registrar y Evaluar Recursos son las tareas de estas pantallas con validación en el BPMN.
+  let rechazo = null;
+  if (item.taskDefinitionKey === tareas.registrarPropuesta) rechazo = validarPropuesta(nuevas);
+  if (item.taskDefinitionKey === tareas.evaluarRecursos) rechazo = validarRecursos(nuevas);
+  // Se corta antes de escribir: tras un rechazo no cambia nada, como en la transacción real.
+  if (rechazo) return rechazo;
 
   const instancia = datos.instancias[item.processInstanceId];
   for (const { name, type, value } of nuevas) {
