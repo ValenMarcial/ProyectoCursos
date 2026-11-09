@@ -160,7 +160,7 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `docenteSeleccionado` | String (ID de usuario del grupo `Docentes`) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
-| `resultado` | String | Cada camino de cierre | Execution Listener que actualiza `cursos.estado` |
+| `resultado` | String | Cada camino de cierre | `RecordProcessResult` (ver "Resultado del proceso") |
 
 ## Definir el docente del curso
 
@@ -193,12 +193,36 @@ Las siguientes tareas tienen responsables fijos en el modelo BPMN:
 
 Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
 
+## Resultado del proceso
+
+El Execution Listener `flowable.result.RecordProcessResult` (enunciado 3.4) corre al terminar la instancia y registra el valor de `resultado` en la base de la institución:
+
+- **Siempre** en `solicitudes.resultado` (migración `003`), usando `solicitudId`. Rechazo, sin respuesta y no viable terminan antes de "Habilitar acceso", así que no tienen curso: la solicitud es lo único que pueden actualizar.
+- **Si existe el curso** (variable `cursoId`), también en `cursos.estado`.
+- **Sin `resultado`:** deja un warning en el log y la instancia termina igual. Es un camino de cierre al que le falta definir la variable.
+- **Con un valor desconocido:** lanza una excepción y la instancia no termina (es un error del modelo).
+
+Usa la conexión de la transacción del motor, porque Flowable y las tablas de la institución están en la misma base. El UPDATE se ejecuta justo antes del commit, así el estado y el cierre de la instancia se confirman o se deshacen juntos. Probado en Flowable UI: si la instancia no logra terminar, no queda ningún estado cambiado.
+
+Para que corra hay que aplicar la migración (`make db-migrate`) y engancharlo a nivel proceso, dentro de `<process>` y antes del primer elemento:
+
+```xml
+<process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
+  <extensionElements>
+    <flowable:executionListener event="end" class="flowable.result.RecordProcessResult"></flowable:executionListener>
+  </extensionElements>
+  ...
+```
+
+En el Modeler se configura en las propiedades del proceso (clic en un lugar vacío del lienzo), en "Execution listeners".
+
 ## Pendiente para que el proceso corra completo
 
 Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:
 
 - Condiciones del gateway "Recursos necesarios" (por ejemplo, `${aulaFisica}`, `${aulaVirtual}`, `${equipamiento}`).
 - `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
+- Enganchar `RecordProcessResult` a nivel proceso (ver "Resultado del proceso").
 - Asignaciones y grupos candidatos de las demás tareas de usuario.
 - Enganchar en el BPMN las clases de "Reservar aula" y "Liberar Aula", y vincular las compensaciones con `association` (ver "Reservar y liberar aula").
 

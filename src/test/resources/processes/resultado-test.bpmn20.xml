@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Proceso mínimo con el listener de fin, igual que en el modelo completo. -->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-resultado" isExecutable="true">
+    <extensionElements>
+      <flowable:executionListener event="end" class="flowable.result.RecordProcessResult"/>
+    </extensionElements>
+    <startEvent id="inicio"/>
+    <userTask id="cerrar"/>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="cerrar"/>
+    <sequenceFlow id="f2" sourceRef="cerrar" targetRef="fin"/>
+  </process>
+</definitions>

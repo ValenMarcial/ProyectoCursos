@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Como resultado-test, con un segundo listener de fin que falla después de RecordProcessResult. -->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-resultado-falla" isExecutable="true">
+    <extensionElements>
+      <flowable:executionListener event="end" class="flowable.result.RecordProcessResult"/>
+      <flowable:executionListener event="end" expression="${variableQueNoExiste}"/>
+    </extensionElements>
+    <startEvent id="inicio"/>
+    <userTask id="cerrar"/>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="cerrar"/>
+    <sequenceFlow id="f2" sourceRef="cerrar" targetRef="fin"/>
+  </process>
+</definitions>
