@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-validacion-recursos" isExecutable="true">
+    <startEvent id="inicio"/>
+    <userTask id="evaluarRecursos" name="Evaluar Recursos">
+      <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.resources.ValidateResourceSelection"/>
+      </extensionElements>
+    </userTask>
+    <endEvent id="fin"/>
+    <sequenceFlow id="iniciarEvaluacion" sourceRef="inicio" targetRef="evaluarRecursos"/>
+    <sequenceFlow id="finalizar" sourceRef="evaluarRecursos" targetRef="fin"/>
+  </process>
+</definitions>

@@ -10,6 +10,7 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.Association;
 import org.flowable.bpmn.model.ServiceTask;
+import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.SubProcess;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.ProcessEngine;
@@ -98,6 +99,29 @@ class ProjectCoursesProcessDeploymentTest {
         assertCandidateGroup(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
     }
 
+    @Test
+    void configuraLasCondicionesDelGatewayDeRecursos() {
+        SubProcess prepararCurso = getPrepararCurso();
+        UserTask evaluarRecursos = (UserTask) prepararCurso
+                .getFlowElement("sid-F3381B5B-C506-4AC2-A09D-747447EFB31B");
+
+        assertEquals(1, evaluarRecursos.getTaskListeners().size());
+        assertEquals("complete", evaluarRecursos.getTaskListeners().get(0).getEvent());
+        assertEquals("flowable.resources.ValidateResourceSelection",
+                evaluarRecursos.getTaskListeners().get(0).getImplementation());
+        assertEquals(3, evaluarRecursos.getFormProperties().size());
+        assertEquals("aulaFisica", evaluarRecursos.getFormProperties().get(0).getId());
+        assertEquals("boolean", evaluarRecursos.getFormProperties().get(0).getType());
+        assertEquals("aulaVirtual", evaluarRecursos.getFormProperties().get(1).getId());
+        assertEquals("boolean", evaluarRecursos.getFormProperties().get(1).getType());
+        assertEquals("equipamiento", evaluarRecursos.getFormProperties().get(2).getId());
+        assertEquals("boolean", evaluarRecursos.getFormProperties().get(2).getType());
+
+        assertCondition(prepararCurso, "sid-19857014-988C-474C-919E-156D839EBF11", "${aulaFisica}");
+        assertCondition(prepararCurso, "sid-26008547-815D-4F4A-BC87-8B1AE4E49010", "${aulaVirtual}");
+        assertCondition(prepararCurso, "sid-136BD651-1667-4CC4-8A87-10A4944F19B0", "${equipamiento}");
+    }
+
         @Test
         void conectaLasTareasDeAulaConSusDelegates() {
         SubProcess prepararCurso = getPrepararCurso();
@@ -161,5 +185,10 @@ class ProjectCoursesProcessDeploymentTest {
     private static void assertCandidateGroup(SubProcess process, String taskId) {
         UserTask task = (UserTask) process.getFlowElement(taskId);
         assertTrue(task.getCandidateGroups().contains("Administracion"), "Grupo candidato de " + task.getName());
+    }
+
+    private static void assertCondition(SubProcess process, String flowId, String expectedCondition) {
+        SequenceFlow flow = (SequenceFlow) process.getFlowElement(flowId);
+        assertEquals(expectedCondition, flow.getConditionExpression());
     }
 }
