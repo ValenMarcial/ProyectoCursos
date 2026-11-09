@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="test">
+  <!-- Réplica de "Preparar curso" con los mismos ids de actividad que el BPMN real, para probar las consultas 4.3. -->
+  <message id="msgCancel" name="msgCancel"/>
+  <process id="process-proyecto-curso" name="Proyecto Cursos (prueba)" isExecutable="true">
+    <startEvent id="inicio"/>
+    <sequenceFlow sourceRef="inicio" targetRef="preparar"/>
+    <subProcess id="preparar" name="Preparar curso">
+      <startEvent id="ini"/>
+      <sequenceFlow sourceRef="ini" targetRef="split"/>
+      <parallelGateway id="split"/>
+      <sequenceFlow sourceRef="split" targetRef="sid-40B80C57-5A63-4D5C-A43B-710C8B140370"/>
+      <sequenceFlow sourceRef="split" targetRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB"/>
+      <sequenceFlow sourceRef="split" targetRef="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B"/>
+      <receiveTask id="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" name="Recibir nómina"/>
+      <sequenceFlow sourceRef="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" targetRef="sid-67285B9F-672D-4038-A765-E67245B387D1"/>
+      <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:candidateGroups="Administracion"/>
+      <sequenceFlow sourceRef="sid-67285B9F-672D-4038-A765-E67245B387D1" targetRef="union"/>
+      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion"/>
+      <sequenceFlow sourceRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" targetRef="union"/>
+      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion"/>
+      <sequenceFlow sourceRef="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" targetRef="seleccion"/>
+      <inclusiveGateway id="seleccion"/>
+      <sequenceFlow sourceRef="seleccion" targetRef="sid-065649F8-9F01-4C34-B290-C37474CC479D">
+        <conditionExpression xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${aulaFisica}</conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow sourceRef="seleccion" targetRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB">
+        <conditionExpression xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${aulaVirtual}</conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow sourceRef="seleccion" targetRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790">
+        <conditionExpression xsi:type="tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${equipamiento}</conditionExpression>
+      </sequenceFlow>
+      <userTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:candidateGroups="Administracion"/>
+      <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:candidateGroups="Administracion"/>
+      <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:candidateGroups="Administracion"/>
+      <sequenceFlow sourceRef="sid-065649F8-9F01-4C34-B290-C37474CC479D" targetRef="cierreRecursos"/>
+      <sequenceFlow sourceRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" targetRef="cierreRecursos"/>
+      <sequenceFlow sourceRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" targetRef="cierreRecursos"/>
+      <inclusiveGateway id="cierreRecursos"/>
+      <sequenceFlow sourceRef="cierreRecursos" targetRef="union"/>
+      <parallelGateway id="union"/>
+      <sequenceFlow sourceRef="union" targetRef="sid-85D22149-CBE0-424A-9E0D-9C03CFB275CD"/>
+      <endEvent id="sid-85D22149-CBE0-424A-9E0D-9C03CFB275CD"/>
+    </subProcess>
+    <boundaryEvent id="cancelacion" attachedToRef="preparar">
+      <messageEventDefinition messageRef="msgCancel"/>
+    </boundaryEvent>
+    <sequenceFlow sourceRef="preparar" targetRef="fin"/>
+    <sequenceFlow sourceRef="cancelacion" targetRef="fin"/>
+    <endEvent id="fin"/>
+  </process>
+</definitions>
