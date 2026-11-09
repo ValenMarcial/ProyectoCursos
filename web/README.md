@@ -10,7 +10,7 @@ Es un único sitio con distintas vistas según quién ingresa. Todas las vistas 
 ```
 web/
 ├── index.html          Portada con acceso a cada sección
-├── comun/              Código compartido (actualmente solo un estilo)
+├── common/              Código compartido (actualmente solo un estilo)
 ├── public/            Sección pública: formulario de solicitud
 ├── enterprise/            Acceso y seguimiento para empresas
 ├── administration/     Funciones para Administración
@@ -66,18 +66,27 @@ Cada docente puede consultar y completar las tareas *Desarrollar curso* que teng
 
 Carpeta: `teachers/`
 
-## Cómo abrir el sitio en local
+## Cómo abrir el sitio
 
-Con el backend levantado (`make dev-up`), desde la carpeta `web/`:
+Los archivos estáticos los sirve el backend (Spring Boot). Con `make dev-up`,
+el sitio queda en `http://localhost:8081`.
 
-```
-python3 -m http.server 8000
-```
+Cada cambio en `web/` requiere volver a correr `make dev-up`.
 
-Después entrar a `http://localhost:8000`.
-
-La portada se puede ver abriendo `index.html` directamente, pero las páginas que se conectan al backend necesitan el servidor.
+Para editar más rápido se puede servir `web/` con un servidor estático en el
+puerto 3000 y abrirlo como `http://localhost:3000`. En ese caso las llamadas
+al backend necesitan URL absoluta y CORS habilitado en el controller.
 
 ## Pendiente
 
-- Antes de comenzar con la implementacion de cada vista con su logica correspondiente se debe definir que se implementara para servir estos archivos estaticos
+- Desarrollar las vistas de cada carpeta.
+- Definir los endpoints del backend que cada vista necesite.
+- Resolver cómo consumen las pantallas del personal la API REST de Flowable.
+
+## Convenciones que se pueden seguir para llamar al backend
+
+- Cuando el sitio lo sirve el backend, usar rutas relativas (`/api/...`).
+- Revisar siempre `respuesta.ok`: `fetch` no lanza error ante un 4xx o 5xx.
+- Leer el cuerpo de la respuesta también cuando hay error. El backend puede
+  devolver información útil (por ejemplo, el estado `PENDIENTE` en un 502).
+- Mostrar al usuario un mensaje claro en cada caso de error.
