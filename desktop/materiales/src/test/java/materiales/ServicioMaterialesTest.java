@@ -11,11 +11,9 @@ import java.util.List;
 import java.util.Map;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.ProcessEngineConfiguration;
+import org.flowable.engine.IdentityService;
 import org.flowable.idm.api.Group;
-import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.idm.api.User;
-import org.flowable.idm.engine.IdmEngine;
-import org.flowable.idm.engine.IdmEngineConfiguration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +23,6 @@ import materiales.ServicioMateriales.Usuario;
 /** Prueba contra un motor real (H2 en memoria) con un proceso mínimo: una tarea "Prepara materiales" para el grupo. */
 class ServicioMaterialesTest {
     private static ProcessEngine procesos;
-    private static IdmEngine idm;
     private static ServicioMateriales servicio;
 
     @BeforeAll
@@ -34,11 +31,7 @@ class ServicioMaterialesTest {
                 .setJdbcUrl("jdbc:h2:mem:materiales;DB_CLOSE_DELAY=-1")
                 .setAsyncExecutorActivate(false)
                 .buildProcessEngine();
-        IdmEngineConfiguration cfg = IdmEngineConfiguration.createStandaloneInMemIdmEngineConfiguration();
-        cfg.setJdbcUrl("jdbc:h2:mem:materiales-idm;DB_CLOSE_DELAY=-1");
-        cfg.setDatabaseSchemaUpdate(IdmEngineConfiguration.DB_SCHEMA_UPDATE_TRUE);
-        idm = cfg.buildIdmEngine();
-        IdmIdentityService ids = idm.getIdmIdentityService();
+        IdentityService ids = procesos.getIdentityService();
         grupo(ids, "Administracion");
         grupo(ids, "Docentes");
         usuario(ids, "admin1", "clave1", "Administracion");
@@ -52,7 +45,6 @@ class ServicioMaterialesTest {
     @AfterAll
     static void cerrar() {
         procesos.close();
-        idm.close();
     }
 
     @BeforeEach
@@ -61,13 +53,13 @@ class ServicioMaterialesTest {
                 .forEach(i -> procesos.getRuntimeService().deleteProcessInstance(i.getId(), "test"));
     }
 
-    private static void grupo(IdmIdentityService ids, String id) {
+    private static void grupo(IdentityService ids, String id) {
         Group g = ids.newGroup(id);
         g.setName(id);
         ids.saveGroup(g);
     }
 
-    private static void usuario(IdmIdentityService ids, String id, String clave, String grupo) {
+    private static void usuario(IdentityService ids, String id, String clave, String grupo) {
         User u = ids.newUser(id);
         u.setPassword(clave);
         ids.saveUser(u);
@@ -124,14 +116,29 @@ class ServicioMaterialesTest {
     }
 
     @Test
-    void completarAvanzaElProceso() {
+    void identificaPorClaveDeTareaAunqueCambieElNombre() {
+        iniciar("Acme");
+        // La tarea se llama "Nombre cualquiera": se la encuentra por su id; la otra rama no aparece.
+        List<TareaMateriales> tareas = servicio.consultar(servicio.identificar("admin1", "clave1"));
+        assertEquals(1, tareas.size());
+        assertEquals("Nombre cualquiera", tareas.get(0).nombre);
+    }
+
+    @Test
+    void completarSiendoLaUltimaRamaNoEjecutaElResto() {
         String instancia = iniciar("Acme");
         Usuario a1 = servicio.identificar("admin1", "clave1");
+        // La otra rama termina primero: la de materiales queda como última.
+        procesos.getTaskService().createTaskQuery().processInstanceId(instancia).taskDefinitionKey("otraRama")
+                .list().forEach(t -> procesos.getTaskService().complete(t.getId()));
         String id = servicio.consultar(a1).get(0).id;
         servicio.reclamar(a1, id);
+        // Sin la unión asíncrona esto falla: el script Groovy corre dentro de esta app y no encuentra el motor.
         servicio.completar(a1, id);
         assertTrue(servicio.consultar(a1).isEmpty());
-        assertEquals(0, procesos.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
+        // Lo que sigue queda como trabajo pendiente para el motor que sí tiene Groovy (Flowable UI).
+        assertTrue(procesos.getManagementService().createJobQuery().processInstanceId(instancia).count() > 0);
+        assertEquals(1, procesos.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
     }
 
     @Test

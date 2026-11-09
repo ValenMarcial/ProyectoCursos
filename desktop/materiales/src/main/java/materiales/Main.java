@@ -14,6 +14,6 @@ public final class Main {
         }
         Runtime.getRuntime().addShutdownHook(new Thread(motor::close));
         VentanaMateriales.abrir(new ServicioMateriales(motor.procesos().getTaskService(),
-                motor.procesos().getRuntimeService(), motor.identidades()));
+                motor.procesos().getRuntimeService(), motor.procesos().getIdentityService()));
     }
 }

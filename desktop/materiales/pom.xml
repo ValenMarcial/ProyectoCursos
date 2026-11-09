@@ -16,12 +16,6 @@
       <artifactId>flowable-engine</artifactId>
       <version>6.8.0</version>
     </dependency>
-    <!-- Usuarios y grupos de Flowable (el mismo login que Flowable UI). -->
-    <dependency>
-      <groupId>org.flowable</groupId>
-      <artifactId>flowable-idm-engine</artifactId>
-      <version>6.8.0</version>
-    </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>

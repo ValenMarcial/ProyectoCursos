@@ -5,23 +5,25 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.flowable.engine.IdentityService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
 import org.flowable.idm.api.Group;
-import org.flowable.idm.api.IdmIdentityService;
 import org.flowable.task.api.Task;
 
 /** Lo que puede hacer un administrativo con las tareas "Preparar materiales", usando la API Java del motor. */
 public class ServicioMateriales {
-    /** El BPMN la nombra "Prepara materiales"; el enunciado dice "Preparar materiales". Se aceptan las dos. */
+    /** Id de la tarea en el BPMN (no cambia si en el editor se renombra la tarea). */
+    static final String CLAVE_TAREA = "sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB";
+    /** Respaldo por nombre, por si se vuelve a dibujar la tarea y cambia el id: "Prepara/Preparar materiales". */
     static final String PATRON_NOMBRE = "prepar% materiales";
     static final String GRUPO_ADMINISTRACION = "Administracion";
 
     private final TaskService tareas;
     private final RuntimeService ejecuciones;
-    private final IdmIdentityService identidades;
+    private final IdentityService identidades;
 
-    public ServicioMateriales(TaskService tareas, RuntimeService ejecuciones, IdmIdentityService identidades) {
+    public ServicioMateriales(TaskService tareas, RuntimeService ejecuciones, IdentityService identidades) {
         this.tareas = tareas;
         this.ejecuciones = ejecuciones;
         this.identidades = identidades;
@@ -42,14 +44,16 @@ public class ServicioMateriales {
     /** Tareas de materiales asignadas al usuario, más las que puede reclamar por su grupo. */
     public List<TareaMateriales> consultar(Usuario usuario) {
         Map<String, TareaMateriales> resultado = new LinkedHashMap<>();
-        for (Task t : tareas.createTaskQuery().taskAssignee(usuario.id).taskNameLikeIgnoreCase(PATRON_NOMBRE)
-                .active().list()) {
-            resultado.put(t.getId(), aVista(t, true));
+        for (Task t : tareas.createTaskQuery().taskAssignee(usuario.id).active().list()) {
+            if (esDeMateriales(t)) {
+                resultado.put(t.getId(), aVista(t, true));
+            }
         }
         if (!usuario.grupos.isEmpty()) {
-            for (Task t : tareas.createTaskQuery().taskCandidateGroupIn(usuario.grupos)
-                    .taskNameLikeIgnoreCase(PATRON_NOMBRE).active().list()) {
-                resultado.putIfAbsent(t.getId(), aVista(t, false));
+            for (Task t : tareas.createTaskQuery().taskCandidateGroupIn(usuario.grupos).active().list()) {
+                if (esDeMateriales(t)) {
+                    resultado.putIfAbsent(t.getId(), aVista(t, false));
+                }
             }
         }
         List<TareaMateriales> lista = new ArrayList<>(resultado.values());
@@ -84,11 +88,16 @@ public class ServicioMateriales {
     }
 
     private Task buscar(String tareaId) {
-        Task t = tareas.createTaskQuery().taskId(tareaId).taskNameLikeIgnoreCase(PATRON_NOMBRE).singleResult();
-        if (t == null) {
+        Task t = tareas.createTaskQuery().taskId(tareaId).singleResult();
+        if (t == null || !esDeMateriales(t)) {
             throw new IllegalStateException("La tarea ya no existe o no es de preparar materiales.");
         }
         return t;
+    }
+
+    static boolean esDeMateriales(Task t) {
+        return CLAVE_TAREA.equals(t.getTaskDefinitionKey())
+                || (t.getName() != null && t.getName().toLowerCase().matches("prepar[a-z]* materiales"));
     }
 
     private TareaMateriales aVista(Task t, boolean propia) {

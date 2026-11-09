@@ -34,9 +34,13 @@ También existen `MOTOR_DB_USER` y `MOTOR_DB_PASSWORD`.
 
 - **`asyncExecutorActivate=false`** (lo pide el enunciado): esta app solo consulta y completa tareas; los timers y trabajos los ejecuta Flowable UI. Si los dos motores ejecutaran trabajos sobre la misma base, se los disputarían.
 - **`databaseSchemaUpdate=false`**: la app nunca crea ni modifica tablas, solo se conecta a las que ya existen.
-- **Login con el IDM de Flowable** (`IdmIdentityService.checkPassword`), no hay cuentas aparte.
-- **Nombre de la tarea:** se buscan las tareas llamadas "Prepara materiales" o "Preparar materiales" (hoy el BPMN dice "Prepara materiales").
+- **Login con Flowable** (`IdentityService.checkPassword` del mismo motor de procesos), no hay cuentas aparte.
+- **Cómo encuentra la tarea:** por su id en el BPMN (`taskDefinitionKey`, constante `CLAVE_TAREA`), así un renombre en el editor no la hace desaparecer. Si algún día se vuelve a dibujar la tarea y cambia el id, también la encuentra por el nombre "Prepara/Preparar materiales".
 - **Reclamar** exige que la tarea no tenga responsable y que el usuario pertenezca a un grupo candidato; **completar** exige que la tarea sea del usuario.
+
+## Requisito en el BPMN: unión asíncrona
+
+Si "Prepara materiales" es la última rama de "Preparar curso" en terminar, al completarla desde esta app el motor de la app seguiría ejecutando el proceso hasta "Enviar confirmación", un script Groovy que esta app no puede correr (no trae Groovy ni las clases del proyecto) y falla con `Can't find scripting engine for 'groovy'`. Por eso la unión **"Preparación completa"** (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) debe tener `flowable:async="true"`: la app solo completa la tarea y el resto lo ejecuta Flowable UI. La prueba `completarSiendoLaUltimaRamaNoEjecutaElResto` lo verifica (sin el async falla).
 
 ## Pendiente
 
