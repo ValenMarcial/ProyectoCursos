@@ -9,6 +9,7 @@ import java.util.List;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.Association;
+import org.flowable.bpmn.model.FlowableListener;
 import org.flowable.bpmn.model.ServiceTask;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.SubProcess;
@@ -97,6 +98,19 @@ class ProjectCoursesProcessDeploymentTest {
         assertCandidateGroup(prepararCurso, "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
         assertCandidateGroup(prepararCurso, "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
         assertCandidateGroup(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+    }
+
+    @Test
+    void inicializaCanceladaAlEntrarEnPrepararCurso() {
+        SubProcess prepararCurso = getPrepararCurso();
+
+        FlowableListener listener = prepararCurso.getExecutionListeners().stream()
+                .filter(candidate -> "start".equals(candidate.getEvent()))
+                .findFirst()
+                .orElseThrow();
+
+        assertEquals("${execution.setVariable('cancelada', false)}", listener.getImplementation());
+        assertEquals("expression", listener.getImplementationType());
     }
 
     @Test
