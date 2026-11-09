@@ -92,10 +92,24 @@
   outline-offset: 1px;
 }
 
+/* Campo con error: la sombra engrosa el borde sin mover el resto del formulario. */
+.campo input[aria-invalid="true"],
+.campo textarea[aria-invalid="true"] {
+  border-color: var(--texto);
+  box-shadow: 0 0 0 1px var(--texto);
+}
+
 .campos-en-fila {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
+}
+
+/* Fila de una lista editable: el campo ocupa el ancho que deja el botón. */
+.fila-nombre {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* En la grilla del formulario, el botón conserva su ancho, como en el resto del sitio. */

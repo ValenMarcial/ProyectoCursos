@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confeccionar lista definitiva</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Confeccionar lista definitiva</h1>
+    <p>Administración</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Sección con los datos del curso -->
+    <section id="bloque-curso" class="bloque" hidden>
+      <h2>Datos del curso</h2>
+      <div class="tarjeta">
+        <dl id="datos-curso" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección con la lista de participantes -->
+    <section id="bloque-lista" class="bloque" hidden>
+      <h2>Participantes</h2>
+      <div class="tarjeta">
+        <!-- novalidate: los errores los muestra el módulo de la pantalla, en español y juntos -->
+        <form id="formulario-lista" class="formulario" novalidate>
+          <!-- Una fila por participante: las arma el módulo de la pantalla -->
+          <div id="filas-participantes" class="formulario"></div>
+
+          <p id="resumen-lista"></p>
+
+          <button id="boton-agregar" class="boton boton-secundario" type="button">Agregar participante</button>
+          <button id="boton-confirmar" class="boton" type="submit">Confirmar lista</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/lista-definitiva.js"></script>
+
+</body>
+</html>
