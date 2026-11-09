@@ -61,6 +61,10 @@ CREATE TABLE IF NOT EXISTS cursos (
 ALTER TABLE solicitudes
   ADD COLUMN IF NOT EXISTS curso_id BIGINT UNIQUE REFERENCES cursos (id);
 
+ALTER TABLE solicitudes
+  ADD COLUMN IF NOT EXISTS resultado TEXT
+    CHECK (resultado IN ('finalizado', 'cancelado', 'rechazado', 'cerrado_por_falta_de_respuesta', 'no_viable'));
+
 INSERT INTO schema_version (version)
 VALUES (0)
 ON CONFLICT (version) DO NOTHING;
