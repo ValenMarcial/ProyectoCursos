@@ -3,10 +3,8 @@
  *
  * Solo usa las variables de la base común, sin colores fijos, para que siga
  * funcionando el modo oscuro. Las pantallas enlazan únicamente este archivo.
- *
- * La ruta del @import pasa a ../../common/css/style.css cuando se mergee la PR #32.
  */
-@import url("../../comun/css/style.css");
+@import url("../../common/css/style.css");
 
 /* Clases como .boton definen display y le ganarían al atributo hidden. */
 [hidden] {
