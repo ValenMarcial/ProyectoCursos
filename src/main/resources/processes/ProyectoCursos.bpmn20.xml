@@ -129,7 +129,14 @@
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
       <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
-      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true">
+        <extensionElements>
+          <flowable:taskListener event="complete" class="flowable.resources.ValidateResourceSelection"></flowable:taskListener>
+          <flowable:formProperty id="aulaFisica" name="Requiere aula presencial" type="boolean"></flowable:formProperty>
+          <flowable:formProperty id="aulaVirtual" name="Requiere aula virtual" type="boolean"></flowable:formProperty>
+          <flowable:formProperty id="equipamiento" name="Requiere equipamiento especial" type="boolean"></flowable:formProperty>
+        </extensionElements>
+      </userTask>
       <receiveTask id="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" name="Recibir nómina"></receiveTask>
       <inclusiveGateway id="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" name="Recursos necesarios"></inclusiveGateway>
       <parallelGateway id="sid-420D072A-C42B-404D-BBDA-B884DD90C410" name="Preparación completa"></parallelGateway>
@@ -175,9 +182,15 @@
       <sequenceFlow id="sid-B7EAF565-2437-4864-BA47-EE0DAB9D2981" sourceRef="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" targetRef="sid-6236FDAA-5819-426B-BC14-0B157140A03E"></sequenceFlow>
       <sequenceFlow id="sid-DECAB99F-3EBC-4742-BCF0-FC3686762F40" sourceRef="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" targetRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E"></sequenceFlow>
       <sequenceFlow id="sid-83332017-6DC8-490C-AB89-DAA2F69FCE45" sourceRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" targetRef="sid-420D072A-C42B-404D-BBDA-B884DD90C410"></sequenceFlow>
-      <sequenceFlow id="sid-19857014-988C-474C-919E-156D839EBF11" name="Presencial" sourceRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" targetRef="sid-065649F8-9F01-4C34-B290-C37474CC479D"></sequenceFlow>
-      <sequenceFlow id="sid-26008547-815D-4F4A-BC87-8B1AE4E49010" name="Virtual" sourceRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" targetRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB"></sequenceFlow>
-      <sequenceFlow id="sid-136BD651-1667-4CC4-8A87-10A4944F19B0" name="Equipamiento especial" sourceRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" targetRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790"></sequenceFlow>
+      <sequenceFlow id="sid-19857014-988C-474C-919E-156D839EBF11" name="Presencial" sourceRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" targetRef="sid-065649F8-9F01-4C34-B290-C37474CC479D">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${aulaFisica}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="sid-26008547-815D-4F4A-BC87-8B1AE4E49010" name="Virtual" sourceRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" targetRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${aulaVirtual}]]></conditionExpression>
+      </sequenceFlow>
+      <sequenceFlow id="sid-136BD651-1667-4CC4-8A87-10A4944F19B0" name="Equipamiento especial" sourceRef="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" targetRef="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790">
+        <conditionExpression xsi:type="tFormalExpression"><![CDATA[${equipamiento}]]></conditionExpression>
+      </sequenceFlow>
       <sequenceFlow id="sid-BC254D8A-471A-4B4C-873D-F231AFD04D50" sourceRef="sid-6236FDAA-5819-426B-BC14-0B157140A03E" targetRef="sid-40B80C57-5A63-4D5C-A43B-710C8B140370"></sequenceFlow>
       <sequenceFlow id="sid-BAA13A7D-A456-4FB1-914C-039978735785" sourceRef="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" targetRef="sid-67285B9F-672D-4038-A765-E67245B387D1"></sequenceFlow>
       <sequenceFlow id="sid-016D2D9B-B42F-4F85-8445-C50975D0C55D" sourceRef="sid-67285B9F-672D-4038-A765-E67245B387D1" targetRef="sid-420D072A-C42B-404D-BBDA-B884DD90C410"></sequenceFlow>

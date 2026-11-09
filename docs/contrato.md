@@ -197,10 +197,21 @@ Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable
 
 Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:
 
-- Condiciones del gateway "Recursos necesarios" (por ejemplo, `${aulaFisica}`, `${aulaVirtual}`, `${equipamiento}`).
 - `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
 - Asignaciones y grupos candidatos de las demás tareas de usuario.
 - Enganchar en el BPMN las clases de "Reservar aula" y "Liberar Aula", y vincular las compensaciones con `association` (ver "Reservar y liberar aula").
+
+## Evaluación de recursos
+
+La tarea **Evaluar Recursos** registra los recursos requeridos mediante tres campos booleanos:
+
+| Variable | Rama del gateway |
+|---|---|
+| `aulaFisica` | Presencial: reservar aula |
+| `aulaVirtual` | Virtual: solicitar aula virtual |
+| `equipamiento` | Equipamiento especial: contratar equipamiento |
+
+El gateway es inclusivo, por lo que puede activar varias ramas. La tarea no se puede completar si ninguna opción está marcada; cada opción individual es opcional.
 
 # Sección de viabilidad
 
