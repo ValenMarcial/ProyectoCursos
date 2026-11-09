@@ -1,0 +1,132 @@
+/*
+ * Estilos propios de las pantallas de Administración.
+ *
+ * Solo usa las variables de la base común, sin colores fijos, para que siga
+ * funcionando el modo oscuro. Las pantallas enlazan únicamente este archivo.
+ */
+@import url("../../common/css/style.css");
+
+/* Clases como .boton definen display y le ganarían al atributo hidden. */
+[hidden] {
+  display: none !important;
+}
+
+/* Aviso de error o de éxito */
+.aviso {
+  margin: 1.5rem 0 0;
+  padding: 0.75rem 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left-width: 5px;
+  border-radius: 8px;
+  /* Permite mostrar varios errores, uno por línea. */
+  white-space: pre-line;
+}
+
+/* Sin un color de error en la base, se distingue por el peso y el borde. */
+.aviso-error {
+  border-left-color: var(--texto);
+  font-weight: 600;
+}
+
+.aviso-exito {
+  border-left-color: var(--acento);
+}
+
+/* Datos de solicitud, en pares etiqueta y valor */
+.datos {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+
+.datos dt {
+  color: var(--texto-suave);
+}
+
+.datos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* Formularios */
+.formulario {
+  display: grid;
+  gap: 1rem;
+}
+
+.campo {
+  display: grid;
+  gap: 0.3rem;
+  /* Sin esto, un input ancho puede estirar la grilla en pantallas chicas. */
+  min-width: 0;
+}
+
+.campo label {
+  font-weight: 600;
+}
+
+.campo input,
+.campo textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  /* Hace que el calendario y sus íconos sigan el modo oscuro del sistema. */
+  color-scheme: light dark;
+}
+
+.campo textarea {
+  min-height: 9rem;
+  resize: vertical;
+}
+
+.campo input:focus-visible,
+.campo textarea:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.campos-en-fila {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+/* En la grilla del formulario, el botón conserva su ancho, como en el resto del sitio. */
+.formulario .boton {
+  justify-self: start;
+}
+
+/* El azul por defecto del navegador no se lee en modo oscuro. */
+.pie a {
+  color: var(--acento);
+}
+
+/* .boton nació para enlaces: en un button hay que heredar la tipografía. */
+button.boton {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.boton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .datos {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .datos dd {
+    margin-bottom: 0.6rem;
+  }
+}
