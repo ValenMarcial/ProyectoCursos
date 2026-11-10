@@ -19,6 +19,11 @@ export const modoApi = 'mock';
 /**
  * Prefijo de la API del backend.
  * El navegador nunca habla directo con Flowable (ver docs/contrato.md).
+ *
+ * En modo 'real' estas rutas tienen que ser siempre las del backend (/api/...),
+ * nunca las de Flowable: el adaptador reclama sin mandar assignee porque el
+ * backend lo toma de la sesión, y un claim sin assignee contra Flowable libera
+ * la tarea en lugar de tomarla.
  */
 export const baseApi = '/api';
 
@@ -104,22 +109,9 @@ export const tiposVariables = {
   [variables.informeResultados]: 'string',
 };
 
-/** Mensaje de flowable.resources.ValidateResourceSelection; la pantalla anticipa la misma regla. */
-export const mensajeSinRecursos = 'Debe seleccionar al menos un recurso.';
-
 /**
- * Mensajes de los listeners que se pueden mostrar tal cual al usuario.
- * Copiados de flowable.proposal.ValidateProposalDates y de
- * flowable.resources.ValidateResourceSelection.
- *
- * PROVISORIA: se reemplaza cuando el backend traduzca los errores. Hace falta
- * porque Flowable devuelve 500 tanto para validaciones de negocio como para
- * bugs, y el status no permite distinguirlos.
+ * Mismo texto que flowable.resources.ValidateResourceSelection. La pantalla de
+ * evaluar recursos lo usa para anticipar la regla antes de enviar, así el aviso
+ * es igual tanto si lo detecta el navegador como si lo rechaza el motor.
  */
-export const mensajesNegocio = new Set([
-  'El presupuesto es obligatorio y debe ser un número mayor o igual a 0.',
-  'El presupuesto debe ser mayor o igual a 0.',
-  'Las fechas posibles de inicio y finalización son obligatorias.',
-  'La fecha de finalización debe ser posterior o igual a la fecha de inicio.',
-  mensajeSinRecursos,
-]);
+export const mensajeSinRecursos = 'Debe seleccionar al menos un recurso.';

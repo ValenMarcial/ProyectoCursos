@@ -5,10 +5,11 @@
  * mismo cuerpo que el backend y devuelve { estado, cuerpo }. Así api.js ejecuta
  * el mismo código en modo mock y en modo real.
  *
- * Respuestas copiadas de lo verificado contra Flowable 6.8 en la Fase 0:
- * reclamar una tarea tomada da 409, las validaciones del listener dan 500 con
- * el texto en exception, y tras un rechazo la tarea sigue activa sin guardar
- * variables.
+ * Respuestas copiadas de lo verificado contra Flowable 6.8: reclamar una tarea
+ * tomada da 409; las validaciones de los listeners dan 400 con el texto en
+ * exception (desde la #43 lanzan FlowableIllegalArgumentException); un error de
+ * casteo de Java sigue dando 500; y tras un rechazo la tarea sigue activa sin
+ * guardar variables.
  *
  * No simula el avance del proceso: al completar, la tarea solo desaparece.
  */
@@ -75,6 +76,10 @@ function crearDatosIniciales() {
       tarea('tarea-evaluar-tomada', 'Evaluar Recursos', tareas.evaluarRecursos, 'instancia-5', 'empleadoAdministrativo', [grupoAdministracion]),
       tarea('tarea-lista', 'Confeccionar lista definitiva', tareas.confeccionarLista, 'instancia-6', usuarioSimulado),
       tarea('tarea-informe', 'Enviar informe a empresa y Archivar expediente', tareas.enviarInforme, 'instancia-7', usuarioSimulado),
+      // Caso de respaldo del listener de asignación: sin integrantes en el grupo, la
+      // tarea queda sin assignee y con Administracion como candidato. Va última para
+      // que la pantalla siga abriendo por defecto la tarea asignada.
+      tarea('tarea-lista-sin-asignar', 'Confeccionar lista definitiva', tareas.confeccionarLista, 'instancia-8', null, [grupoAdministracion]),
     ],
     instancias: {
       'instancia-1': [...solicitud],
@@ -84,6 +89,7 @@ function crearDatosIniciales() {
       'instancia-5': [...solicitud, ...propuesta, aceptacion],
       'instancia-6': [...solicitud, ...propuesta, variable('participantes', 'string', 'Ana Pérez, Juan Gómez')],
       'instancia-7': [...solicitud, ...propuesta, variable(nombres.informeResultados, 'string', 'El curso se dictó con normalidad.')],
+      'instancia-8': [...solicitud, ...propuesta, variable('participantes', 'string', 'Lucía Fernández, Pedro Ruiz')],
     },
   };
 }
@@ -108,11 +114,20 @@ function responder(estado, cuerpo = null) {
 }
 
 /**
- * Arma el 500 que devuelve Flowable cuando falla la tarea.
+ * Arma el 500 que devuelve Flowable ante un error que no es de negocio (un bug).
  * Recibe: texto de la excepción. Devuelve: la respuesta simulada.
  */
 function errorInterno(excepcion) {
   return responder(500, { message: 'Internal server error', exception: excepcion });
+}
+
+/**
+ * Arma el 400 que devuelve Flowable cuando un listener rechaza por una regla de
+ * negocio (FlowableIllegalArgumentException).
+ * Recibe: texto de la excepción. Devuelve: la respuesta simulada.
+ */
+function errorNegocio(excepcion) {
+  return responder(400, { message: 'Bad request', exception: excepcion });
 }
 
 /**
@@ -126,7 +141,8 @@ function textoCasteo(recibida, esperada) {
 /**
  * Busca el rechazo que daría ValidateProposalDates, en el mismo orden que el listener.
  * Recibe: variables nuevas que se quieren guardar en la instancia.
- * Devuelve: la respuesta 500, o null si la propuesta es válida.
+ * Devuelve: la respuesta 500 (casteo) o 400 (regla de negocio), o null si la
+ * propuesta es válida.
  */
 function validarPropuesta(nuevas) {
   const buscar = (nombre) => nuevas.find((item) => item.name === nombre);
@@ -143,16 +159,16 @@ function validarPropuesta(nuevas) {
   }
 
   if (!presupuesto) {
-    return errorInterno('El presupuesto es obligatorio y debe ser un número mayor o igual a 0.');
+    return errorNegocio('El presupuesto es obligatorio y debe ser un número mayor o igual a 0.');
   }
   if (presupuesto.value < 0) {
-    return errorInterno('El presupuesto debe ser mayor o igual a 0.');
+    return errorNegocio('El presupuesto debe ser mayor o igual a 0.');
   }
   if (!inicio || !fin) {
-    return errorInterno('Las fechas posibles de inicio y finalización son obligatorias.');
+    return errorNegocio('Las fechas posibles de inicio y finalización son obligatorias.');
   }
   if (new Date(fin.value) < new Date(inicio.value)) {
-    return errorInterno('La fecha de finalización debe ser posterior o igual a la fecha de inicio.');
+    return errorNegocio('La fecha de finalización debe ser posterior o igual a la fecha de inicio.');
   }
   return null;
 }
@@ -160,13 +176,13 @@ function validarPropuesta(nuevas) {
 /**
  * Busca el rechazo que daría ValidateResourceSelection.
  * Recibe: variables nuevas que se quieren guardar en la instancia.
- * Devuelve: la respuesta 500, o null si hay al menos un recurso en true.
+ * Devuelve: la respuesta 400, o null si hay al menos un recurso en true.
  */
 function validarRecursos(nuevas) {
   const recursos = [nombres.aulaFisica, nombres.aulaVirtual, nombres.equipamiento];
   // Como Boolean.TRUE.equals en el listener: una variable ausente no cuenta como marcada.
   const hayRecurso = nuevas.some((item) => recursos.includes(item.name) && item.value === true);
-  return hayRecurso ? null : errorInterno('Debe seleccionar al menos un recurso.');
+  return hayRecurso ? null : errorNegocio('Debe seleccionar al menos un recurso.');
 }
 
 /**
@@ -213,7 +229,8 @@ function reclamar(item) {
 /**
  * Simula completar una tarea.
  * Recibe: la tarea y las variables enviadas.
- * Devuelve: 200 sin cuerpo, o 500 si el listener rechaza.
+ * Devuelve: 200 sin cuerpo, 400 si el listener rechaza por negocio o 500 si
+ * falla un casteo.
  */
 function completar(item, nuevas = []) {
   // Registrar y Evaluar Recursos son las tareas de estas pantallas con validación en el BPMN.

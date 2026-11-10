@@ -11,6 +11,8 @@
  * jsPDF se carga antes con un script clásico en el HTML y queda en window.jspdf.
  */
 
+import { quitarAcentos } from './texto.js';
+
 /** Margen de la hoja, en milímetros. */
 const margen = 20;
 
@@ -34,10 +36,7 @@ function formatearPresupuesto(presupuesto) {
  * Devuelve: nombre sin acentos ni símbolos, por ejemplo propuesta-tech-solutions-s-a-v1.pdf.
  */
 function nombreArchivo(empresa, version) {
-  const base = String(empresa ?? '')
-    .normalize('NFD')
-    // NFD separa la letra de su acento, y este reemplazo borra los acentos.
-    .replace(/[̀-ͯ]/g, '')
+  const base = quitarAcentos(empresa)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');

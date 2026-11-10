@@ -12,7 +12,7 @@
  * o completar lo controla el backend.
  */
 
-import { mensajesNegocio, modoApi, rutasApi, tiposVariables } from './contrato.js';
+import { modoApi, rutasApi, tiposVariables } from './contrato.js';
 import { enviarSimulado } from './mock.js';
 
 /**
@@ -136,6 +136,17 @@ function armarVariables(valores) {
 }
 
 /**
+ * Indica si un error es un rechazo de negocio que se puede mostrar tal cual.
+ * Regla de docs/contrato.md: las validaciones del motor lanzan
+ * FlowableIllegalArgumentException, que la API REST devuelve como 400 con el
+ * texto en exception. Un 400 sin ese texto no se puede mostrar.
+ * Recibe: status HTTP y cuerpo. Devuelve: boolean.
+ */
+function esRechazoDeNegocio(estado, cuerpo) {
+  return estado === 400 && typeof cuerpo?.exception === 'string' && cuerpo.exception.trim() !== '';
+}
+
+/**
  * Convierte una respuesta de error en un ErrorApi.
  * Recibe: status HTTP y cuerpo { message, exception }, si lo hay.
  * Devuelve: el ErrorApi listo para lanzar.
@@ -143,11 +154,12 @@ function armarVariables(valores) {
 function traducirError(estado, cuerpo) {
   const detalle = cuerpo?.exception ?? cuerpo?.message ?? null;
 
-  // Va primero porque el status no distingue validaciones de bugs: ambos son 500.
-  if (mensajesNegocio.has(cuerpo?.exception)) {
+  if (esRechazoDeNegocio(estado, cuerpo)) {
     return new ErrorApi(cuerpo.exception, { tipo: 'negocio', estado, detalle });
   }
 
+  // Un 500 siempre cae en el mensaje genérico, aunque su texto parezca de negocio:
+  // es un bug o una falla de infraestructura, y su detalle queda solo para la consola.
   switch (estado) {
     case 401:
       return new ErrorApi('Tu sesión no es válida. Volvé a ingresar.', { tipo: 'sinSesion', estado, detalle });
@@ -242,7 +254,11 @@ export function crearApi(enviar) {
     /**
      * Reclama una tarea de grupo.
      * Recibe: id de la tarea. Devuelve: nada.
-     * No manda assignee: el backend lo toma de la sesión, no del navegador.
+     * No manda assignee: el backend lo toma de la sesión, no del navegador, así
+     * nadie puede reclamar a nombre de otro. Por eso solo recibe el id: desde la
+     * web no hay forma de pedir un claim vacío, que en Flowable libera la tarea.
+     * El backend tiene que ignorar cualquier assignee del cuerpo y nunca reenviar
+     * a Flowable un claim sin el usuario de la sesión.
      */
     async reclamarTarea(id) {
       await pedir('POST', rutasApi.tarea(id), { action: 'claim' });
