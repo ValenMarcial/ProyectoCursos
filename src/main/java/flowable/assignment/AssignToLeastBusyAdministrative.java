@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.flowable.engine.TaskService;
@@ -16,11 +17,23 @@ import org.flowable.task.service.delegate.DelegateTask;
 /**
  * Task Listener de creación de "Confeccionar lista definitiva" (enunciado 3.4): asigna la tarea
  * al integrante de Administracion con menos tareas pendientes asignadas,
- * eligiendo al azar entre los integrantes empatados.
+ * desempatando con una estrategia. Flowable usa el constructor sin argumentos, que elige al azar;
+ * los tests pueden pasar una estrategia fija.
  */
 public class AssignToLeastBusyAdministrative implements TaskListener {
     private static final long serialVersionUID = 1L;
     private static final String GROUP = "Administracion";
+
+    /** Recibe los empatados en orden alfabético y devuelve el elegido. */
+    private final transient Function<List<String>, String> tieBreaker;
+
+    public AssignToLeastBusyAdministrative() {
+        this(tied -> tied.get(ThreadLocalRandom.current().nextInt(tied.size())));
+    }
+
+    AssignToLeastBusyAdministrative(Function<List<String>, String> tieBreaker) {
+        this.tieBreaker = tieBreaker;
+    }
 
     @Override
     public void notify(DelegateTask delegateTask) {
@@ -43,8 +56,8 @@ public class AssignToLeastBusyAdministrative implements TaskListener {
         List<String> leastBusyUsers = taskCounts.entrySet().stream()
                 .filter(entry -> entry.getValue() == minimumTaskCount)
                 .map(Map.Entry::getKey)
+                .sorted()
                 .collect(Collectors.toList());
-        String assignee = leastBusyUsers.get(ThreadLocalRandom.current().nextInt(leastBusyUsers.size()));
-        delegateTask.setAssignee(assignee);
+        delegateTask.setAssignee(tieBreaker.apply(leastBusyUsers));
     }
 }

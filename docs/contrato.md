@@ -118,7 +118,7 @@ Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cer
 Al crearse la tarea, el Task Listener `flowable.assignment.AssignToLeastBusyAdministrative` (enunciado 3.4) la asigna a un integrante del grupo `Administracion` con menos tareas de usuario pendientes asignadas en el motor. Si varios integrantes comparten la menor carga, el listener elige uno al azar entre ellos.
 
 - **Qué cuenta:** solo las tareas activas con `assignee` igual a ese usuario. Las que tienen al grupo como candidato y nadie reclamó no cuentan, porque no tienen `assignee`.
-- **Empate:** se elige aleatoriamente entre los integrantes empatados en la menor cantidad de tareas asignadas.
+- **Empate:** se elige aleatoriamente entre los integrantes empatados en la menor cantidad de tareas asignadas. El desempate es una estrategia que recibe los empatados en orden alfabético; Flowable usa la aleatoria y los tests pueden inyectar una fija por constructor (ver `AssignToLeastBusyAdministrativeTest`).
 - **Sin integrantes en el grupo:** la tarea queda sin assignee y conserva `Administracion` como grupo candidato. Cuando haya integrantes disponibles, podrán encontrar y reclamar esa tarea.
 
 En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listener no asigna a nadie):
