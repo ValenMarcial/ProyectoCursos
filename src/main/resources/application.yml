@@ -1,5 +1,12 @@
 server:
   port: ${SERVER_PORT:8081}
+  servlet:
+    session:
+      # La sesión del personal vence después de 30 minutos sin uso.
+      timeout: 30m
+      cookie:
+        # Lax: el navegador no manda la cookie de sesión en pedidos POST que vienen de otros sitios.
+        same-site: lax
 
 spring:
   datasource:
