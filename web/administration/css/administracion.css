@@ -112,6 +112,40 @@
   gap: 0.5rem;
 }
 
+/*
+ * Botones y pie de página. La base común ya no trae .boton, .boton-secundario
+ * ni .pie (la PR #47 los reemplazó por .boton-de-accion), así que se definen
+ * acá con los mismos valores que tenían, para que las pantallas no cambien.
+ */
+.boton {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--acento);
+  background: var(--acento);
+  color: var(--acento-texto);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.boton:hover {
+  opacity: 0.9;
+}
+
+/* Variante sin relleno: mantiene el borde de .boton y usa el acento como texto. */
+.boton-secundario {
+  background: transparent;
+  color: var(--acento);
+}
+
+.pie {
+  text-align: center;
+  padding: 1.5rem;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
 /* En la grilla del formulario, el botón conserva su ancho, como en el resto del sitio. */
 .formulario .boton {
   justify-self: start;
