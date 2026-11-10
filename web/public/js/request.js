@@ -41,8 +41,6 @@ function readData() {
     delete data.contactoTelefono;
   }
 
-  console.log(`data: ${data}`)
-  
   return data;
 }
 

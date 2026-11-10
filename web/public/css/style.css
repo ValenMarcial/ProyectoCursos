@@ -10,26 +10,47 @@
 
 /* notificacion de error o de exito */
 .notification {
-  margin: 1.5rem 0 0;
+  max-width: 850px;
+  margin: 1.5rem auto 0;
   padding: 0.75rem 1rem;
   background: var(--superficie);
   border: 1px solid var(--borde);
   border-left-width: 5px;
   border-radius: 8px;
   white-space: pre-line;
+  text-align: center
 }
 
 .notification-error {
+  max-width: 850px;
   border-left-color: var(--texto);
   font-weight: 600;
 }
 
 .notification-success {
+  max-width: 850px;
   border-left-color: var(--acento);
 }
 
+.header {
+  max-width: 850px;  
+  margin: 0 auto;    
+  padding: 2.5rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+}
+
+.header p {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
 .form {
-  max-width: 1050px;    
+  max-width: 850px;    
   margin: 0 auto;
   display: grid;
   gap: 1rem;
@@ -116,12 +137,10 @@
   transition: opacity 0.2s ease;
 }
 
-/* Efecto hover */
 #send-button:hover {
   opacity: 0.9;
 }
 
-/* Estado deshabilitado */
 #send-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
