@@ -80,9 +80,9 @@ export const variables = {
   presupuesto: 'presupuesto',
   fechaInicioPosible: 'fechaInicioPosible',
   fechaFinPropuesta: 'fechaFinPropuesta',
-  aulaFisica: 'aulaFisica', // PENDIENTE: condiciones del gateway (Valentín)
-  aulaVirtual: 'aulaVirtual', // PENDIENTE: condiciones del gateway (Valentín)
-  equipamiento: 'equipamiento', // PENDIENTE: condiciones del gateway (Valentín)
+  aulaFisica: 'aulaFisica',
+  aulaVirtual: 'aulaVirtual',
+  equipamiento: 'equipamiento',
   listaDefinitiva: 'listaDefinitiva', // PENDIENTE: nombre a acordar
   informeResultados: 'informeResultados', // PENDIENTE: nombre a acordar
 };
@@ -104,9 +104,13 @@ export const tiposVariables = {
   [variables.informeResultados]: 'string',
 };
 
+/** Mensaje de flowable.resources.ValidateResourceSelection; la pantalla anticipa la misma regla. */
+export const mensajeSinRecursos = 'Debe seleccionar al menos un recurso.';
+
 /**
  * Mensajes de los listeners que se pueden mostrar tal cual al usuario.
- * Copiados de flowable.proposal.ValidateProposalDates.
+ * Copiados de flowable.proposal.ValidateProposalDates y de
+ * flowable.resources.ValidateResourceSelection.
  *
  * PROVISORIA: se reemplaza cuando el backend traduzca los errores. Hace falta
  * porque Flowable devuelve 500 tanto para validaciones de negocio como para
@@ -117,4 +121,5 @@ export const mensajesNegocio = new Set([
   'El presupuesto debe ser mayor o igual a 0.',
   'Las fechas posibles de inicio y finalización son obligatorias.',
   'La fecha de finalización debe ser posterior o igual a la fecha de inicio.',
+  mensajeSinRecursos,
 ]);

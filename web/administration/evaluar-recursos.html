@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evaluar recursos</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Evaluar recursos</h1>
+    <p>Administración</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Sección con los datos de la propuesta aceptada, solo para consulta -->
+    <section id="bloque-propuesta" class="bloque" hidden>
+      <h2>Propuesta aceptada</h2>
+      <div class="tarjeta">
+        <dl id="datos-propuesta" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección para tomar la tarea: el formulario aparece recién después de reclamarla -->
+    <section id="bloque-reclamo" class="bloque" hidden>
+      <button id="boton-tomar" class="boton" type="button">Tomar tarea</button>
+    </section>
+
+    <!-- Sección con los recursos que requiere el curso -->
+    <section id="bloque-recursos" class="bloque" hidden>
+      <h2>Recursos del curso</h2>
+      <div class="tarjeta">
+        <!-- novalidate: los errores los muestra el módulo de la pantalla, en español -->
+        <form id="formulario-recursos" class="formulario" novalidate>
+          <!-- Al fallar, el módulo suma el aviso a aria-describedby para que se lea al entrar al grupo -->
+          <fieldset id="grupo-recursos" class="grupo-casillas" aria-describedby="ayuda-recursos">
+            <legend>Recursos necesarios</legend>
+            <p id="ayuda-recursos">Marcá al menos uno.</p>
+
+            <label class="casilla">
+              <input id="recurso-aula-fisica" type="checkbox">
+              <span>Requiere aula presencial</span>
+            </label>
+
+            <label class="casilla">
+              <input id="recurso-aula-virtual" type="checkbox">
+              <span>Requiere aula virtual</span>
+            </label>
+
+            <label class="casilla">
+              <input id="recurso-equipamiento" type="checkbox">
+              <span>Requiere equipamiento especial</span>
+            </label>
+          </fieldset>
+
+          <button id="boton-confirmar" class="boton" type="submit">Confirmar recursos</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/evaluar-recursos.js"></script>
+
+</body>
+</html>

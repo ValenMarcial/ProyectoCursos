@@ -178,3 +178,49 @@ button.boton:disabled {
     margin-bottom: 0.6rem;
   }
 }
+
+/* Grupo de casillas: el fieldset no agrega recuadro propio dentro de la tarjeta. */
+.grupo-casillas {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grupo-casillas legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.grupo-casillas p {
+  margin: 0;
+}
+
+.casilla {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.casilla input {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0.2rem 0 0;
+  accent-color: var(--acento);
+}
+
+.casilla input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+/* Grupo con error: el contorno no ocupa lugar, así el formulario no se mueve. */
+.grupo-casillas-error {
+  outline: 2px solid var(--texto);
+  outline-offset: 0.5rem;
+  border-radius: 2px;
+}

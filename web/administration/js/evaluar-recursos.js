@@ -1,0 +1,301 @@
+/**
+ * Módulo evaluar-recursos.js
+ *
+ * Pantalla 4, "Evaluar Recursos": muestra la propuesta aceptada, reclama la
+ * tarea de grupo y registra qué recursos requiere el curso.
+ *
+ * El formulario aparece recién después de reclamar. Quién tiene la tarea lo
+ * resuelve el propio reclamo: si ya es de esta persona, pasa; si es de otra,
+ * responde 409. Abrir la página no reclama nada, para no reservar tareas sin querer.
+ *
+ * Toda la comunicación pasa por api.js. Los datos se muestran con textContent:
+ * nunca se interpretan como HTML.
+ */
+
+import { completarTarea, ErrorApi, listarTareas, obtenerVariables, reclamarTarea } from './api.js';
+import { mensajeSinRecursos, tareas, variables } from './contrato.js';
+
+/** Datos de la propuesta que se muestran: variable, etiqueta y formato opcional. */
+const camposPropuesta = [
+  ['empresaNombre', 'Empresa'],
+  ['tematica', 'Temática'],
+  ['descripcion', 'Descripción'],
+  ['participantesEstimados', 'Participantes estimados'],
+  [variables.programa, 'Programa del curso'],
+  [variables.presupuesto, 'Presupuesto', formatearPresupuesto],
+  ['fechaInicio', 'Fecha de inicio acordada', formatearFechaAcordada],
+  [variables.fechaInicioPosible, 'Fecha de inicio propuesta'],
+  [variables.fechaFinPropuesta, 'Fecha de finalización propuesta'],
+];
+
+/** Casillas del formulario: id del elemento y variable que representa. */
+const casillasRecursos = [
+  ['recurso-aula-fisica', variables.aulaFisica],
+  ['recurso-aula-virtual', variables.aulaVirtual],
+  ['recurso-equipamiento', variables.equipamiento],
+];
+
+/** Errores al reclamar que no se arreglan reintentando: la tarea no se puede tomar. */
+const erroresDefinitivosAlReclamar = new Set(['conflicto', 'noEncontrado']);
+
+const mensajeGenerico = 'Ocurrió un error inesperado. Intentá de nuevo más tarde.';
+
+const descripcionBase = 'ayuda-recursos';
+const descripcionConError = 'ayuda-recursos aviso';
+
+const aviso = document.getElementById('aviso');
+const bloquePropuesta = document.getElementById('bloque-propuesta');
+const datosPropuesta = document.getElementById('datos-propuesta');
+const bloqueReclamo = document.getElementById('bloque-reclamo');
+const botonTomar = document.getElementById('boton-tomar');
+const bloqueRecursos = document.getElementById('bloque-recursos');
+const formulario = document.getElementById('formulario-recursos');
+const grupoRecursos = document.getElementById('grupo-recursos');
+const botonConfirmar = document.getElementById('boton-confirmar');
+const casillas = casillasRecursos.map(([id]) => document.getElementById(id));
+
+// Se completa en iniciar() y lo usan el reclamo y el envío del formulario.
+let tareaActual = null;
+
+/**
+ * Formatea un presupuesto para mostrarlo.
+ * Recibe: número entero. Devuelve: texto, por ejemplo "$ 150.000".
+ */
+function formatearPresupuesto(presupuesto) {
+  return `$ ${new Intl.NumberFormat('es-AR').format(presupuesto)}`;
+}
+
+/**
+ * Formatea la fecha que acordó la empresa.
+ * Recibe: texto ISO-8601, como 2027-03-08T09:00:00.
+ * Devuelve: texto dd/MM/yyyy, o el valor original si no tiene ese formato.
+ */
+function formatearFechaAcordada(fecha) {
+  // Se toma el texto tal cual: convertirlo a Date podría correr el día por la zona horaria.
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha));
+  return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha);
+}
+
+/**
+ * Muestra un aviso y lo trae a la vista.
+ * Recibe: texto y tipo ('error', 'exito' o 'neutro'). No devuelve nada.
+ */
+function mostrarAviso(texto, tipo) {
+  aviso.textContent = texto;
+  aviso.className = `aviso aviso-${tipo}`;
+  aviso.hidden = false;
+  aviso.scrollIntoView({ block: 'nearest' });
+}
+
+/**
+ * Muestra un error atrapado, sin exponer texto técnico al usuario.
+ * Recibe: el error. No devuelve nada.
+ */
+function mostrarError(error) {
+  // Solo el message de un ErrorApi es apto para el usuario; el resto va a la consola.
+  console.error(error, error?.detalle ?? '');
+  mostrarAviso(error instanceof ErrorApi ? error.message : mensajeGenerico, 'error');
+}
+
+/**
+ * Busca la tarea a mostrar.
+ * Usa el parámetro ?tarea=<id> de la URL o, si no viene, prefiere una sin reclamar.
+ * No recibe nada.
+ * Devuelve: promesa de { tarea } con la tarea normalizada o, si no se encontró,
+ * de { tarea: null, texto, tipo } con el aviso que corresponde mostrar.
+ */
+async function buscarTarea() {
+  const idPedido = new URLSearchParams(window.location.search).get('tarea');
+  // Sin filtro porque todavía no hay login: quién es el usuario lo resuelve la sesión.
+  const lista = await listarTareas();
+  const deEstaPantalla = lista.filter((tarea) => tarea.claveTarea === tareas.evaluarRecursos);
+
+  if (idPedido) {
+    const pedida = deEstaPantalla.find((tarea) => tarea.id === idPedido);
+    // Un id que no aparece es un error, aunque haya otras tareas pendientes.
+    return pedida
+      ? { tarea: pedida }
+      : { tarea: null, texto: 'Esa tarea no existe o ya fue completada.', tipo: 'error' };
+  }
+
+  const elegida = deEstaPantalla.find((tarea) => !tarea.asignado) ?? deEstaPantalla[0];
+  return elegida
+    ? { tarea: elegida }
+    : { tarea: null, texto: 'No hay ninguna tarea pendiente de evaluar recursos.', tipo: 'neutro' };
+}
+
+/**
+ * Dibuja los datos de la propuesta.
+ * Recibe: objeto { nombreVariable: valor }. No devuelve nada.
+ */
+function mostrarPropuesta(valores) {
+  datosPropuesta.replaceChildren(...camposPropuesta.flatMap(([nombre, etiqueta, formatear]) => {
+    const termino = document.createElement('dt');
+    termino.textContent = etiqueta;
+    const definicion = document.createElement('dd');
+    // Con ?? y no con ||, para que un 0 se muestre como dato.
+    const valor = valores[nombre] ?? '';
+    if (valor === '') {
+      definicion.textContent = 'No informado';
+    } else {
+      definicion.textContent = formatear ? formatear(valor) : String(valor);
+    }
+    return [termino, definicion];
+  }));
+}
+
+/**
+ * Deja guardada la tarea en la URL, para que al recargar se abra la misma.
+ * Recibe: id de la tarea. No devuelve nada.
+ */
+function recordarTareaEnUrl(id) {
+  const url = new URL(window.location.href);
+  url.searchParams.set('tarea', id);
+  window.history.replaceState(null, '', url);
+}
+
+/**
+ * Reclama la tarea y, si se pudo, muestra el formulario.
+ * No recibe nada. Devuelve: promesa sin valor.
+ */
+async function alTomar() {
+  aviso.hidden = true;
+  botonTomar.disabled = true;
+
+  try {
+    await reclamarTarea(tareaActual.id);
+  } catch (error) {
+    mostrarError(error);
+    if (error instanceof ErrorApi && erroresDefinitivosAlReclamar.has(error.tipo)) {
+      bloqueReclamo.hidden = true;
+    } else {
+      botonTomar.disabled = false;
+    }
+    return;
+  }
+
+  recordarTareaEnUrl(tareaActual.id);
+  bloqueReclamo.hidden = true;
+  bloqueRecursos.hidden = false;
+  // El botón pulsado desapareció: sin esto, el foco del teclado se perdería.
+  casillas[0].focus();
+}
+
+/**
+ * Lee las casillas.
+ * No recibe nada.
+ * Devuelve: objeto { nombreVariable: boolean } con los tres recursos: el gateway
+ * evalúa las tres variables, así que las no marcadas también se envían.
+ */
+function leerRecursos() {
+  return Object.fromEntries(casillasRecursos.map(([id, variable], indice) => [variable, casillas[indice].checked]));
+}
+
+/**
+ * Indica si hay al menos un recurso marcado.
+ * Recibe: el resultado de leerRecursos. Devuelve: boolean.
+ */
+function algunRecursoMarcado(valores) {
+  return Object.values(valores).includes(true);
+}
+
+/**
+ * Marca o desmarca el error del grupo de casillas.
+ * aria-invalid va en cada casilla porque ARIA no lo admite en un grupo; la clase
+ * es la señal visual, y aria-describedby hace que se lea el aviso al entrar al grupo.
+ * Recibe: boolean, true si el grupo tiene error. No devuelve nada.
+ */
+function marcarGrupo(hayError) {
+  for (const casilla of casillas) {
+    if (hayError) {
+      casilla.setAttribute('aria-invalid', 'true');
+    } else {
+      casilla.removeAttribute('aria-invalid');
+    }
+  }
+  grupoRecursos.classList.toggle('grupo-casillas-error', hayError);
+  grupoRecursos.setAttribute('aria-describedby', hayError ? descripcionConError : descripcionBase);
+}
+
+/**
+ * Procesa el envío: valida las casillas y completa la tarea.
+ * Recibe: el evento submit. Devuelve: promesa sin valor.
+ */
+async function alEnviar(evento) {
+  evento.preventDefault();
+  aviso.hidden = true;
+
+  const valores = leerRecursos();
+  if (!algunRecursoMarcado(valores)) {
+    marcarGrupo(true);
+    // En este orden: enfocar desplaza la página y el aviso tiene que quedar a la vista.
+    casillas[0].focus();
+    mostrarAviso(mensajeSinRecursos, 'error');
+    return;
+  }
+  marcarGrupo(false);
+
+  // Con el botón deshabilitado tampoco se puede reenviar.
+  botonConfirmar.disabled = true;
+  try {
+    await completarTarea(tareaActual.id, valores);
+  } catch (error) {
+    // Si falla, la tarea sigue activa: se conservan las casillas para reintentar.
+    botonConfirmar.disabled = false;
+    mostrarError(error);
+    return;
+  }
+
+  bloqueRecursos.hidden = true;
+  mostrarAviso('Los recursos quedaron registrados.', 'exito');
+}
+
+/**
+ * Saca la marca de error cuando ya hay algún recurso marcado. No marca el error
+ * si se destildan todas: eso se informa recién al confirmar.
+ * No recibe ni devuelve nada.
+ */
+function alCambiarCasilla() {
+  if (algunRecursoMarcado(leerRecursos())) marcarGrupo(false);
+}
+
+/**
+ * Evita que Enter sobre una casilla confirme: completar la tarea no se puede
+ * deshacer, y las casillas se marcan con la barra espaciadora.
+ * Recibe: el evento keydown. No devuelve nada.
+ */
+function alPresionarTecla(evento) {
+  if (evento.key === 'Enter' && evento.target.matches('.casilla input')) {
+    evento.preventDefault();
+  }
+}
+
+/**
+ * Carga la pantalla: busca la tarea y muestra la propuesta y el botón para tomarla.
+ * No recibe nada. Devuelve: promesa sin valor.
+ */
+async function iniciar() {
+  let valores;
+  try {
+    const busqueda = await buscarTarea();
+    if (!busqueda.tarea) {
+      mostrarAviso(busqueda.texto, busqueda.tipo);
+      return;
+    }
+    tareaActual = busqueda.tarea;
+    valores = await obtenerVariables(tareaActual.instanciaId);
+  } catch (error) {
+    mostrarError(error);
+    return;
+  }
+
+  mostrarPropuesta(valores);
+  bloquePropuesta.hidden = false;
+  bloqueReclamo.hidden = false;
+}
+
+botonTomar.addEventListener('click', alTomar);
+formulario.addEventListener('submit', alEnviar);
+formulario.addEventListener('change', alCambiarCasilla);
+formulario.addEventListener('keydown', alPresionarTecla);
+iniciar();
