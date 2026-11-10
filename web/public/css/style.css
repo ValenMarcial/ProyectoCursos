@@ -1,0 +1,158 @@
+/*
+ * Estilos seccion pública.
+ *
+ */
+@import url("../../common/css/style.css");
+
+[hidden] {
+  display: none !important;
+}
+
+/* notificacion de error o de exito */
+.notification {
+  max-width: 850px;
+  margin: 1.5rem auto 0;
+  padding: 0.75rem 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left-width: 5px;
+  border-radius: 8px;
+  white-space: pre-line;
+  text-align: center
+}
+
+.notification-error {
+  max-width: 850px;
+  border-left-color: var(--texto);
+  font-weight: 600;
+}
+
+.notification-success {
+  max-width: 850px;
+  border-left-color: var(--acento);
+}
+
+.header {
+  max-width: 850px;  
+  margin: 0 auto;    
+  padding: 2.5rem 1.5rem 1.5rem;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 2rem;
+}
+
+.header p {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+.form {
+  max-width: 850px;    
+  margin: 0 auto;
+  display: grid;
+  gap: 1rem;
+}
+
+.form fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+}
+
+.form legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  color-scheme: light dark;
+}
+
+.field textarea {
+  min-height: 9rem;
+  resize: vertical;
+}
+
+.short-field textarea {
+  min-height: 5rem;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.fields-in-a-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form #send-button {
+  justify-self: start;
+}
+
+.form #send-button {
+  justify-self: center;
+}
+
+#send-button {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--acento);
+  background: var(--acento);
+  color: var(--acento-texto);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+#send-button:hover {
+  opacity: 0.9;
+}
+
+#send-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.foot {
+  display: flex;
+  justify-content: center; 
+  align-items: center;     
+  text-align: center;      
+}
+
+.foot a {
+  color: var(--acento);
+}

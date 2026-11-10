@@ -88,7 +88,7 @@ body {
   flex: 1;
 }
 
-.boton {
+.boton-de-accion {
   display: inline-block;
   align-self: flex-start;
   padding: 0.55rem 1rem;
@@ -100,18 +100,6 @@ body {
   font-weight: 600;
 }
 
-.boton:hover {
+.boton-de-accion:hover {
   opacity: 0.9;
-}
-
-.boton-secundario {
-  background: transparent;
-  color: var(--acento);
-}
-
-.pie {
-  text-align: center;
-  padding: 1.5rem;
-  color: var(--texto-suave);
-  font-size: 0.9rem;
 }
