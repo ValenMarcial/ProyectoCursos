@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administración</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Administración</h1>
+    <p>Tareas del proceso de cursos a medida</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Menú de tareas, en el orden del proceso. Las que todavía no tienen pantalla van sin enlace. -->
+    <section class="bloque" aria-labelledby="titulo-tareas">
+      <h2 id="titulo-tareas">Tareas</h2>
+      <div class="tarjetas">
+
+        <article class="tarjeta">
+          <h3>Registrar y elaborar propuesta</h3>
+          <p>Arma el programa, el presupuesto y las fechas de una solicitud nueva, con su PDF.</p>
+          <a class="boton-de-accion" href="registrar-propuesta.html">Abrir registrar y elaborar propuesta</a>
+        </article>
+
+        <article class="tarjeta tarjeta-deshabilitada">
+          <h3>Revisar propuesta</h3>
+          <p>Ajusta la propuesta según las observaciones de la empresa.</p>
+          <p class="estado-tarjeta">Próximamente</p>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Evaluar recursos</h3>
+          <p>Indica si el curso necesita aula física, aula virtual o equipamiento.</p>
+          <a class="boton-de-accion" href="evaluar-recursos.html">Abrir evaluar recursos</a>
+        </article>
+
+        <article class="tarjeta">
+          <h3>Confeccionar lista definitiva</h3>
+          <p>Revisa y confirma la nómina de participantes que envió la empresa.</p>
+          <a class="boton-de-accion" href="lista-definitiva.html">Abrir confeccionar lista definitiva</a>
+        </article>
+
+        <article class="tarjeta tarjeta-deshabilitada">
+          <h3>Enviar informe de resultados</h3>
+          <p>Envía el informe del curso a la empresa y archiva el expediente.</p>
+          <p class="estado-tarjeta">Próximamente</p>
+        </article>
+
+        <article class="tarjeta tarjeta-deshabilitada">
+          <h3>Archivar solicitud</h3>
+          <p>Cierra una solicitud rechazada o que quedó sin respuesta de la empresa.</p>
+          <p class="estado-tarjeta">Próximamente</p>
+        </article>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+</body>
+</html>
