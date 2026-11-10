@@ -10,6 +10,8 @@ import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.Association;
 import org.flowable.bpmn.model.FlowableListener;
+import org.flowable.bpmn.model.GraphicInfo;
+import org.flowable.bpmn.model.ScriptTask;
 import org.flowable.bpmn.model.ServiceTask;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.SubProcess;
@@ -97,7 +99,12 @@ class ProjectCoursesProcessDeploymentTest {
         assertCandidateGroup(prepararCurso, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B");
         assertCandidateGroup(prepararCurso, "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
         assertCandidateGroup(prepararCurso, "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
-        assertCandidateGroup(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+
+        ScriptTask liberarEquipamiento = (ScriptTask) prepararCurso
+                .getFlowElement("sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        assertTrue(liberarEquipamiento.isForCompensation());
+        assertEquals("println \"Equipamiento Liberado: \" + execution.processInstanceId",
+                liberarEquipamiento.getScript());
     }
 
     @Test
@@ -111,6 +118,41 @@ class ProjectCoursesProcessDeploymentTest {
 
         assertEquals("${execution.setVariable('cancelada', false)}", listener.getImplementation());
         assertEquals("expression", listener.getImplementationType());
+    }
+
+    @Test
+    void marcaCanceladaAlFinalizarLaRamaDeCancelacion() {
+        ProcessDefinition definition = engine.getRepositoryService().createProcessDefinitionQuery()
+                .processDefinitionKey("process-proyecto-curso").singleResult();
+        BpmnModel model = engine.getRepositoryService().getBpmnModel(definition.getId());
+        SubProcess prepararCurso = getPrepararCurso();
+        SubProcess cancelacion = (SubProcess) prepararCurso
+                .getFlowElement("sid-98039E66-3765-4C9A-8061-7280782D1D67");
+        ScriptTask marcarCancelada = (ScriptTask) cancelacion
+                .getFlowElement("sid-2FCA85E9-D3B7-4DBB-9C3A-83CBA2BAA625");
+        SequenceFlow haciaMarcarCancelada = (SequenceFlow) cancelacion
+                .getFlowElement("sid-08271985-A006-46DC-820A-3A8BD93CEB20");
+        SequenceFlow haciaFin = (SequenceFlow) cancelacion
+                .getFlowElement("sid-A826EAB1-FD26-47C1-B8AC-689102C64CB3");
+
+        GraphicInfo tarea = model.getGraphicInfo("sid-2FCA85E9-D3B7-4DBB-9C3A-83CBA2BAA625");
+        GraphicInfo subproceso = model.getGraphicInfo("sid-98039E66-3765-4C9A-8061-7280782D1D67");
+        assertTrue(tarea.getX() >= subproceso.getX());
+        assertTrue(tarea.getY() >= subproceso.getY());
+        assertTrue(tarea.getX() + tarea.getWidth() <= subproceso.getX() + subproceso.getWidth());
+        assertTrue(tarea.getY() + tarea.getHeight() <= subproceso.getY() + subproceso.getHeight());
+        assertEquals(2, model.getFlowLocationGraphicInfo(haciaMarcarCancelada.getId()).size());
+        assertEquals(2, model.getFlowLocationGraphicInfo(haciaFin.getId()).size());
+        assertEquals(tarea.getX(),
+                model.getFlowLocationGraphicInfo(haciaMarcarCancelada.getId()).get(1).getX(), 0.001);
+        assertEquals(tarea.getX() + tarea.getWidth(),
+                model.getFlowLocationGraphicInfo(haciaFin.getId()).get(0).getX(), 0.001);
+        assertEquals("groovy", marcarCancelada.getScriptFormat());
+        assertEquals("execution.setVariable(\"cancelada\", true)", marcarCancelada.getScript());
+        assertEquals("sid-3329D761-38E5-49B6-99FE-711F82A01284", haciaMarcarCancelada.getSourceRef());
+        assertEquals("sid-2FCA85E9-D3B7-4DBB-9C3A-83CBA2BAA625", haciaMarcarCancelada.getTargetRef());
+        assertEquals("sid-2FCA85E9-D3B7-4DBB-9C3A-83CBA2BAA625", haciaFin.getSourceRef());
+        assertEquals("sid-D2B77839-7DFB-495D-B2E2-43239376D0CC", haciaFin.getTargetRef());
     }
 
     @Test
