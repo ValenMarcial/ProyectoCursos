@@ -19,8 +19,8 @@ import web.backend.service.SesionException.Motivo;
 import web.backend.service.UsuarioSesion;
 
 /**
- * Corta con 401 los pedidos que llegan sin sesión a las rutas del personal.
- * Qué rutas pasan por acá lo decide SesionWebConfig. Flowable no controla quién usa sus
+ * Corta con 401 los pedidos que llegan sin sesión a la API (todo /api salvo el login y
+ * el alta pública). Qué rutas pasan por acá lo decide SesionWebConfig. Flowable no controla quién usa sus
  * tareas, así que este es el primer filtro: sin sesión no hay forma de llegar al motor.
  */
 public class SesionInterceptor implements HandlerInterceptor {

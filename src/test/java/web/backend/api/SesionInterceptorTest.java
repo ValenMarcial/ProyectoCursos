@@ -109,6 +109,40 @@ class SesionInterceptorTest {
                 .andExpect(status().isCreated());
     }
 
+    /**
+     * La protección va por defecto: una ruta que todavía no existe bajo /api (como la de un
+     * endpoint nuevo que nadie agregó a SesionWebConfig) responde 401 y no 404.
+     */
+    @Test
+    void unaRutaNuevaBajoApiPideSesion() throws Exception {
+        for (String ruta : new String[] {"/api", "/api/cursos", "/api/cursos/curso-1/participantes"}) {
+            mvc.perform(get(ruta))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().json(SIN_SESION, true));
+        }
+        mvc.perform(post("/api/reportes").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().json(SIN_SESION, true));
+    }
+
+    /** Solo /api/solicitudes es pública: una subruta nueva debajo de ella exige sesión. */
+    @Test
+    void unaSubrutaDeSolicitudesPideSesion() throws Exception {
+        mvc.perform(get("/api/solicitudes/solicitud-1"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().json(SIN_SESION, true));
+    }
+
+    /**
+     * La excepción de /api/solicitudes es por ruta, no por método: otro método no pasa por el
+     * interceptor y lo rechaza Spring (405), no la sesión (401).
+     */
+    @Test
+    void otroMetodoSobreSolicitudesLoResuelveSpringYNoLaSesion() throws Exception {
+        mvc.perform(get("/api/solicitudes"))
+                .andExpect(status().isMethodNotAllowed());
+    }
+
     @Test
     void losArchivosEstaticosNoPidenSesion() throws Exception {
         mvc.perform(get("/index.html"))
