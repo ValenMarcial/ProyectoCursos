@@ -1,0 +1,118 @@
+/*
+ * Estilos seccion pública.
+ *
+ */
+@import url("../../common/css/style.css");
+
+[hidden] {
+  display: none !important;
+}
+
+/* notificacion de error o de exito */
+.notification {
+  margin: 1.5rem 0 0;
+  padding: 0.75rem 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left-width: 5px;
+  border-radius: 8px;
+  white-space: pre-line;
+}
+
+.notification-error {
+  border-left-color: var(--texto);
+  font-weight: 600;
+}
+
+.notification-exito {
+  border-left-color: var(--acento);
+}
+
+.form {
+  display: grid;
+  gap: 1rem;
+}
+
+.form fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+}
+
+.form legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+
+.field {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.field label {
+  font-weight: 600;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  color-scheme: light dark;
+}
+
+.field textarea {
+  min-height: 9rem;
+  resize: vertical;
+}
+
+.short-field textarea {
+  min-height: 5rem;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.fields-in-a-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.form .send-button {
+  justify-self: start;
+}
+
+.foot {
+  display: flex;
+  justify-content: center; 
+  align-items: center;     
+  text-align: center;      
+}
+
+.foot a {
+  color: var(--acento);
+}
+button.send-button {
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button.send-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

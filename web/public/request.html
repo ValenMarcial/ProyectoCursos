@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solicitar una capacitación</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Solicitar una capacitación</h1>
+    <p>Complete el formulario con los datos de su empresa. Los campos marcados con * son obligatorios.</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Los atributos name coinciden con los campos que espera POST /api/solicitudes -->
+    <form id="request-form" class="form">
+
+      <fieldset>
+        <legend>Empresa y contacto</legend>
+
+        <div class="field">
+          <label for="empresaNombre">Nombre de la empresa *</label>
+          <input type="text" id="empresaNombre" name="empresaNombre" maxlength="255" required>
+        </div>
+
+        <div class="field">
+          <label for="contactoNombre">Nombre y apellido de la persona de contacto *</label>
+          <input type="text" id="contactoNombre" name="contactoNombre" maxlength="255" required>
+        </div>
+
+        <div class="fields-in-a-row">
+          <div class="field">
+            <label for="contactoEmail">Correo electrónico *</label>
+            <input type="email" id="contactoEmail" name="contactoEmail" maxlength="320" required>
+          </div>
+
+          <div class="field">
+            <label for="contactoTelefono">Teléfono</label>
+            <input type="tel" id="contactoTelefono" name="contactoTelefono" maxlength="64">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Capacitación solicitada</legend>
+
+        <div class="field">
+          <label for="tematica">Temática *</label>
+          <input type="text" id="tematica" name="tematica" maxlength="255" required>
+        </div>
+
+        <div class="field">
+          <label for="descripcion">Descripción de la capacitación *</label>
+          <textarea id="descripcion" name="descripcion" required></textarea>
+        </div>
+
+        <div class="fields-in-a-row">
+          <div class="field">
+            <label for="participantesEstimados">Cantidad estimada de participantes *</label>
+            <input type="number" id="participantesEstimados" name="participantesEstimados" min="1" step="1" required>
+          </div>
+        </div>
+
+        <div class="field short-field">
+          <label for="fechasPreferidas">Fechas preferidas *</label>
+          <textarea id="fechasPreferidas" name="fechasPreferidas" maxlength="500" required
+                    placeholder="Por ejemplo: marzo de 2027, por las tardes"></textarea>
+        </div>
+      </fieldset>
+
+      <button type="submit" id="send-button" class="boton">Enviar solicitud</button>
+    </form>
+
+    
+    <div id="notification" class="notification" aria-live="polite" hidden></div>
+
+  </main>
+
+  <footer class="foot">
+    <p><a href="../index.html">Volver al inicio</a></p>
+  </footer>
+
+  <script src="js/request.js" defer></script>
+</body>
+</html>
