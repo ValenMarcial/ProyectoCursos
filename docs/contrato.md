@@ -98,7 +98,25 @@ Hay que reemplazar los tres `sequenceFlow` que salen de los boundaries "Liberar 
 <association id="assocLiberarEquipamiento" sourceRef="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" targetRef="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" associationDirection="One"/>
 ```
 
-**Manejo de `SIN_AULAS`:** el boundary de error del subproceso "Preparar curso" no tiene `errorRef`, así que hoy ya atrapa cualquier error. Eso incluye `SIN_AULAS`, que termina en "Notificar Cierre" con `resultado = "cancelado"`. Si se agrega un boundary de error propio sobre "Reservar aula", tiene que declararse antes que el boundary de compensación. En el orden inverso, Flowable 6.8 falla con el mismo error de arriba.
+**Manejo de `SIN_AULAS`:** lo atrapa un boundary de error sobre "Reservar aula" (`errorRef="SIN_AULAS"`), que va a un fin de terminación "Sin aulas libres". Ese fin guarda `resultado = "cancelado"` y cierra "Preparar curso", que sale por el gateway "¿Curso cancelado?" hacia "Notificar Cierre". El boundary de error tiene que declararse antes que el de compensación: en el orden inverso, Flowable 6.8 falla con el mismo error de arriba.
+
+## Cancelación durante la preparación
+
+El mensaje `msgCancelacion` dispara el subproceso de evento "Cancelación" dentro de "Preparar curso":
+
+1. Al salir de "Recibir Cancelación" se guarda `resultado = "cancelado"` (listener `end`; Flowable 6.8 no ejecuta los listeners `start` de un subproceso de evento ni de su evento de inicio).
+2. Tres eventos de compensación, cada uno con `activityRef`: "Liberar aula" (Reservar aula), "Liberar aula virtual" (Solicitar Aula Virtual) y "Liberar equipamiento" (Contratar equipamiento). Solo se libera lo que ya se había conseguido; los recursos pendientes se saltean.
+3. Fin normal. "Preparar curso" termina y el gateway "¿Curso cancelado?" manda a "Notificar Cierre" si `resultado == 'cancelado'`; si no, sigue a "Enviar confirmación".
+
+Restricciones de Flowable 6.8 que explican este diseño (probadas en tests):
+
+- **Las tareas de liberación son automáticas.** El evento de compensación no espera a las tareas de usuario: las crea y sigue, y al cerrarse el subproceso quedan terminadas sin que nadie las complete. Si hace falta que una persona confirme una devolución, tiene que ser una tarea de usuario común en el flujo de "Cancelación", después de las compensaciones.
+- **Cada compensación lleva `activityRef`.** Sin él, lanzada desde el subproceso de evento no compensa nada.
+- **"Preparar curso" no tiene boundary de error.** Un subproceso con boundary de error y subproceso de evento a la vez no termina por el camino normal: la instancia queda colgada. Por eso `SIN_AULAS` se atrapa sobre "Reservar aula" y la cancelación no termina con un fin de error.
+
+El Modeler conserva `activityRef`, el fin de terminación, los listeners y el orden de los boundaries al guardar; las asociaciones y el nombre del proceso los corrige `ModelerExportFixer` al correr el seed.
+
+`src/test/java/flowable/cancellation/CancellationModelTest.java` lo prueba sobre el BPMN real: cancelar con aula virtual y equipamiento, con aula reservada, con un recurso pendiente y sin recursos; quedarse sin aulas; y el camino normal hasta "Definir Docente". Los scripts Groovy corren en los tests con `groovy-jsr223` 4.0.3 (la misma versión de Flowable UI).
 
 ## Registrar y elaborar propuesta
 
