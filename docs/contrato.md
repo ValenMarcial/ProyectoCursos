@@ -216,6 +216,18 @@ Para que corra hay que aplicar la migración (`make db-migrate`) y engancharlo a
 
 En el Modeler se configura en las propiedades del proceso (clic en un lugar vacío del lienzo), en "Execution listeners".
 
+## Errores de negocio y errores internos
+
+Cuando una clase rechaza un dato por una regla de negocio, lanza `FlowableIllegalArgumentException`. La API REST de Flowable la devuelve como **400** y el texto de `exception` se puede mostrar tal cual al usuario. Cualquier otra excepción (un bug, una base caída, un dato faltante que debería haber puesto el proceso) llega como **500**, y la web muestra un mensaje genérico.
+
+| Clase | Regla que devuelve 400 |
+|---|---|
+| `flowable.proposal.ValidateProposalDates` | Presupuesto obligatorio y no negativo; fechas obligatorias; fin posterior o igual al inicio |
+| `flowable.resources.ValidateResourceSelection` | Al menos un recurso elegido |
+| `flowable.proposal.CreateCourseOnAcceptance` | `fechaInicio` acordada no posterior a `fechaFinPropuesta` |
+
+Una clase nueva con validaciones de negocio debe seguir la misma regla. El backend reenvía el status que recibe de Flowable.
+
 ## Pendiente para que el proceso corra completo
 
 Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:

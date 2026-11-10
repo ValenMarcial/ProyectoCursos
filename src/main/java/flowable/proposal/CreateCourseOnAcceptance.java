@@ -12,6 +12,7 @@ import java.time.format.DateTimeParseException;
 import java.util.function.Supplier;
 
 import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
 
@@ -50,7 +51,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
             throw new FlowableException("Faltan datos de la solicitud o de la propuesta para crear el curso.");
         }
         if (start.toLocalDate().isAfter(new Date(end.getTime()).toLocalDate())) {
-            throw new FlowableException("La fecha de inicio acordada (" + start
+            throw new FlowableIllegalArgumentException("La fecha de inicio acordada (" + start
                     + ") no puede ser posterior a la fecha de finalización propuesta (" + new Date(end.getTime()) + ").");
         }
 

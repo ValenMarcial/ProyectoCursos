@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,7 @@ class CreateCourseOnAcceptanceTest {
         Map<String, Object> variables = variables(1L);
         variables.put("fechaInicio", "2027-12-01");
 
-        assertThrows(FlowableException.class, () -> delegate.execute(execution("proc-4", variables)));
+        assertThrows(FlowableIllegalArgumentException.class, () -> delegate.execute(execution("proc-4", variables)));
         try (Connection connection = DriverManager.getConnection(url, "sa", "");
                 Statement statement = connection.createStatement()) {
             var cursos = statement.executeQuery("SELECT COUNT(*) FROM cursos");

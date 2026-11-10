@@ -1,6 +1,6 @@
 package flowable.resources;
 
-import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.delegate.TaskListener;
 import org.flowable.task.service.delegate.DelegateTask;
 
@@ -14,7 +14,7 @@ public class ValidateResourceSelection implements TaskListener {
                 || Boolean.TRUE.equals(task.getVariable("equipamiento"));
 
         if (!hasSelectedResource) {
-            throw new FlowableException("Debe seleccionar al menos un recurso.");
+            throw new FlowableIllegalArgumentException("Debe seleccionar al menos un recurso.");
         }
     }
 }
