@@ -32,43 +32,43 @@ body {
   line-height: 1.5;
 }
 
-.cabecera {
+.header {
   padding: 2.5rem 1.5rem 1.5rem;
   text-align: center;
 }
 
-.cabecera h1 {
+.header h1 {
   margin: 0 0 0.25rem;
   font-size: 2rem;
 }
 
-.cabecera p {
+.header p {
   margin: 0;
   color: var(--texto-suave);
 }
 
-.contenedor {
+.container {
   max-width: 900px;
   margin: 0 auto;
   padding: 0 1.5rem 2rem;
 }
 
-.bloque {
+.block {
   margin-top: 2rem;
 }
 
-.bloque h2 {
+.block h2 {
   font-size: 1.25rem;
   margin: 0 0 1rem;
 }
 
-.tarjetas {
+.cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
 }
 
-.tarjeta {
+.card {
   display: flex;
   flex-direction: column;
   background: var(--superficie);
@@ -77,18 +77,18 @@ body {
   padding: 1.25rem;
 }
 
-.tarjeta h3 {
+.card h3 {
   margin: 0 0 0.5rem;
   font-size: 1.05rem;
 }
 
-.tarjeta p {
+.card p {
   margin: 0 0 1rem;
   color: var(--texto-suave);
   flex: 1;
 }
 
-.boton {
+.action-button {
   display: inline-block;
   align-self: flex-start;
   padding: 0.55rem 1rem;
@@ -100,18 +100,6 @@ body {
   font-weight: 600;
 }
 
-.boton:hover {
+.form-completion-button:hover {
   opacity: 0.9;
-}
-
-.boton-secundario {
-  background: transparent;
-  color: var(--acento);
-}
-
-.pie {
-  text-align: center;
-  padding: 1.5rem;
-  color: var(--texto-suave);
-  font-size: 0.9rem;
 }

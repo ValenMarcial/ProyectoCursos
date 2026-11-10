@@ -24,11 +24,13 @@
   font-weight: 600;
 }
 
-.notification-exito {
+.notification-success {
   border-left-color: var(--acento);
 }
 
 .form {
+  max-width: 1050px;    
+  margin: 0 auto;
   display: grid;
   gap: 1rem;
 }
@@ -92,8 +94,37 @@
   gap: 1rem;
 }
 
-.form .send-button {
+.form #send-button {
   justify-self: start;
+}
+
+.form #send-button {
+  justify-self: center;
+}
+
+#send-button {
+  display: inline-block;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--acento);
+  background: var(--acento);
+  color: var(--acento-texto);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Efecto hover */
+#send-button:hover {
+  opacity: 0.9;
+}
+
+/* Estado deshabilitado */
+#send-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .foot {
@@ -105,14 +136,4 @@
 
 .foot a {
   color: var(--acento);
-}
-button.send-button {
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-button.send-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
