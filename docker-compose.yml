@@ -9,6 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       LOAD_SEED_DATA: ${LOAD_SEED_DATA:-true}
+      TZ: UTC
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/db/init:/docker-entrypoint-initdb.d:ro
@@ -40,6 +41,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       # No autodesplegar el BPMN que viene dentro del .jar: se despliega con `make deploy`
       FLOWABLE_CHECK_PROCESS_DEFINITIONS: "false"
+      # Las fechas (DATE) se convierten con la zona de la JVM: se fija UTC para que no se corran un día
+      TZ: UTC
     # Mismo arranque que /flowable-entrypoint.sh de la imagen, sumando /opt/proyecto/lib al classpath
     entrypoint:
       - sh
@@ -71,6 +74,7 @@ services:
       FLOWABLE_REST_URL: http://flowable:8080/flowable-ui/process-api
       FLOWABLE_USER: ${FLOWABLE_USER:-admin}
       FLOWABLE_PASSWORD: ${FLOWABLE_PASSWORD:-test}
+      TZ: UTC
     ports:
       - "127.0.0.1:8081:8081"
     networks:
