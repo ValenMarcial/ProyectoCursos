@@ -36,6 +36,7 @@ public class VentanaMateriales extends JFrame {
     private static final String TAREAS = "tareas";
 
     private final ServicioMateriales servicio;
+    private final PanelAnalisis panelAnalisis;
     private final CardLayout cartas = new CardLayout();
     private final JPanel raiz = new JPanel(cartas);
 
@@ -52,11 +53,15 @@ public class VentanaMateriales extends JFrame {
     private final Timer refresco;
     private Usuario usuario;
 
-    public VentanaMateriales(ServicioMateriales servicio) {
+    public VentanaMateriales(ServicioMateriales servicio, Analisis analisis) {
         super("Preparar materiales");
         this.servicio = servicio;
+        this.panelAnalisis = new PanelAnalisis(analisis);
+        javax.swing.JTabbedPane pestanas = new javax.swing.JTabbedPane();
+        pestanas.addTab("Mis tareas", panelTareas());
+        pestanas.addTab("Análisis", panelAnalisis);
         raiz.add(panelLogin(), LOGIN);
-        raiz.add(panelTareas(), TAREAS);
+        raiz.add(pestanas, TAREAS);
         setContentPane(raiz);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setMinimumSize(new Dimension(820, 460));
@@ -166,6 +171,7 @@ public class VentanaMateriales extends JFrame {
                 cartas.show(raiz, TAREAS);
                 getRootPane().setDefaultButton(null);
                 actualizar();
+                panelAnalisis.actualizar();
                 refresco.start();
             }
         }, ex -> {
@@ -242,8 +248,8 @@ public class VentanaMateriales extends JFrame {
         return causa.getMessage() == null ? causa.toString() : causa.getMessage();
     }
 
-    public static void abrir(ServicioMateriales servicio) {
-        SwingUtilities.invokeLater(() -> new VentanaMateriales(servicio).setVisible(true));
+    public static void abrir(ServicioMateriales servicio, Analisis analisis) {
+        SwingUtilities.invokeLater(() -> new VentanaMateriales(servicio, analisis).setVisible(true));
     }
 
     private static final class ModeloTareas extends AbstractTableModel {
