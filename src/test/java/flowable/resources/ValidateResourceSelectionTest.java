@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration;
@@ -40,7 +40,7 @@ class ValidateResourceSelectionTest {
     void rechazaLaTareaCuandoNoSeSeleccionaNingunRecurso() {
         Task task = startEvaluationTask();
 
-        assertThrows(FlowableException.class, () -> taskService.complete(task.getId(), new HashMap<>()));
+        assertThrows(FlowableIllegalArgumentException.class, () -> taskService.complete(task.getId(), new HashMap<>()));
         assertEquals(1, taskService.createTaskQuery().taskId(task.getId()).count());
     }
 

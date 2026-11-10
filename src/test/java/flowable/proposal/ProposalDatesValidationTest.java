@@ -8,7 +8,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.TaskService;
 import org.flowable.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration;
@@ -50,7 +50,7 @@ class ProposalDatesValidationTest {
         variables.put("fechaInicioPosible", startDate);
         variables.put("fechaFinPropuesta", Date.from(Instant.parse("2026-11-19T00:00:00Z")));
 
-        assertThrows(FlowableException.class, () -> taskService.complete(task.getId(), variables));
+        assertThrows(FlowableIllegalArgumentException.class, () -> taskService.complete(task.getId(), variables));
         assertEquals(1, taskService.createTaskQuery().taskId(task.getId()).count());
 
         variables.put("fechaFinPropuesta", startDate);
@@ -85,7 +85,7 @@ class ProposalDatesValidationTest {
         variables.put("fechaInicioPosible", startDate);
         variables.put("fechaFinPropuesta", startDate);
 
-        assertThrows(FlowableException.class, () -> taskService.complete(task.getId(), variables));
+        assertThrows(FlowableIllegalArgumentException.class, () -> taskService.complete(task.getId(), variables));
         assertEquals(1, taskService.createTaskQuery().taskId(task.getId()).count());
 
         variables.put("presupuesto", 0L);

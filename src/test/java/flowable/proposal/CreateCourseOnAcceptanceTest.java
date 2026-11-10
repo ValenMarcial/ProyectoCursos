@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,30 @@ class CreateCourseOnAcceptanceTest {
         variables.remove("fechaInicio");
 
         assertThrows(FlowableException.class, () -> delegate.execute(execution("proc-3", variables)));
+    }
+
+    @Test
+    void rechazaFechaDeInicioPosteriorAlFinPropuestoSinCrearElCurso() throws SQLException {
+        Map<String, Object> variables = variables(1L);
+        variables.put("fechaInicio", "2027-12-01");
+
+        assertThrows(FlowableIllegalArgumentException.class, () -> delegate.execute(execution("proc-4", variables)));
+        try (Connection connection = DriverManager.getConnection(url, "sa", "");
+                Statement statement = connection.createStatement()) {
+            var cursos = statement.executeQuery("SELECT COUNT(*) FROM cursos");
+            cursos.next();
+            assertEquals(0, cursos.getInt(1));
+        }
+    }
+
+    @Test
+    void aceptaInicioElMismoDiaDelFinPropuesto() {
+        Map<String, Object> variables = variables(1L);
+        variables.put("fechaInicio", new java.sql.Date(1_800_900_000_000L).toString());
+
+        delegate.execute(execution("proc-5", variables));
+
+        assertEquals(1L, variables.get("cursoId"));
     }
 
     private Map<String, Object> variables(long solicitudId) {
