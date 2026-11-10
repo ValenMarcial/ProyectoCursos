@@ -50,7 +50,7 @@ services:
       - exec java $$JAVA_OPTS -Djava.awt.headless=true -Dfile.encoding=UTF-8 -cp '/app:/app/WEB-INF/classes:/app/WEB-INF/lib/*:/opt/proyecto/lib/*' org.flowable.ui.application.FlowableUiApplication
     volumes:
       # Nuestro .jar + Drools (se genera con `make build`)
-      - ./target/flowable-lib:/opt/proyecto/lib:ro
+      - ./flowable-lib:/opt/proyecto/lib:ro
     ports:
       - "127.0.0.1:8080:8080"
     networks:

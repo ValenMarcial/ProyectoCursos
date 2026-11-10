@@ -8,13 +8,16 @@ FLOWABLE_PASSWORD ?= test
 
 .PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy seed import
 
-# Dejar en target/flowable-lib el .jar y las librerías de Drools que Flowable UI no trae
+# Dejar en flowable-lib/ el .jar y las librerías de Drools que Flowable UI no trae.
+# Está fuera de target/ y se vacía sin borrar la carpeta: es la que monta el contenedor de Flowable,
+# y si se borra (rm -rf o mvn clean) Flowable sigue apuntando a la carpeta vieja y arranca sin el .jar.
 build:
-	rm -rf target/flowable-lib
+	mkdir -p flowable-lib
+	find flowable-lib -mindepth 1 -delete
 	mvn -q package dependency:copy-dependencies -DskipTests \
 		-DincludeGroupIds=org.drools,org.kie,org.kie.soup,org.mvel,org.antlr,com.thoughtworks.xstream,io.github.x-stream,xmlpull \
-		-DoutputDirectory=target/flowable-lib
-	cp target/ProyectoCursos-*.jar target/flowable-lib/
+		-DoutputDirectory=flowable-lib
+	cp target/ProyectoCursos-*.jar flowable-lib/
 
 backend-test:
 	mvn -Pbackend clean test
@@ -24,6 +27,9 @@ db-migrate:
 
 dev-up: build
 	$(DEV_COMPOSE) up -d --build --wait --wait-timeout 120
+	# Flowable carga el .jar solo al arrancar: se reinicia para que tome el que acaba de compilar build.
+	$(DEV_COMPOSE) restart flowable
+	$(DEV_COMPOSE) up -d --wait --wait-timeout 180 flowable
 
 # Desplegar BPMN y reglas en el motor (cada despliegue crea una versión nueva).
 # En un .zip, la API REST recibe un solo archivo por despliegue y el .drl va junto al BPMN.
