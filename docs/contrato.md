@@ -247,7 +247,9 @@ La tarea **Evaluar Recursos** registra los recursos requeridos mediante tres cam
 | `aulaVirtual` | Virtual: solicitar aula virtual |
 | `equipamiento` | Equipamiento especial: contratar equipamiento |
 
-El gateway es inclusivo, por lo que puede activar varias ramas. La tarea no se puede completar si ninguna opción está marcada; cada opción individual es opcional.
+El gateway es inclusivo, por lo que puede activar varias ramas. La tarea no se puede completar si ninguna opción está marcada; cada opción individual es opcional. Si al completar no se envía alguna de las tres variables, `ValidateResourceSelection` la guarda en `false`, porque el gateway falla al evaluar una condición sobre una variable que no existe.
+
+`src/test/java/flowable/resources/ResourcesGatewayModelTest.java` lo prueba sobre el BPMN real: una sola opción activa solo su rama, dos opciones activan las dos, las variables ausentes cuentan como `false` y sin ninguna opción la tarea se rechaza y sigue activa.
 
 # Sección de viabilidad
 
