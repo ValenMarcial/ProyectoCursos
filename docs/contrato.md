@@ -61,7 +61,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Notificar Decisión | Script | Log y `resultado = "no_viable"` |
 | Enviar propuesta | Script | Simula el envío registrando en el log el programa, presupuesto y fechas de la propuesta; reinicia `recordatoriosEnviados = 0` y define `plazoRecordatorio = "P5D"` si no existe |
 | Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
-| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
+| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Si la `fechaInicio` acordada es posterior a `fechaFinPropuesta`, falla sin crear el curso. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
 | Enviar confirmación | Script | Log |
 | Notificar Cierre | Script | Log y `resultado = "cancelado"` |
 | Liberar Aula Virtual | Script (compensación) | Log |

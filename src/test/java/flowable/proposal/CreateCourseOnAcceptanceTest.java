@@ -83,6 +83,30 @@ class CreateCourseOnAcceptanceTest {
         assertThrows(FlowableException.class, () -> delegate.execute(execution("proc-3", variables)));
     }
 
+    @Test
+    void rechazaFechaDeInicioPosteriorAlFinPropuestoSinCrearElCurso() throws SQLException {
+        Map<String, Object> variables = variables(1L);
+        variables.put("fechaInicio", "2027-12-01");
+
+        assertThrows(FlowableException.class, () -> delegate.execute(execution("proc-4", variables)));
+        try (Connection connection = DriverManager.getConnection(url, "sa", "");
+                Statement statement = connection.createStatement()) {
+            var cursos = statement.executeQuery("SELECT COUNT(*) FROM cursos");
+            cursos.next();
+            assertEquals(0, cursos.getInt(1));
+        }
+    }
+
+    @Test
+    void aceptaInicioElMismoDiaDelFinPropuesto() {
+        Map<String, Object> variables = variables(1L);
+        variables.put("fechaInicio", new java.sql.Date(1_800_900_000_000L).toString());
+
+        delegate.execute(execution("proc-5", variables));
+
+        assertEquals(1L, variables.get("cursoId"));
+    }
+
     private Map<String, Object> variables(long solicitudId) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("solicitudId", solicitudId);

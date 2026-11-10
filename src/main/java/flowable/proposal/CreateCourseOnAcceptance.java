@@ -49,6 +49,10 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
         if (solicitudId == null || budget == null || start == null || end == null || program == null) {
             throw new FlowableException("Faltan datos de la solicitud o de la propuesta para crear el curso.");
         }
+        if (start.toLocalDate().isAfter(new Date(end.getTime()).toLocalDate())) {
+            throw new FlowableException("La fecha de inicio acordada (" + start
+                    + ") no puede ser posterior a la fecha de finalización propuesta (" + new Date(end.getTime()) + ").");
+        }
 
         try (Connection connection = connections.get()) {
             connection.setAutoCommit(false);
