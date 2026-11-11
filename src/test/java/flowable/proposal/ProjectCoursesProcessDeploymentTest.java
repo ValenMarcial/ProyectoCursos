@@ -478,6 +478,14 @@ class ProjectCoursesProcessDeploymentTest {
         engine.getManagementService().createJobQuery().processInstanceId(instancia).list()
                 .forEach(job -> engine.getManagementService().executeJob(job.getId()));
 
+        assertEquals(0, engine.getTaskService().createTaskQuery().processInstanceId(instancia)
+                .taskDefinitionKey("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85").count());
+        List<Job> jobs = engine.getManagementService().createJobQuery().processInstanceId(instancia).list();
+        assertEquals(3, jobs.size());
+        for (Job job : jobs) {
+            engine.getManagementService().executeJob(job.getId());
+        }
+
         assertEquals(false, engine.getRuntimeService().getVariable(instancia, "cancelada"));
         assertEquals(1, engine.getTaskService().createTaskQuery().processInstanceId(instancia)
                 .taskDefinitionKey("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85").count());
