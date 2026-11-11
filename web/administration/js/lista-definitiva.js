@@ -5,13 +5,16 @@
  * empresa, permite agregar, editar y quitar nombres, valida la lista y completa
  * la tarea.
  *
- * La tarea llega asignada por un listener del motor, así que no se reclama.
+ * La tarea suele llegar asignada por un listener del motor, y entonces no se
+ * reclama. Si llega sin asignar (el listener no encontró a nadie en el grupo y
+ * la dejó para Administracion), se reclama antes de mostrar el formulario.
  * Toda la comunicación pasa por api.js. Los datos vienen de afuera: se muestran
  * con textContent o value y nunca se interpretan como HTML.
  */
 
-import { completarTarea, ErrorApi, listarTareas, obtenerVariables } from './api.js';
+import { completarTarea, ErrorApi, listarTareas, obtenerVariables, reclamarTarea } from './api.js';
 import { tareas, variables } from './contrato.js';
+import { quitarAcentos } from './texto.js';
 
 /** Variables del curso que se muestran, con su etiqueta. */
 const camposCurso = [
@@ -114,11 +117,7 @@ function limpiarNombre(nombre) {
  * Devuelve: el nombre sin acentos y en minúsculas ("Ana Pérez" da "ana perez").
  */
 function claveDeNombre(nombre) {
-  return nombre
-    .normalize('NFD')
-    // NFD separa la letra de su acento, y este reemplazo borra los acentos.
-    .replace(/[̀-ͯ]/g, '')
-    .toLocaleLowerCase('es');
+  return quitarAcentos(nombre).toLocaleLowerCase('es');
 }
 
 /**
@@ -358,7 +357,8 @@ function alPresionarTecla(evento) {
 }
 
 /**
- * Carga la pantalla: busca la tarea y muestra sus datos y la nómina.
+ * Carga la pantalla: busca la tarea, la reclama si llegó sin asignar y muestra
+ * sus datos y la nómina.
  * No recibe nada. Devuelve: promesa sin valor.
  */
 async function iniciar() {
@@ -370,6 +370,12 @@ async function iniciar() {
       return;
     }
     tareaActual = busqueda.tarea;
+    // Sin asignar, la tarea es del grupo: se toma antes de mostrar el formulario para
+    // que nadie más trabaje la misma lista. Si otra persona la tomó primero (409) o
+    // ya no existe (404), el catch muestra el aviso y el formulario no aparece.
+    if (!tareaActual.asignado) {
+      await reclamarTarea(tareaActual.id);
+    }
     valores = await obtenerVariables(tareaActual.instanciaId);
   } catch (error) {
     mostrarError(error);
