@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso para empresas</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Acceso para empresas</h1>
+    <p>Ingrese con la cuenta que le habilitamos al aceptar una propuesta.</p>
+  </header>
+
+  <main class="contenedor">
+
+    <div class="acceso">
+
+      <!-- Lo completa el JavaScript: éxito o error -->
+      <div id="notification" class="notification" aria-live="polite" hidden></div>
+
+      <!-- Los nombres de los campos son provisorios hasta definir el contrato del login -->
+      <form id="form-login" class="formulario">
+
+        <fieldset>
+          <legend>Ingreso</legend>
+
+          <div class="campo">
+            <label for="usuario">Usuario *</label>
+            <input type="text" id="usuario" name="usuario" maxlength="320"
+                   autocomplete="username" required>
+          </div>
+
+          <div class="campo">
+            <label for="contrasena">Contraseña *</label>
+            <input type="password" id="contrasena" name="contrasena"
+                   autocomplete="current-password" required>
+          </div>
+        </fieldset>
+
+        <button type="submit" id="ingresar" class="boton-de-accion">Ingresar</button>
+      </form>
+
+    </div>
+
+  </main>
+
+  <footer class="pie">
+    <p><a href="../index.html">Volver al inicio</a></p>
+  </footer>
+
+</body>
+</html>

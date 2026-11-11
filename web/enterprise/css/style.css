@@ -1,0 +1,252 @@
+@import url("../../common/css/style.css");
+
+[hidden] {
+  display: none !important;
+}
+
+.notification {
+  margin: 1.5rem 0 0;
+  padding: 0.75rem 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-left-width: 5px;
+  border-radius: 8px;
+  white-space: pre-line;
+}
+
+.notification-error {
+  border-left-color: var(--texto);
+  font-weight: 600;
+}
+
+.notification-success {
+  border-left-color: var(--acento);
+}
+
+.ayuda {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+}
+
+.ayuda a {
+  color: var(--acento);
+}
+
+.acceso {
+  display: grid;
+  gap: 1rem;
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.acceso .notification {
+  margin: 0;
+}
+
+.formulario {
+  display: grid;
+  gap: 1rem;
+}
+
+.formulario fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+}
+
+.formulario legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+
+.campo {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.campo label {
+  font-weight: 600;
+}
+
+.campo input {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  color-scheme: light dark;
+}
+
+.campo input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+.formulario .boton-de-accion {
+  justify-self: start;
+}
+
+button.boton-de-accion {
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.boton-de-accion:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.boton-secundario {
+  background: transparent;
+  color: var(--acento);
+}
+
+.barra-sesion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.barra-sesion p {
+  margin: 0;
+}
+
+.cursos {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.curso {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+}
+
+.curso-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.curso-cabecera h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.estado {
+  display: inline-block;
+  padding: 0.15rem 0.7rem;
+  border: 1px solid var(--acento);
+  border-radius: 999px;
+  color: var(--acento);
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.estado[data-estado="finalizado"],
+.estado[data-estado="cancelado"] {
+  border-color: var(--borde);
+  color: var(--texto-suave);
+}
+
+.datos {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+
+.datos dt {
+  color: var(--texto-suave);
+}
+
+.datos dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.actividades summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.actividades summary:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.lista-actividades {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lista-actividades li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+}
+
+.actividad-nombre {
+  flex: 1 1 12rem;
+  font-weight: 600;
+}
+
+.rama,
+.actividad-estado {
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+}
+
+.pie {
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.pie p {
+  margin: 0;
+}
+
+.pie a {
+  color: var(--acento);
+}
+
+@media (max-width: 480px) {
+  .datos {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .datos dd {
+    margin-bottom: 0.6rem;
+  }
+}
