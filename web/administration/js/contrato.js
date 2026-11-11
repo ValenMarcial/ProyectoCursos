@@ -10,11 +10,28 @@
  */
 
 /**
- * Único interruptor del adaptador.
+ * Modo por defecto del adaptador.
  * 'mock': usa los datos simulados de mock.js.
  * 'real': llama al backend con fetch.
+ *
+ * Se puede cambiar por pestaña sin tocar este archivo: ?api=real (o ?api=mock)
+ * en la URL de cualquier pantalla. La elección queda guardada en la pestaña
+ * (sessionStorage), así no se pierde al ir del menú a una pantalla; se borra al
+ * cerrar la pestaña. El modo real solo anda con la web servida por el backend
+ * (mismo origen que /api), no con python3 -m http.server.
+ *
+ * Cuándo pasar el default a 'real': cuando exista la pantalla de login (rutaLogin
+ * distinto de null) y las PR de tareas del backend estén en master. Hasta
+ * entonces queda en 'mock' para que se pueda trabajar en las pantallas sin
+ * backend ni sesión. Ese cambio va en una PR aparte.
  */
 export const modoApi = 'mock';
+
+/** Parámetro de la URL que cambia el modo de la pestaña (?api=real o ?api=mock). */
+export const parametroModoApi = 'api';
+
+/** Clave de sessionStorage donde queda el modo elegido en la pestaña. */
+export const claveModoApi = 'administracion.modoApi';
 
 /**
  * Prefijo de la API del backend.

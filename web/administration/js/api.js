@@ -7,14 +7,16 @@
  * iniciarSesion, usuarioActual y cerrarSesion son para el login (de Santos).
  *
  * La interfaz es la misma en modo mock y en modo real: lo único que cambia es
- * la función de transporte, elegida con modoApi en contrato.js. Las conversiones
- * y la traducción de errores corren igual en los dos modos.
+ * la función de transporte, elegida con modoApi en contrato.js o con ?api= en la
+ * URL. Las conversiones y la traducción de errores corren igual en los dos modos.
  *
  * Este módulo no decide permisos ni guarda credenciales: quién puede reclamar
  * o completar lo controla el backend.
  */
 
-import { alcances, modoApi, rutaLogin, rutasApi, tamanioPagina, tiposVariables } from './contrato.js';
+import {
+  alcances, claveModoApi, modoApi, parametroModoApi, rutaLogin, rutasApi, tamanioPagina, tiposVariables,
+} from './contrato.js';
 import { enviarSimulado } from './mock.js';
 
 /**
@@ -403,11 +405,61 @@ export function crearApi(enviar, { alPerderSesion = () => {} } = {}) {
   };
 }
 
-/** Elige el transporte según el único flag de configuración. */
+/** Transporte de cada modo. */
+const transportes = { mock: enviarSimulado, real: enviarReal };
+
+/**
+ * Lee el modo guardado en la pestaña.
+ * No recibe nada. Devuelve: 'mock', 'real' o null si no hay (o no hay storage:
+ * modo privado, cookies bloqueadas o Node).
+ */
+function leerModoGuardado() {
+  try {
+    const guardado = globalThis.sessionStorage?.getItem(claveModoApi) ?? null;
+    return Object.hasOwn(transportes, guardado ?? '') ? guardado : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Guarda el modo en la pestaña. Si no hay storage, el modo vale solo para esta
+ * carga de página (no se recuerda al navegar).
+ * Recibe: el modo. No devuelve nada.
+ */
+function guardarModo(modo) {
+  try {
+    globalThis.sessionStorage?.setItem(claveModoApi, modo);
+  } catch {
+    // Sin storage no hay nada que hacer: la pantalla funciona igual.
+  }
+}
+
+/**
+ * Decide el modo: ?api= de la URL (y lo guarda en la pestaña), si no el guardado
+ * en la pestaña, y si no el default de contrato.js.
+ * No recibe nada. Devuelve: 'mock' o 'real'.
+ */
+function elegirModo() {
+  const busqueda = globalThis.location?.search ?? '';
+  const pedido = new URLSearchParams(busqueda).get(parametroModoApi);
+  if (pedido !== null) {
+    if (Object.hasOwn(transportes, pedido)) {
+      guardarModo(pedido);
+      return pedido;
+    }
+    console.warn(`?${parametroModoApi}=${pedido} no es un modo válido (mock o real): se ignora.`);
+  }
+  return leerModoGuardado() ?? modoApi;
+}
+
+/** Elige el transporte según el modo de la pestaña o el default de contrato.js. */
 function elegirTransporte() {
-  if (modoApi === 'mock') return enviarSimulado;
-  if (modoApi === 'real') return enviarReal;
-  throw new Error(`modoApi inválido en contrato.js: ${modoApi}`);
+  const modo = elegirModo();
+  if (!Object.hasOwn(transportes, modo)) {
+    throw new Error(`modoApi inválido en contrato.js: ${modo}`);
+  }
+  return transportes[modo];
 }
 
 /**
