@@ -62,9 +62,13 @@ public class EmpresaController {
         return respuesta(empresa);
     }
 
+    /**
+     * Cierra solo la sesión de la empresa: la cookie es la misma que la del personal, así que
+     * invalidar toda la sesión también cerraría la del personal en ese navegador.
+     */
     @DeleteMapping("/sesion")
     public ResponseEntity<Void> cerrar(HttpSession sesion) {
-        sesion.invalidate();
+        sesion.removeAttribute(ATRIBUTO_EMPRESA);
         return ResponseEntity.noContent().build();
     }
 

@@ -232,7 +232,7 @@ La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) t
 
 - **Usuario:** el `contactoEmail` de la solicitud, en minúsculas. Si falta, o si ya lo usa otra empresa, es `empresa-<id>`.
 - **Clave:** 12 caracteres aleatorios. Se guarda solo el hash PBKDF2 (`shared.PasswordHash`, formato `pbkdf2-sha256$iteraciones$sal$hash`); nunca en texto plano ni en variables del proceso.
-- **Entrega (simulada):** las credenciales quedan en el log de Flowable. Para verlas:
+- **Entrega (simulada):** las credenciales quedan en el log de Flowable, en texto plano. Es solo para la demo: un despliegue real las mandaría por email y no las escribiría en el log. Para verlas:
 
 ```bash
 docker compose logs flowable | grep "Cuenta de empresa creada"
@@ -265,7 +265,7 @@ Las rutas `/api/empresa/**` usan una sesión de empresa, distinta de la del pers
 
 - Las fechas del curso van como `AAAA-MM-DD`; `desde` es la hora de inicio de la actividad en ISO-8601.
 - `actividades` son las actividades sin terminar de la instancia (historial de Flowable), así aparecen las ramas paralelas de "Preparar curso", la recepción de la nómina y la espera de "Fecha programada". Se omiten compuertas, eventos de inicio y fin y el subproceso. Un curso finalizado o cancelado devuelve la lista vacía.
-- El login usa la misma cookie de sesión que el personal (`JSESSIONID`, 30 minutos sin uso) y renueva su id al autenticar.
+- El login usa la misma cookie de sesión que el personal (`JSESSIONID`, 30 minutos sin uso) y renueva su id al autenticar. Cerrar la sesión de empresa quita solo la empresa: si en el mismo navegador también hay una sesión del personal, sigue abierta. Al revés no: `DELETE /api/sesion` cierra todo.
 
 Probado en Flowable UI y Postgres: credenciales en el log, login, "Mis cursos", detalle con las tres ramas de la preparación, `404` sobre un curso de otra empresa, `401` sobre `/api/tareas` con sesión de empresa, y los seis estados en orden hasta `finalizado`.
 

@@ -32,13 +32,16 @@ import org.springframework.web.client.RestTemplate;
 import web.backend.api.dto.IniciarSolicitudRequest;
 import web.backend.api.dto.IniciarSolicitudResponse;
 import web.backend.api.dto.PaginaResponse;
+import web.backend.service.EmpresaService;
+import web.backend.service.EmpresaSesion;
 import web.backend.service.SesionException.Motivo;
 import web.backend.service.SesionService;
 import web.backend.service.SolicitudService;
 import web.backend.service.TareaService;
 import web.backend.service.UsuarioSesion;
 
-@WebMvcTest(controllers = {SesionController.class, SolicitudController.class, TareaController.class})
+@WebMvcTest(controllers = {SesionController.class, SolicitudController.class, TareaController.class,
+        EmpresaController.class})
 @Import(SesionInterceptorTest.OtrosMetodosDeSolicitudes.class)
 class SesionInterceptorTest {
     private static final String SIN_SESION = "{\"message\":\"" + Motivo.SIN_SESION.getMensaje() + "\"}";
@@ -54,6 +57,9 @@ class SesionInterceptorTest {
 
     @MockBean
     private TareaService tareas;
+
+    @MockBean
+    private EmpresaService empresas;
 
     // BackendApplication declara el RestTemplate de Flowable; acá no se usa y se reemplaza.
     @MockBean
@@ -192,6 +198,42 @@ class SesionInterceptorTest {
                         .header(HttpHeaders.ORIGIN, "http://localhost:5173")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void elLoginDeEmpresaNoPideSesion() throws Exception {
+        when(empresas.iniciar(anyString(), anyString())).thenReturn(new EmpresaSesion(1L, "rrhh@tech.com", "Tech"));
+
+        mvc.perform(post(EmpresaController.RUTA_SESION)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuario\":\"rrhh@tech.com\",\"clave\":\"clave\"}"))
+                .andExpect(status().isOk());
+    }
+
+    /** /api/empresa/** pide sesión de empresa y el resto de la API la del personal: no se mezclan. */
+    @Test
+    void cadaParteDeLaApiPideSuPropiaSesion() throws Exception {
+        UsuarioSesion jefe = new UsuarioSesion("jefeAdministrativo", "Jefe administrativo", List.of("Administracion"));
+        EmpresaSesion empresa = new EmpresaSesion(1L, "rrhh@tech.com", "Tech");
+        MockHttpSession personal = new MockHttpSession();
+        personal.setAttribute(SesionController.ATRIBUTO_USUARIO, jefe);
+        MockHttpSession deEmpresa = new MockHttpSession();
+        deEmpresa.setAttribute(EmpresaController.ATRIBUTO_EMPRESA, empresa);
+        when(empresas.cursos(empresa)).thenReturn(List.of());
+
+        for (String ruta : new String[] {EmpresaController.RUTA_SESION, EmpresaController.RUTA + "/cursos",
+                EmpresaController.RUTA + "/cursos/10"}) {
+            mvc.perform(get(ruta)).andExpect(status().isUnauthorized());
+            mvc.perform(get(ruta).session(personal))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().json(SIN_SESION, true));
+        }
+        mvc.perform(get(EmpresaController.RUTA + "/cursos").session(deEmpresa)).andExpect(status().isOk());
+        for (String ruta : new String[] {SesionController.RUTA, "/api/tareas", "/api/instancias/instancia-1/variables"}) {
+            mvc.perform(get(ruta).param("alcance", "mias").session(deEmpresa))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(content().json(SIN_SESION, true));
+        }
     }
 
     @Test
