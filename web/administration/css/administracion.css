@@ -168,6 +168,32 @@ button.boton:disabled {
   cursor: not-allowed;
 }
 
+/*
+ * Tarjeta del menú cuya pantalla todavía no existe. No lleva enlace y lo dice con
+ * texto (.estado-tarjeta); el borde punteado y el fondo de la página la separan de
+ * las activas sin bajar la opacidad, para que el texto conserve el contraste.
+ */
+.tarjeta-deshabilitada {
+  background: var(--fondo);
+  border-style: dashed;
+}
+
+.tarjeta-deshabilitada h3 {
+  color: var(--texto-suave);
+}
+
+/* Ocupa el lugar del botón: la descripción de arriba es la que se estira. */
+.tarjeta .estado-tarjeta {
+  flex: none;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--borde);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 @media (max-width: 480px) {
   .datos {
     grid-template-columns: 1fr;
