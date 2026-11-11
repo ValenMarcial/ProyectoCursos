@@ -8,3 +8,4 @@
 .DS_Store
 ProyectoCursos_V2.pdf
 /flowable-lib/
+__pycache__/
