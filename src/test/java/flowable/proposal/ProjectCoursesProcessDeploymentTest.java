@@ -5,9 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
-import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Activity;
+import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Association;
 import org.flowable.bpmn.model.BoundaryEvent;
 import org.flowable.bpmn.model.CompensateEventDefinition;
@@ -25,6 +26,7 @@ import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration;
 import org.flowable.engine.impl.rules.RulesDeployer;
+import org.flowable.task.api.Task;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -236,9 +238,6 @@ class ProjectCoursesProcessDeploymentTest {
 
         assertEquals("sid-065649F8-9F01-4C34-B290-C37474CC479D", capturaEnReserva.getAttachedToRefId());
         assertEquals("errorSIN_AULAS", errorDefinition(capturaEnReserva).getErrorCode());
-        assertEquals(1, capturaEnReserva.getExecutionListeners().size());
-        assertEquals("${execution.setVariable('motivoCierre', 'SIN_AULAS')}",
-                capturaEnReserva.getExecutionListeners().get(0).getImplementation());
         assertCompensationActivityRef(prepararCurso, "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1",
                 "sid-065649F8-9F01-4C34-B290-C37474CC479D");
         assertCompensationActivityRef(prepararCurso, "sid-AD35AD31-1F32-478B-BEBE-CA591851B965",
@@ -249,6 +248,7 @@ class ProjectCoursesProcessDeploymentTest {
         assertEquals("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF",
                 capturaEnPreparacion.getAttachedToRefId());
         assertEquals("errorSIN_AULAS", errorDefinition(capturaEnPreparacion).getErrorCode());
+        assertEquals("motivoCierre", errorDefinition(capturaEnPreparacion).getErrorVariableName());
         assertEquals(capturaEnPreparacion.getId(), rutaAlCierre.getSourceRef());
         assertEquals(notificarCierre.getId(), rutaAlCierre.getTargetRef());
         assertFlow(prepararCurso, "sid-C1AD5A67-E90B-46B4-80B1-E58A31C5774B",
@@ -259,11 +259,72 @@ class ProjectCoursesProcessDeploymentTest {
                 "sid-AD35AD31-1F32-478B-BEBE-CA591851B965", "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E");
         assertFlow(prepararCurso, "sid-0CA04C12-36C6-46F0-BA41-799C1CE9B7E2",
                 "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E", propagarError.getId());
-        assertEquals("if (execution.getVariable(\"motivoCierre\") == \"SIN_AULAS\") { println \"Curso cancelado por falta de aulas disponibles: \" + execution.processInstanceId } else { println \"Curso cancelado: \" + execution.processInstanceId }; execution.setVariable(\"resultado\", \"cancelado\")",
+        assertEquals("if (execution.hasVariable(\"motivoCierre\")) { println \"Curso cancelado por falta de aulas disponibles: \" + execution.processInstanceId } else { println \"Curso cancelado: \" + execution.processInstanceId }; execution.setVariable(\"resultado\", \"cancelado\")",
                 notificarCierre.getScript());
         assertTrue(model.getGraphicInfo(capturaEnReserva.getId()) != null);
         assertTrue(model.getGraphicInfo(capturaEnPreparacion.getId()) != null);
         assertTrue(model.getFlowLocationGraphicInfo(rutaAlCierre.getId()).size() >= 2);
+    }
+
+    @Test
+    void ejecutaSinAulasEnElBpmnRealYFinalizaNotificandoElCierre() {
+        String primera = iniciarSolicitud();
+        String segunda = iniciarSolicitud();
+        String tercera = iniciarSolicitud();
+        engine.getRuntimeService().setVariable(primera, "aulaAsignada", "Aula 1");
+        engine.getRuntimeService().setVariable(segunda, "aulaAsignada", "Aula 2");
+
+        Task tareaActiva = engine.getTaskService().createTaskQuery()
+                .processInstanceId(tercera)
+                .singleResult();
+        engine.getRuntimeService().createChangeActivityStateBuilder()
+                .processInstanceId(tercera)
+                .moveActivityIdTo(tareaActiva.getTaskDefinitionKey(),
+                        "sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050")
+                .changeState();
+        Task evaluarRecursos = engine.getTaskService().createTaskQuery()
+                .processInstanceId(tercera)
+                .taskDefinitionKey("sid-F3381B5B-C506-4AC2-A09D-747447EFB31B")
+                .singleResult();
+        engine.getTaskService().complete(evaluarRecursos.getId(), Map.of(
+                "aulaFisica", true,
+                "aulaVirtual", false,
+                "equipamiento", false));
+
+        assertEquals(0, engine.getRuntimeService().createProcessInstanceQuery()
+                .processInstanceId(tercera)
+                .count());
+        assertEquals("cancelado", engine.getHistoryService().createHistoricVariableInstanceQuery()
+                .processInstanceId(tercera)
+                .variableName("resultado")
+                .singleResult()
+                .getValue());
+        assertTrue(engine.getHistoryService().createHistoricVariableInstanceQuery()
+                .processInstanceId(tercera)
+                .variableName("motivoCierre")
+                .count() > 0);
+        assertHistoricActivity(tercera, "sid-7A782D3B-FA48-4B06-9E9D-22C32BD6F574");
+        assertHistoricActivity(tercera, "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1");
+        assertHistoricActivity(tercera, "sid-AD35AD31-1F32-478B-BEBE-CA591851B965");
+        assertHistoricActivity(tercera, "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E");
+        assertHistoricActivity(tercera, "sid-481F402E-5806-475E-8AB2-1148DE4E7B9C");
+        assertHistoricActivity(tercera, "sid-6931943F-5BD2-45CD-BE56-52DE64896B0C");
+        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(tercera)
+                .activityId("sid-CF527638-CD0A-48BF-9EF6-DDB557838793")
+                .count());
+    }
+
+    private String iniciarSolicitud() {
+        return engine.getRuntimeService().startProcessInstanceByMessage("msgSolicitud", Map.of())
+                .getId();
+    }
+
+    private void assertHistoricActivity(String processInstanceId, String activityId) {
+        assertEquals(1, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .activityId(activityId)
+                .count(), "Se ejecutó la actividad BPMN " + activityId);
     }
 
     private static ErrorEventDefinition errorDefinition(BoundaryEvent event) {

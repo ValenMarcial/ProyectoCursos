@@ -8,6 +8,7 @@
   <message id="msgRechazo" name="msgRechazo"></message>
   <message id="msgModificaciones" name="msgModificaciones"></message>
   <message id="msgCancelacion" name="msgCancelacion"></message>
+  <error id="errorSIN_AULAS" errorCode="SIN_AULAS"></error>
   <process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
     <laneSet id="laneSet_process-proyecto-curso">
       <lane id="sid-16EED2DB-CECD-46D1-B6ED-AD042E6C8943" name="Administración">
@@ -169,6 +170,9 @@
       <userTask id="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB" name="Solicitar Aula Virtual" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <userTask id="sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790" name="Contratar equipamiento" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:class="flowable.classroom.ReserveClassroom"></serviceTask>
+      <boundaryEvent id="sid-7A782D3B-FA48-4B06-9E9D-22C32BD6F574" name="Sin aulas disponibles" attachedToRef="sid-065649F8-9F01-4C34-B290-C37474CC479D">
+        <errorEventDefinition errorRef="errorSIN_AULAS" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
+      </boundaryEvent>
       <intermediateThrowEvent id="sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1" name="Sin aulas">
         <compensateEventDefinition activityRef="sid-065649F8-9F01-4C34-B290-C37474CC479D"></compensateEventDefinition>
       </intermediateThrowEvent>
@@ -226,12 +230,6 @@ de aulas">
       <scriptTask id="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" name="Liberar Equipamiento" isForCompensation="true" scriptFormat="groovy" flowable:autoStoreVariables="false">
         <script><![CDATA[println "Equipamiento Liberado: " + execution.processInstanceId]]></script>
       </scriptTask>
-      <boundaryEvent id="sid-7A782D3B-FA48-4B06-9E9D-22C32BD6F574" name="Sin aulas disponibles" attachedToRef="sid-065649F8-9F01-4C34-B290-C37474CC479D">
-        <extensionElements>
-          <flowable:executionListener event="start" expression="${execution.setVariable('motivoCierre', 'SIN_AULAS')}"></flowable:executionListener>
-        </extensionElements>
-        <errorEventDefinition errorRef="errorSIN_AULAS" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
-      </boundaryEvent>
       <sequenceFlow id="sid-8A80C2DE-F5A6-4B3B-A1F7-2744A2B05E15" sourceRef="sid-6236FDAA-5819-426B-BC14-0B157140A03E" targetRef="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B"></sequenceFlow>
       <sequenceFlow id="sid-D002D422-FFC6-4D5F-9D60-E730D8466295" sourceRef="sid-6236FDAA-5819-426B-BC14-0B157140A03E" targetRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB"></sequenceFlow>
       <sequenceFlow id="sid-B7EAF565-2437-4864-BA47-EE0DAB9D2981" sourceRef="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" targetRef="sid-6236FDAA-5819-426B-BC14-0B157140A03E"></sequenceFlow>
@@ -263,7 +261,7 @@ de aulas">
       <association id="sid-4E267965-16EE-4BEF-AE22-F345834D8441" sourceRef="sid-79D40E03-33A5-476E-AC89-3F44F73680A0" targetRef="sid-892710F9-B2AE-4002-82D0-131829D8FA29" associationDirection="One"></association>
     </subProcess>
     <scriptTask id="sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1" name="Notificar Cierre" scriptFormat="groovy" flowable:autoStoreVariables="false">
-      <script><![CDATA[if (execution.getVariable("motivoCierre") == "SIN_AULAS") { println "Curso cancelado por falta de aulas disponibles: " + execution.processInstanceId } else { println "Curso cancelado: " + execution.processInstanceId }; execution.setVariable("resultado", "cancelado")]]></script>
+      <script><![CDATA[if (execution.hasVariable("motivoCierre")) { println "Curso cancelado por falta de aulas disponibles: " + execution.processInstanceId } else { println "Curso cancelado: " + execution.processInstanceId }; execution.setVariable("resultado", "cancelado")]]></script>
     </scriptTask>
     <endEvent id="sid-2DBA8D2D-BCDA-4492-950F-3FEE9B0959BA"></endEvent>
     <scriptTask id="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" name="Enviar confirmación" scriptFormat="groovy" flowable:autoStoreVariables="false">
@@ -291,7 +289,7 @@ de aulas">
     <boundaryEvent id="sid-6931943F-5BD2-45CD-BE56-52DE64896B0C" name="Cierre por 
 falta de 
 aulas" attachedToRef="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF">
-      <errorEventDefinition errorRef="errorSIN_AULAS" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
+      <errorEventDefinition errorRef="errorSIN_AULAS" flowable:errorVariableName="motivoCierre" flowable:errorVariableLocalScope="false" flowable:errorVariableTransient="false"></errorEventDefinition>
     </boundaryEvent>
     <userTask id="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85" name="Definir Docente que desarrolla el curso" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true">
       <extensionElements>
