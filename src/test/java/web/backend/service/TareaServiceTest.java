@@ -36,6 +36,8 @@ class TareaServiceTest {
     private static final List<String> ADMINISTRACION = List.of("Administracion");
     private static final UsuarioSesion JEFE =
             new UsuarioSesion("jefeAdministrativo", "Jefe administrativo", ADMINISTRACION);
+    private static final UsuarioSesion JEFE_DE_EQUIPO =
+            new UsuarioSesion("jefeDeEquipo", "Jefe docente", List.of("Docentes"));
     private static final UsuarioSesion SIN_GRUPOS = new UsuarioSesion("matiasP", "Matías", List.of());
 
     @Mock
@@ -274,6 +276,21 @@ class TareaServiceTest {
         verify(flowable).completarTarea("7501", variables);
     }
 
+    /**
+     * "Definir Docente": el jefe de equipo manda el id de usuario del docente como texto. El
+     * backend solo valida nombre y tipo; que sea del grupo Docentes lo valida el motor.
+     */
+    @Test
+    void completarDefinirDocenteMandaElDocenteSeleccionado() {
+        List<CompletarTareaRequest.Variable> variables =
+                List.of(new CompletarTareaRequest.Variable("docenteSeleccionado", "string", "docente2"));
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeDeEquipo")));
+
+        service.completar(JEFE_DE_EQUIPO, "7501", variables);
+
+        verify(flowable).completarTarea("7501", variables);
+    }
+
     @Test
     void completarSinVariablesMandaUnaListaVacia() {
         when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeAdministrativo")));
@@ -309,7 +326,10 @@ class TareaServiceTest {
     void lasVariablesFueraDeLaListaOConOtroTipoSeRechazan() {
         Object[][] invalidas = {
                 {"resultado", "string", "finalizado"},        // la setea el motor
-                {"docenteSeleccionado", "string", "docente1"}, // la setea otra tarea, no esta web
+                {"aulaAsignada", "string", "Aula 1"},          // la setea ReserveClassroom
+                {"docenteSeleccionado", "integer", 42},        // es el id de usuario: va como texto
+                {"docenteSeleccionado", "string", 42},         // valor que no es texto
+                {"docenteSeleccionado", "string", null},       // valor nulo
                 {"presupuesto", "integer", 1000},              // tipo distinto del esperado
                 {"presupuesto", "long", "mil"},                // valor que no es del tipo
                 {"presupuesto", "long", 10.5},                 // long no acepta decimales
