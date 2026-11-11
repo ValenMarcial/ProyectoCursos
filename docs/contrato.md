@@ -61,7 +61,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Notificar Decisión | Script | Log y `resultado = "no_viable"` |
 | Enviar propuesta | Script | Simula el envío registrando en el log el programa, presupuesto y fechas de la propuesta; reinicia `recordatoriosEnviados = 0` y define `plazoRecordatorio = "P5D"` si no existe |
 | Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
-| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Si la `fechaInicio` acordada es posterior a `fechaFinPropuesta`, falla sin crear el curso. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
+| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Si la `fechaInicio` acordada es posterior a `fechaFinPropuesta`, falla sin crear el curso. También crea la cuenta de la empresa si no tiene (ver "Acceso de las empresas"). Es idempotente: un reintento no duplica el curso ni la cuenta. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
 | Enviar confirmación | Script | Log |
 | Notificar Cierre | Script | Log y `resultado = "cancelado"` |
 | Liberar Aula Virtual | Script (compensación) | Log |
@@ -223,6 +223,51 @@ Dónde se define `resultado` en cada camino:
 ## Unión asíncrona de "Preparar curso"
 
 La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Prepara materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
+
+## Acceso de las empresas (escenario 10)
+
+### Cuenta
+
+"Habilitar acceso de la empresa" crea la cuenta en `cuentas_empresa` (migración `004`), en la misma transacción que el curso. Una empresa tiene una sola cuenta: si ya tenía una por un curso anterior, se reutiliza y no se generan credenciales nuevas.
+
+- **Usuario:** el `contactoEmail` de la solicitud, en minúsculas. Si falta, o si ya lo usa otra empresa, es `empresa-<id>`.
+- **Clave:** 12 caracteres aleatorios. Se guarda solo el hash PBKDF2 (`shared.PasswordHash`, formato `pbkdf2-sha256$iteraciones$sal$hash`); nunca en texto plano ni en variables del proceso.
+- **Entrega (simulada):** las credenciales quedan en el log de Flowable. Para verlas:
+
+```bash
+docker compose logs flowable | grep "Cuenta de empresa creada"
+```
+
+### Estados del curso
+
+`cursos.estado` lo escriben listeners del BPMN, así la base siempre tiene la etapa actual. Los intermedios los escribe `flowable.course.UpdateCourseState`, con el estado como campo `estado` del listener. Los finales los escribe `RecordProcessResult` (ver "Resultado del proceso").
+
+| Estado | Dónde se escribe | Texto sugerido para la web |
+|---|---|---|
+| `en_preparacion` | "Habilitar acceso" al crear el curso | En preparación |
+| `confirmado` | Listener `start` de "Enviar confirmación" (la preparación terminó sin cancelación) | Confirmado |
+| `pendiente_de_inicio` | Listener `start` del timer "Fecha programada" (ya hay docente, falta la fecha) | Pendiente de inicio |
+| `en_desarrollo` | Listener `start` de "Desarrollar curso" | En curso |
+| `en_elaboracion_informe` | Listener `start` de "Elaborar informe de resultados" | En redacción del informe |
+| `finalizado` / `cancelado` | `RecordProcessResult` al terminar la instancia | Finalizado / Cancelado |
+
+### API para la web de empresas
+
+Las rutas `/api/empresa/**` usan una sesión de empresa, distinta de la del personal: con una no se puede usar la otra parte de la API (`401`). La empresa sale siempre de la sesión, nunca del pedido. Los errores responden `{"message": "..."}`.
+
+| Método y ruta | Pedido | Respuesta |
+|---|---|---|
+| `POST /api/empresa/sesion` | `{"usuario", "clave"}` | `200 {"usuario", "empresa"}`; `400` sin datos; `401` usuario o clave incorrectos |
+| `GET /api/empresa/sesion` | — | `200 {"usuario", "empresa"}`; `401` sin sesión |
+| `DELETE /api/empresa/sesion` | — | `204` |
+| `GET /api/empresa/cursos` | — | `200 [{"id", "nombre", "descripcion", "estado", "fechaInicio", "fechaFin"}]`, del más nuevo al más viejo |
+| `GET /api/empresa/cursos/{id}` | — | `200` el curso con `"actividades": [{"nombre", "tipo", "desde"}]`; `404` si no existe o es de otra empresa; `502` si Flowable no responde |
+
+- Las fechas del curso van como `AAAA-MM-DD`; `desde` es la hora de inicio de la actividad en ISO-8601.
+- `actividades` son las actividades sin terminar de la instancia (historial de Flowable), así aparecen las ramas paralelas de "Preparar curso", la recepción de la nómina y la espera de "Fecha programada". Se omiten compuertas, eventos de inicio y fin y el subproceso. Un curso finalizado o cancelado devuelve la lista vacía.
+- El login usa la misma cookie de sesión que el personal (`JSESSIONID`, 30 minutos sin uso) y renueva su id al autenticar.
+
+Probado en Flowable UI y Postgres: credenciales en el log, login, "Mis cursos", detalle con las tres ramas de la preparación, `404` sobre un curso de otra empresa, `401` sobre `/api/tareas` con sesión de empresa, y los seis estados en orden hasta `finalizado`.
 
 ## Errores de negocio y errores internos
 

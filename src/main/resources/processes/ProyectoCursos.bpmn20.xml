@@ -272,6 +272,13 @@
     </scriptTask>
     <endEvent id="sid-2DBA8D2D-BCDA-4492-950F-3FEE9B0959BA"></endEvent>
     <scriptTask id="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" name="Enviar confirmación" scriptFormat="groovy" flowable:autoStoreVariables="false">
+      <extensionElements>
+        <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">
+          <flowable:field name="estado">
+            <flowable:string><![CDATA[confirmado]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
       <script><![CDATA[println "Confirmación enviada: " + execution.processInstanceId]]></script>
     </scriptTask>
     <userTask id="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" name="Enviar informe a empresa y Archivar expediente" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true">
@@ -302,17 +309,34 @@
       </extensionElements>
     </userTask>
     <intermediateCatchEvent id="sid-F7F51C6F-028D-46BA-950E-32E5041A5F43" name="Fecha programada">
+      <extensionElements>
+        <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">
+          <flowable:field name="estado">
+            <flowable:string><![CDATA[pendiente_de_inicio]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
+      </extensionElements>
       <timerEventDefinition>
         <timeDate>${fechaInicio}</timeDate>
       </timerEventDefinition>
     </intermediateCatchEvent>
     <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:assignee="${docenteSeleccionado}" flowable:formFieldValidation="true">
       <extensionElements>
+        <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">
+          <flowable:field name="estado">
+            <flowable:string><![CDATA[en_desarrollo]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
         <modeler:initiator-can-complete xmlns:modeler="http://flowable.org/modeler"><![CDATA[false]]></modeler:initiator-can-complete>
       </extensionElements>
     </userTask>
     <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true">
       <extensionElements>
+        <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">
+          <flowable:field name="estado">
+            <flowable:string><![CDATA[en_elaboracion_informe]]></flowable:string>
+          </flowable:field>
+        </flowable:executionListener>
         <modeler:initiator-can-complete xmlns:modeler="http://flowable.org/modeler"><![CDATA[false]]></modeler:initiator-can-complete>
       </extensionElements>
     </userTask>
