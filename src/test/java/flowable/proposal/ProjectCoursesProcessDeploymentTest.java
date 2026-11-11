@@ -4,7 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +34,7 @@ import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.repository.ProcessDefinition;
 import org.flowable.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration;
 import org.flowable.engine.impl.rules.RulesDeployer;
+import org.flowable.job.api.Job;
 import org.flowable.task.api.Task;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -59,6 +66,77 @@ class ProjectCoursesProcessDeploymentTest {
                 .processDefinitionKey("process-proyecto-curso")
                 .count());
     }
+
+        @Test
+        void persisteElRechazoDespuesDeMostrarloEnArchivarSolicitud() throws SQLException {
+                prepararTablasDeResultados();
+                String instancia = iniciarPropuesta();
+                String ejecucion = engine.getRuntimeService().createExecutionQuery().processInstanceId(instancia)
+                                .messageEventSubscriptionName("msgRechazo").singleResult().getId();
+                engine.getRuntimeService().messageEventReceived("msgRechazo", ejecucion);
+
+                assertResultadoAntesDeArchivar(instancia, "rechazado");
+                completarTarea(instancia, "sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62", Map.of());
+                assertEquals("rechazado", consultarResultado("SELECT resultado FROM solicitudes WHERE id = 1"));
+                assertEquals(0, engine.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
+        }
+
+        @Test
+        void persisteLaFaltaDeRespuestaDespuesDeDosRecordatorios() throws SQLException {
+                prepararTablasDeResultados();
+                String instancia = iniciarPropuesta();
+                for (int intento = 0; intento < 3; intento++) {
+                        Job temporizador = engine.getManagementService().createTimerJobQuery()
+                                        .processInstanceId(instancia).singleResult();
+                        Job ejecutable = engine.getManagementService().moveTimerToExecutableJob(temporizador.getId());
+                        engine.getManagementService().executeJob(ejecutable.getId());
+                }
+
+                assertEquals(2, engine.getRuntimeService().getVariable(instancia, "recordatoriosEnviados"));
+                assertResultadoAntesDeArchivar(instancia, "cerrado_por_falta_de_respuesta");
+                completarTarea(instancia, "sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62", Map.of());
+                assertEquals("cerrado_por_falta_de_respuesta", consultarResultado("SELECT resultado FROM solicitudes WHERE id = 1"));
+                assertEquals(0, engine.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
+        }
+
+        @Test
+        void persisteLaFinalizacionEnSolicitudYCurso() throws SQLException {
+                prepararTablasDeResultados();
+                String instancia = iniciarSolicitud();
+                engine.getRuntimeService().setVariables(instancia, Map.of("solicitudId", 1L, "cursoId", 10L));
+                moverDesdeRegistro(instancia, "sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63");
+                completarTarea(instancia, "sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63", Map.of());
+
+                assertEquals("finalizado", consultarResultado("SELECT resultado FROM solicitudes WHERE id = 1"));
+                assertEquals("finalizado", consultarResultado("SELECT estado FROM cursos WHERE id = 10"));
+                assertEquals(0, engine.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
+        }
+
+        @Test
+        void persisteLaCancelacionEnSolicitudYCurso() throws SQLException {
+                prepararTablasDeResultados();
+                String instancia = iniciarPreparacion();
+                engine.getRuntimeService().setVariables(instancia, Map.of("solicitudId", 1L, "cursoId", 10L));
+                enviarCancelacion(instancia);
+
+                assertCierreCancelado(instancia);
+                assertEquals("cancelado", consultarResultado("SELECT resultado FROM solicitudes WHERE id = 1"));
+                assertEquals("cancelado", consultarResultado("SELECT estado FROM cursos WHERE id = 10"));
+        }
+
+        @Test
+        void persisteLaSolicitudNoViable() throws SQLException {
+                prepararTablasDeResultados();
+                for (int indice = 0; indice < 5; indice++) {
+                        String activa = iniciarSolicitud();
+                        engine.getRuntimeService().setVariable(activa, "cursoId", (long) indice + 20);
+                }
+                String instancia = engine.getRuntimeService().startProcessInstanceByMessage("msgSolicitud",
+                                Map.of("solicitudId", 1L)).getId();
+
+                assertEquals("no_viable", consultarResultado("SELECT resultado FROM solicitudes WHERE id = 1"));
+                assertEquals(0, engine.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
+        }
 
     @Test
     void asignaLosResponsablesConfiguradosEnLasTareas() {
@@ -93,6 +171,33 @@ class ProjectCoursesProcessDeploymentTest {
         assertEquals("string", task.getFormProperties().get(0).getType());
         assertTrue(task.getFormProperties().get(0).isRequired());
     }
+
+        @Test
+        void revisarPropuestaTieneElMismoFormularioYValidacionQueRegistrar() {
+                BpmnModel model = getProcessModel();
+                UserTask registrar = (UserTask) model.getMainProcess()
+                                .getFlowElement("sid-F96A6968-13D6-4EA4-929E-69230127C208");
+                UserTask revisar = (UserTask) model.getMainProcess()
+                                .getFlowElement("sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6");
+
+                List<String> ids = List.of("programa", "presupuesto", "fechaInicioPosible", "fechaFinPropuesta");
+                List<String> tipos = List.of("string", "long", "date", "date");
+                assertEquals(ids.size(), registrar.getFormProperties().size());
+                assertEquals(ids.size(), revisar.getFormProperties().size());
+                for (int index = 0; index < ids.size(); index++) {
+                        assertEquals(ids.get(index), registrar.getFormProperties().get(index).getId());
+                        assertEquals(ids.get(index), revisar.getFormProperties().get(index).getId());
+                        assertEquals(tipos.get(index), registrar.getFormProperties().get(index).getType());
+                        assertEquals(tipos.get(index), revisar.getFormProperties().get(index).getType());
+                        assertEquals(registrar.getFormProperties().get(index).getName(),
+                                        revisar.getFormProperties().get(index).getName());
+                        assertTrue(registrar.getFormProperties().get(index).isRequired());
+                        assertTrue(revisar.getFormProperties().get(index).isRequired());
+                }
+                assertEquals(1, revisar.getTaskListeners().size());
+                assertEquals("complete", revisar.getTaskListeners().get(0).getEvent());
+                assertEquals("flowable.proposal.ValidateProposalDates", revisar.getTaskListeners().get(0).getImplementation());
+        }
 
     @Test
     void asignaAdministracionComoGrupoCandidatoDeLasTareasDePreparacion() {
@@ -373,6 +478,14 @@ class ProjectCoursesProcessDeploymentTest {
         engine.getManagementService().createJobQuery().processInstanceId(instancia).list()
                 .forEach(job -> engine.getManagementService().executeJob(job.getId()));
 
+        assertEquals(0, engine.getTaskService().createTaskQuery().processInstanceId(instancia)
+                .taskDefinitionKey("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85").count());
+        List<Job> jobs = engine.getManagementService().createJobQuery().processInstanceId(instancia).list();
+        assertEquals(3, jobs.size());
+        for (Job job : jobs) {
+            engine.getManagementService().executeJob(job.getId());
+        }
+
         assertEquals(false, engine.getRuntimeService().getVariable(instancia, "cancelada"));
         assertEquals(1, engine.getTaskService().createTaskQuery().processInstanceId(instancia)
                 .taskDefinitionKey("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85").count());
@@ -382,11 +495,50 @@ class ProjectCoursesProcessDeploymentTest {
 
     private String iniciarPreparacion() {
         String instancia = iniciarSolicitud();
-        Task tarea = engine.getTaskService().createTaskQuery().processInstanceId(instancia).singleResult();
+                moverDesdeRegistro(instancia, "sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+                return instancia;
+        }
+
+        private void moverDesdeRegistro(String instancia, String destino) {
+                Task tarea = engine.getTaskService().createTaskQuery().processInstanceId(instancia).singleResult();
         engine.getRuntimeService().createChangeActivityStateBuilder().processInstanceId(instancia)
-                .moveActivityIdTo(tarea.getTaskDefinitionKey(), "sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF")
+                                .moveActivityIdTo(tarea.getTaskDefinitionKey(), destino)
                 .changeState();
-        return instancia;
+        }
+
+        private String iniciarPropuesta() {
+                String instancia = iniciarSolicitud();
+                engine.getRuntimeService().setVariables(instancia, Map.of("solicitudId", 1L, "plazoRecordatorio", "PT1M"));
+                completarTarea(instancia, "sid-F96A6968-13D6-4EA4-929E-69230127C208", Map.of(
+                                "programa", "Programa", "presupuesto", 100L,
+                                "fechaInicioPosible", Date.from(Instant.parse("2026-11-20T00:00:00Z")),
+                                "fechaFinPropuesta", Date.from(Instant.parse("2026-11-21T00:00:00Z"))));
+                return instancia;
+        }
+
+        private void assertResultadoAntesDeArchivar(String instancia, String resultado) throws SQLException {
+                assertEquals(1, engine.getTaskService().createTaskQuery().processInstanceId(instancia)
+                                .taskDefinitionKey("sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62").count());
+                assertEquals(resultado, engine.getRuntimeService().getVariable(instancia, "resultado"));
+                assertNull(consultarResultado("SELECT resultado FROM solicitudes WHERE id = 1"));
+        }
+
+        private void prepararTablasDeResultados() throws SQLException {
+                try (Connection conexion = engine.getProcessEngineConfiguration().getDataSource().getConnection();
+                                Statement sentencia = conexion.createStatement()) {
+                        sentencia.execute("CREATE TABLE solicitudes (id BIGINT PRIMARY KEY, resultado VARCHAR(40))");
+                        sentencia.execute("CREATE TABLE cursos (id BIGINT PRIMARY KEY, estado VARCHAR(40))");
+                        sentencia.execute("INSERT INTO solicitudes VALUES (1, NULL)");
+                        sentencia.execute("INSERT INTO cursos VALUES (10, 'en_preparacion')");
+                }
+        }
+
+        private String consultarResultado(String consulta) throws SQLException {
+                try (Connection conexion = engine.getProcessEngineConfiguration().getDataSource().getConnection();
+                                Statement sentencia = conexion.createStatement(); ResultSet resultado = sentencia.executeQuery(consulta)) {
+                        resultado.next();
+                        return resultado.getString(1);
+                }
     }
 
     private void completarTarea(String instancia, String tareaId, Map<String, Object> variables) {
