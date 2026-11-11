@@ -35,8 +35,11 @@ const casillasRecursos = [
   ['recurso-equipamiento', variables.equipamiento],
 ];
 
-/** Errores al reclamar que no se arreglan reintentando: la tarea no se puede tomar. */
-const erroresDefinitivosAlReclamar = new Set(['conflicto', 'noEncontrado']);
+/**
+ * Errores al reclamar que no se arreglan reintentando: la tarea no se puede tomar
+ * (la tomó otra persona, ya no existe o no es de tu grupo).
+ */
+const erroresDefinitivosAlReclamar = new Set(['conflicto', 'noEncontrado', 'sinPermiso']);
 
 const mensajeGenerico = 'Ocurrió un error inesperado. Intentá de nuevo más tarde.';
 

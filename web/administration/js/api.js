@@ -1,18 +1,22 @@
 /**
  * Módulo api.js
  *
- * Adaptador entre las pantallas de Administración y la API. Las pantallas solo
- * usan listarTareas, reclamarTarea, completarTarea y obtenerVariables.
+ * Adaptador entre las pantallas de Administración y la API del backend (/api/...).
+ * Las pantallas usan listarTareas, reclamarTarea, completarTarea y obtenerVariables;
+ * obtenerTarea queda disponible para la bandeja y la PR de reutilización.
+ * iniciarSesion, usuarioActual y cerrarSesion son para el login (de Santos).
  *
  * La interfaz es la misma en modo mock y en modo real: lo único que cambia es
- * la función de transporte, elegida con modoApi en contrato.js. Las conversiones
- * y la traducción de errores corren igual en los dos modos.
+ * la función de transporte, elegida con modoApi en contrato.js o con ?api= en la
+ * URL. Las conversiones y la traducción de errores corren igual en los dos modos.
  *
  * Este módulo no decide permisos ni guarda credenciales: quién puede reclamar
  * o completar lo controla el backend.
  */
 
-import { modoApi, rutasApi, tiposVariables } from './contrato.js';
+import {
+  alcances, claveModoApi, modoApi, parametroModoApi, rutaLogin, rutasApi, tamanioPagina, tiposVariables,
+} from './contrato.js';
 import { enviarSimulado } from './mock.js';
 
 /**
@@ -20,7 +24,8 @@ import { enviarSimulado } from './mock.js';
  *
  * Campos:
  * - tipo: 'entrada', 'negocio', 'conflicto', 'noEncontrado', 'sinSesion',
- *   'sinPermiso', 'interno' o 'red'.
+ *   'credenciales' (login rechazado), 'sinPermiso', 'noDisponible' (el backend
+ *   no llega al motor, 502), 'interno' o 'red'.
  * - estado: status HTTP, o null si no hubo respuesta.
  * - detalle: texto técnico para la consola; no mostrar al usuario.
  */
@@ -139,7 +144,8 @@ function armarVariables(valores) {
  * Indica si un error es un rechazo de negocio que se puede mostrar tal cual.
  * Regla de docs/contrato.md: las validaciones del motor lanzan
  * FlowableIllegalArgumentException, que la API REST devuelve como 400 con el
- * texto en exception. Un 400 sin ese texto no se puede mostrar.
+ * texto en exception (el backend lo reenvía sin tocarlo). Un 400 sin ese texto
+ * no es del motor.
  * Recibe: status HTTP y cuerpo. Devuelve: boolean.
  */
 function esRechazoDeNegocio(estado, cuerpo) {
@@ -147,12 +153,26 @@ function esRechazoDeNegocio(estado, cuerpo) {
 }
 
 /**
+ * Devuelve el mensaje si el error lo escribió el backend, o null si no.
+ * El backend responde { message } en español, pensado para el usuario; el motor
+ * siempre agrega exception, y el error estándar de Spring (405, 500) no trae message.
+ * Recibe: cuerpo de la respuesta. Devuelve: texto o null.
+ */
+function mensajeDelBackend(cuerpo) {
+  const esDelBackend = typeof cuerpo?.message === 'string' && cuerpo.message.trim() !== ''
+    && cuerpo.exception === undefined;
+  return esDelBackend ? cuerpo.message : null;
+}
+
+/**
  * Convierte una respuesta de error en un ErrorApi.
- * Recibe: status HTTP y cuerpo { message, exception }, si lo hay.
+ * Recibe: status HTTP, cuerpo { message, exception } si lo hay, y { esLogin }:
+ * en el login un 401 son credenciales incorrectas, no una sesión vencida.
  * Devuelve: el ErrorApi listo para lanzar.
  */
-function traducirError(estado, cuerpo) {
+function traducirError(estado, cuerpo, { esLogin = false } = {}) {
   const detalle = cuerpo?.exception ?? cuerpo?.message ?? null;
+  const delBackend = mensajeDelBackend(cuerpo);
 
   if (esRechazoDeNegocio(estado, cuerpo)) {
     return new ErrorApi(cuerpo.exception, { tipo: 'negocio', estado, detalle });
@@ -161,18 +181,31 @@ function traducirError(estado, cuerpo) {
   // Un 500 siempre cae en el mensaje genérico, aunque su texto parezca de negocio:
   // es un bug o una falla de infraestructura, y su detalle queda solo para la consola.
   switch (estado) {
+    case 400:
+      // Validación del backend (por ejemplo, una variable no permitida): se muestra tal cual.
+      if (delBackend) return new ErrorApi(delBackend, { tipo: 'entrada', estado, detalle });
+      break;
     case 401:
-      return new ErrorApi('Tu sesión no es válida. Volvé a ingresar.', { tipo: 'sinSesion', estado, detalle });
+      if (esLogin) {
+        return new ErrorApi(delBackend ?? 'Usuario o clave incorrectos.', { tipo: 'credenciales', estado, detalle });
+      }
+      return new ErrorApi('Tu sesión venció o no iniciaste sesión. Volvé a ingresar.', { tipo: 'sinSesion', estado, detalle });
     case 403:
-      return new ErrorApi('No tenés permiso para hacer esta operación.', { tipo: 'sinPermiso', estado, detalle });
+      return new ErrorApi(delBackend ?? 'No tenés permiso para hacer esta operación.', { tipo: 'sinPermiso', estado, detalle });
     case 404:
-      return new ErrorApi('La tarea o instancia ya no existe, o ya fue completada.', { tipo: 'noEncontrado', estado, detalle });
+      return new ErrorApi(delBackend ?? 'La tarea o instancia ya no existe, o ya fue completada.', { tipo: 'noEncontrado', estado, detalle });
     case 409:
+      // El 409 viene del motor (cuerpo en inglés): se usa un texto propio.
       return new ErrorApi('Otra persona ya reclamó esta tarea.', { tipo: 'conflicto', estado, detalle });
+    case 502:
+    case 503:
+    case 504:
+      return new ErrorApi(delBackend ?? 'El servidor no está disponible en este momento. Intentá de nuevo más tarde.', { tipo: 'noDisponible', estado, detalle });
     default:
-      // El texto técnico queda en detalle: un bug nunca se le muestra al usuario.
-      return new ErrorApi('Ocurrió un error inesperado. Intentá de nuevo más tarde.', { tipo: 'interno', estado, detalle });
+      break;
   }
+  // El texto técnico queda en detalle: un bug nunca se le muestra al usuario.
+  return new ErrorApi('Ocurrió un error inesperado. Intentá de nuevo más tarde.', { tipo: 'interno', estado, detalle });
 }
 
 /**
@@ -197,14 +230,16 @@ function normalizarTarea(tarea) {
  * Devuelve: promesa de { estado, cuerpo }; cuerpo es null si no hay JSON.
  */
 export async function enviarReal(metodo, ruta, cuerpo) {
-  const opciones = { method: metodo };
+  // same-origin es el valor por defecto; va explícito porque la sesión depende de la
+  // cookie: la web y la API se sirven desde el mismo backend.
+  const opciones = { method: metodo, credentials: 'same-origin' };
   if (cuerpo !== undefined) {
     opciones.headers = { 'Content-Type': 'application/json' };
     opciones.body = JSON.stringify(cuerpo);
   }
 
   const respuesta = await fetch(ruta, opciones);
-  // Reclamar y completar responden 200 sin cuerpo, y un error puede no ser JSON.
+  // Reclamar y completar responden 204 sin cuerpo, y un error puede no ser JSON.
   const texto = await respuesta.text();
   let datos = null;
   try {
@@ -217,17 +252,23 @@ export async function enviarReal(metodo, ruta, cuerpo) {
 
 /**
  * Crea el adaptador sobre un transporte.
- * Recibe: función enviar(metodo, ruta, cuerpo) que devuelve { estado, cuerpo }.
- * Devuelve: objeto con las cuatro operaciones de la interfaz.
+ * Recibe: función enviar(metodo, ruta, cuerpo) que devuelve { estado, cuerpo }, y
+ * { alPerderSesion }: qué hacer cuando una operación responde 401 (por defecto,
+ * nada; el ErrorApi 'sinSesion' se lanza igual para que la pantalla lo muestre).
+ * Devuelve: objeto con las operaciones de tareas y de sesión.
  */
-export function crearApi(enviar) {
+export function crearApi(enviar, { alPerderSesion = () => {} } = {}) {
   /**
    * Hace un pedido y unifica el manejo de errores.
-   * Recibe: método, ruta y cuerpo opcional.
+   * Recibe: método, ruta, cuerpo opcional y { esLogin, sin401 }:
+   * - esLogin: un 401 son credenciales incorrectas.
+   * - sin401: el 401 es una respuesta esperada (consultar o cerrar la sesión) y no
+   *   dispara alPerderSesion; si no, una pantalla de login que pregunta por la
+   *   sesión se redirigiría a sí misma.
    * Devuelve: el cuerpo de la respuesta.
    * Lanza: ErrorApi si no hubo conexión o el status no es 2xx.
    */
-  async function pedir(metodo, ruta, cuerpo) {
+  async function pedir(metodo, ruta, cuerpo, { esLogin = false, sin401 = false } = {}) {
     let respuesta;
     try {
       respuesta = await enviar(metodo, ruta, cuerpo);
@@ -235,42 +276,118 @@ export function crearApi(enviar) {
       throw new ErrorApi('No se pudo conectar con el servidor.', { tipo: 'red', detalle: String(error) });
     }
     if (respuesta.estado < 200 || respuesta.estado >= 300) {
-      throw traducirError(respuesta.estado, respuesta.cuerpo);
+      const error = traducirError(respuesta.estado, respuesta.cuerpo, { esLogin });
+      if (error.tipo === 'sinSesion' && !sin401) alPerderSesion(error);
+      throw error;
     }
     return respuesta.cuerpo;
   }
 
+  /**
+   * Trae todas las tareas de un alcance, recorriendo las páginas del backend.
+   * Recibe: alcance ('mias' o 'grupo').
+   * Devuelve: lista de tareas en el formato de Flowable.
+   */
+  async function todasLasPaginas(alcance) {
+    const encontradas = [];
+    let total = Infinity;
+    // Se corta también si una página vuelve vacía, para no quedar en un bucle si el
+    // total cambia mientras se recorre (alguien completó una tarea en el medio).
+    while (encontradas.length < total) {
+      const pagina = await pedir('GET', rutasApi.tareas({ alcance, start: encontradas.length, size: tamanioPagina }));
+      total = pagina.total;
+      if (pagina.data.length === 0) break;
+      encontradas.push(...pagina.data);
+    }
+    return encontradas;
+  }
+
   return {
     /**
-     * Lista tareas.
-     * Recibe: { usuario } para las asignadas o { grupo } para las disponibles.
+     * Inicia la sesión del personal con su usuario y clave de Flowable.
+     * Recibe: usuario y clave. La clave no se guarda: solo viaja en este pedido.
+     * Devuelve: { usuario, nombre, grupos }.
+     * Lanza: ErrorApi 'credenciales' si el backend los rechaza (401), 'entrada' si
+     * faltan datos (400) o 'noDisponible' si Flowable no responde (502).
+     */
+    async iniciarSesion(usuario, clave) {
+      return pedir('POST', rutasApi.sesion, { usuario, clave }, { esLogin: true });
+    },
+
+    /**
+     * Consulta quién tiene la sesión iniciada.
+     * No recibe nada. Devuelve: { usuario, nombre, grupos }, o null si no hay sesión.
+     */
+    async usuarioActual() {
+      try {
+        return await pedir('GET', rutasApi.sesion, undefined, { sin401: true });
+      } catch (error) {
+        if (error instanceof ErrorApi && error.tipo === 'sinSesion') return null;
+        throw error;
+      }
+    },
+
+    /**
+     * Cierra la sesión. Si ya estaba cerrada (401) no es un error.
+     * No recibe ni devuelve nada.
+     */
+    async cerrarSesion() {
+      try {
+        await pedir('DELETE', rutasApi.sesion, undefined, { sin401: true });
+      } catch (error) {
+        if (!(error instanceof ErrorApi && error.tipo === 'sinSesion')) throw error;
+      }
+    },
+
+    /**
+     * Lista tareas del usuario de la sesión.
+     * Recibe: { alcance } con 'mias' (asignadas) o 'grupo' (sin asignar, de sus
+     * grupos). Sin alcance trae las dos, primero las propias y sin repetir: es lo
+     * que usan las pantallas, que después filtran por tarea del BPMN.
      * Devuelve: lista de tareas normalizadas.
      */
-    async listarTareas({ usuario, grupo } = {}) {
-      const cuerpo = await pedir('GET', rutasApi.tareas({ usuario, grupo }));
-      return cuerpo.data.map(normalizarTarea);
+    async listarTareas({ alcance } = {}) {
+      const pedidos = alcance ? [alcance] : [alcances.mias, alcances.grupo];
+      const vistas = new Set();
+      const resultado = [];
+      for (const cadaAlcance of pedidos) {
+        for (const tarea of await todasLasPaginas(cadaAlcance)) {
+          // Una tarea puede cambiar de alcance entre los dos pedidos (alguien la reclamó).
+          if (vistas.has(tarea.id)) continue;
+          vistas.add(tarea.id);
+          resultado.push(normalizarTarea(tarea));
+        }
+      }
+      return resultado;
+    },
+
+    /**
+     * Lee una tarea del usuario o de uno de sus grupos.
+     * Recibe: id de la tarea. Devuelve: la tarea normalizada.
+     * Lanza: ErrorApi 'noEncontrado' si no existe o no la puede ver.
+     */
+    async obtenerTarea(id) {
+      return normalizarTarea(await pedir('GET', rutasApi.tarea(id)));
     },
 
     /**
      * Reclama una tarea de grupo.
      * Recibe: id de la tarea. Devuelve: nada.
-     * No manda assignee: el backend lo toma de la sesión, no del navegador, así
-     * nadie puede reclamar a nombre de otro. Por eso solo recibe el id: desde la
-     * web no hay forma de pedir un claim vacío, que en Flowable libera la tarea.
-     * El backend tiene que ignorar cualquier assignee del cuerpo y nunca reenviar
-     * a Flowable un claim sin el usuario de la sesión.
+     * Va sin cuerpo: el backend toma el assignee de la sesión, no del navegador, así
+     * nadie puede reclamar a nombre de otro, y nunca le manda a Flowable un claim
+     * sin usuario (que libera la tarea en vez de tomarla).
      */
     async reclamarTarea(id) {
-      await pedir('POST', rutasApi.tarea(id), { action: 'claim' });
+      await pedir('POST', rutasApi.reclamar(id));
     },
 
     /**
-     * Completa una tarea.
+     * Completa una tarea asignada al usuario de la sesión.
      * Recibe: id y objeto { nombreVariable: valor }, con fechas en dd/MM/yyyy.
      * Devuelve: nada.
      */
     async completarTarea(id, valores) {
-      await pedir('POST', rutasApi.tarea(id), { action: 'complete', variables: armarVariables(valores) });
+      await pedir('POST', rutasApi.completar(id), { variables: armarVariables(valores) });
     },
 
     /**
@@ -288,11 +405,76 @@ export function crearApi(enviar) {
   };
 }
 
-/** Elige el transporte según el único flag de configuración. */
-function elegirTransporte() {
-  if (modoApi === 'mock') return enviarSimulado;
-  if (modoApi === 'real') return enviarReal;
-  throw new Error(`modoApi inválido en contrato.js: ${modoApi}`);
+/** Transporte de cada modo. */
+const transportes = { mock: enviarSimulado, real: enviarReal };
+
+/**
+ * Lee el modo guardado en la pestaña.
+ * No recibe nada. Devuelve: 'mock', 'real' o null si no hay (o no hay storage:
+ * modo privado, cookies bloqueadas o Node).
+ */
+function leerModoGuardado() {
+  try {
+    const guardado = globalThis.sessionStorage?.getItem(claveModoApi) ?? null;
+    return Object.hasOwn(transportes, guardado ?? '') ? guardado : null;
+  } catch {
+    return null;
+  }
 }
 
-export const { listarTareas, reclamarTarea, completarTarea, obtenerVariables } = crearApi(elegirTransporte());
+/**
+ * Guarda el modo en la pestaña. Si no hay storage, el modo vale solo para esta
+ * carga de página (no se recuerda al navegar).
+ * Recibe: el modo. No devuelve nada.
+ */
+function guardarModo(modo) {
+  try {
+    globalThis.sessionStorage?.setItem(claveModoApi, modo);
+  } catch {
+    // Sin storage no hay nada que hacer: la pantalla funciona igual.
+  }
+}
+
+/**
+ * Decide el modo: ?api= de la URL (y lo guarda en la pestaña), si no el guardado
+ * en la pestaña, y si no el default de contrato.js.
+ * No recibe nada. Devuelve: 'mock' o 'real'.
+ */
+function elegirModo() {
+  const busqueda = globalThis.location?.search ?? '';
+  const pedido = new URLSearchParams(busqueda).get(parametroModoApi);
+  if (pedido !== null) {
+    if (Object.hasOwn(transportes, pedido)) {
+      guardarModo(pedido);
+      return pedido;
+    }
+    console.warn(`?${parametroModoApi}=${pedido} no es un modo válido (mock o real): se ignora.`);
+  }
+  return leerModoGuardado() ?? modoApi;
+}
+
+/** Elige el transporte según el modo de la pestaña o el default de contrato.js. */
+function elegirTransporte() {
+  const modo = elegirModo();
+  if (!Object.hasOwn(transportes, modo)) {
+    throw new Error(`modoApi inválido en contrato.js: ${modo}`);
+  }
+  return transportes[modo];
+}
+
+/**
+ * Manda al usuario a la pantalla de login, con la pantalla actual en ?volver=
+ * para que el login lo devuelva. Mientras rutaLogin sea null no hace nada: el
+ * aviso de sesión vencida lo muestra la pantalla con el ErrorApi.
+ * No recibe ni devuelve nada.
+ */
+function redirigirALogin() {
+  if (rutaLogin === null || typeof window === 'undefined') return;
+  const volver = window.location.pathname + window.location.search;
+  window.location.assign(`${rutaLogin}?${new URLSearchParams({ volver })}`);
+}
+
+export const {
+  iniciarSesion, usuarioActual, cerrarSesion,
+  listarTareas, obtenerTarea, reclamarTarea, completarTarea, obtenerVariables,
+} = crearApi(elegirTransporte(), { alPerderSesion: redirigirALogin });
