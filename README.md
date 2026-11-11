@@ -242,6 +242,7 @@ Además de las tablas `ACT_*` que administra Flowable, el schema define cuatro t
 | `empresas` | `id` (PK identity), `nombre` (único sin distinguir mayúsculas ni espacios externos), `cantidad_empleados` (entero `>= 0`, opcional) | Empresas que solicitan cursos; se reutilizan por nombre normalizado. |
 | `solicitudes` | `id` (PK identity), `empresa_id` (FK), `business_key` (único), temática/descripción, contacto, participantes, fechas preferidas, `instancia_flowable_id` (único), estado de integración | Datos del formulario público. Se crea al recibir la solicitud y se vincula inmediatamente con su instancia Flowable. |
 | `cursos` | `id` (PK identity), `empresa_id` (FK), nombre, descripción, programa, presupuesto, fechas, resultados, `instancia_flowable_id` (único), estado de negocio | Cursos existentes/registrados. En esta entrega no tienen relación con solicitudes; esa asociación y la creación tras la aceptación quedan para otra PR. |
+| `cuentas_empresa` | `empresa_id` (PK y FK), `usuario` (único), `clave_hash`, `creada_en` | Cuenta de acceso de cada empresa. La crea "Habilitar acceso de la empresa"; la clave se guarda con hash (ver `docs/contrato.md`, "Acceso de las empresas"). |
 
 `solicitudes.instancia_flowable_id` guarda el ID de la instancia de Flowable desde que se inicia el proceso. `solicitudes.business_key` se genera antes del inicio y permite correlacionar el proceso con la solicitud local. `integracion_flowable_estado` diferencia `pendiente`, `iniciada` y `legacy`.
 

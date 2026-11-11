@@ -139,10 +139,15 @@ class ProcessResultModelTest {
         completar(instancia, AULA_VIRTUAL, Map.of());
         // "Preparación completa" es asíncrona: cada rama que llega deja un job.
         ejecutarJobs(instancia);
+        // Estados intermedios que ve la empresa (UpdateCourseState).
+        assertEquals("confirmado", consultar("SELECT estado FROM cursos WHERE id = 50"));
 
         completar(instancia, DEFINIR_DOCENTE, Map.of("docenteSeleccionado", "docente1"));
+        assertEquals("pendiente_de_inicio", consultar("SELECT estado FROM cursos WHERE id = 50"));
         dispararTimer(instancia);
+        assertEquals("en_desarrollo", consultar("SELECT estado FROM cursos WHERE id = 50"));
         completar(instancia, DESARROLLAR_CURSO, Map.of());
+        assertEquals("en_elaboracion_informe", consultar("SELECT estado FROM cursos WHERE id = 50"));
         completar(instancia, ELABORAR_INFORME, Map.of());
         completar(instancia, ENVIAR_INFORME, Map.of());
 

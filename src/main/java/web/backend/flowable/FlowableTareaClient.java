@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -19,6 +20,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import web.backend.api.dto.ActividadResponse;
 import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
@@ -46,6 +48,15 @@ public class FlowableTareaClient {
     private static final String RUTA_TAREA = "/runtime/tasks/{id}";
     private static final String RUTA_VINCULOS = "/runtime/tasks/{id}/identitylinks";
     private static final String RUTA_VARIABLES = "/runtime/process-instances/{id}/variables";
+    private static final String RUTA_ACTIVIDADES = "/history/historic-activity-instances";
+    /**
+     * Tipos de actividad que se muestran a la empresa. Quedan afuera compuertas, eventos de inicio
+     * y fin, y el subproceso, que siguen "sin terminar" mientras corren sus actividades internas.
+     */
+    private static final Set<String> TIPOS_VISIBLES = Set.of("userTask", "receiveTask", "serviceTask",
+            "scriptTask", "intermediateCatchEvent");
+    /** Más que suficiente: una instancia tiene como mucho unas pocas actividades en paralelo. */
+    private static final int MAXIMO_ACTIVIDADES = 100;
     /** Tipo de vínculo de Flowable que marca a un grupo (o usuario) como candidato de la tarea. */
     private static final String VINCULO_CANDIDATO = "candidate";
     /** Orden fijo para que la paginación sea estable: las tareas más viejas primero. */
@@ -164,6 +175,33 @@ public class FlowableTareaClient {
         for (Map<?, ?> variable : elementos(variables)) {
             resultado.add(new VariableResponse(
                     texto(variable, "name"), texto(variable, "type"), variable.get("value")));
+        }
+        return resultado;
+    }
+
+    /**
+     * Devuelve las actividades sin terminar de la instancia, incluidas las de ramas paralelas, de
+     * la más vieja a la más nueva. Se usa el historial (y no las tareas) porque también incluye
+     * la recepción de la nómina y la espera de la fecha de inicio.
+     */
+    public List<ActividadResponse> actividadesEnCurso(String instanciaId) {
+        URI uri = UriComponentsBuilder.fromHttpUrl(baseUrl + RUTA_ACTIVIDADES)
+                .queryParam("processInstanceId", "{id}")
+                .queryParam("finished", false)
+                .queryParam("sort", "startTime")
+                .queryParam("order", "asc")
+                .queryParam("size", MAXIMO_ACTIVIDADES)
+                .encode()
+                .buildAndExpand(instanciaId)
+                .toUri();
+        Map<?, ?> respuesta = consultar("consultar las actividades de una instancia",
+                () -> restTemplate.getForObject(uri, Map.class));
+        List<ActividadResponse> resultado = new ArrayList<>();
+        for (Map<?, ?> actividad : elementos(respuesta == null ? null : respuesta.get("data"))) {
+            if (TIPOS_VISIBLES.contains(texto(actividad, "activityType"))) {
+                resultado.add(new ActividadResponse(texto(actividad, "activityName"),
+                        texto(actividad, "activityType"), texto(actividad, "startTime")));
+            }
         }
         return resultado;
     }

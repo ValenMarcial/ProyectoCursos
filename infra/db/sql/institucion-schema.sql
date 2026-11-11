@@ -65,6 +65,13 @@ ALTER TABLE solicitudes
   ADD COLUMN IF NOT EXISTS resultado TEXT
     CHECK (resultado IN ('finalizado', 'cancelado', 'rechazado', 'cerrado_por_falta_de_respuesta', 'no_viable'));
 
+CREATE TABLE IF NOT EXISTS cuentas_empresa (
+  empresa_id BIGINT PRIMARY KEY REFERENCES empresas (id),
+  usuario TEXT NOT NULL UNIQUE,
+  clave_hash TEXT NOT NULL,
+  creada_en timestamptz NOT NULL DEFAULT now()
+);
+
 INSERT INTO schema_version (version)
 VALUES (0)
 ON CONFLICT (version) DO NOTHING;

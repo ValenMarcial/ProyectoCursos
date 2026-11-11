@@ -27,6 +27,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import web.backend.api.dto.ActividadResponse;
 import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
@@ -254,5 +255,25 @@ class FlowableTareaClientTest {
 
             assertFalse(error instanceof org.springframework.web.client.HttpStatusCodeException);
         }
+    }
+
+    @Test
+    void actividadesEnCursoTraeSoloTareasYEsperasDeLaInstancia() {
+        server.expect(requestTo(URI.create(BASE_URL + "/history/historic-activity-instances?processInstanceId=7420"
+                        + "&finished=false&sort=startTime&order=asc&size=100")))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("{\"data\":["
+                        + "{\"activityName\":\"Preparar curso\",\"activityType\":\"subProcess\",\"startTime\":\"t0\"},"
+                        + "{\"activityName\":\"Prepara materiales\",\"activityType\":\"userTask\",\"startTime\":\"t1\"},"
+                        + "{\"activityName\":\"Recibir nómina\",\"activityType\":\"receiveTask\",\"startTime\":\"t1\"},"
+                        + "{\"activityName\":null,\"activityType\":\"inclusiveGateway\",\"startTime\":\"t2\"}"
+                        + "],\"total\":4}", MediaType.APPLICATION_JSON));
+
+        List<ActividadResponse> actividades = client.actividadesEnCurso("7420");
+
+        assertEquals(2, actividades.size());
+        assertEquals("Prepara materiales", actividades.get(0).nombre);
+        assertEquals("receiveTask", actividades.get(1).tipo);
+        assertEquals("t1", actividades.get(1).desde);
     }
 }
