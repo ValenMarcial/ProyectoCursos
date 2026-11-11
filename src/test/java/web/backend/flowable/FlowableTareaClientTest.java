@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
@@ -26,6 +27,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
 import web.backend.api.dto.VariableResponse;
@@ -182,6 +184,61 @@ class FlowableTareaClientTest {
             assertArrayEquals(ERROR_MOTOR.getBytes(StandardCharsets.UTF_8), error.getCuerpo());
             assertEquals(MediaType.APPLICATION_JSON, error.getTipoContenido());
         }
+    }
+
+    @Test
+    void reclamaConElUsuarioComoAssignee() {
+        server.expect(requestTo(URI.create(TAREAS + "/75%2F01")))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().json("{\"action\":\"claim\",\"assignee\":\"empleadoAdministrativo\"}", true))
+                .andRespond(withSuccess());
+
+        client.reclamarTarea("75/01", "empleadoAdministrativo");
+    }
+
+    /** Un claim sin assignee libera la tarea en Flowable: nunca se manda. */
+    @Test
+    void sinUsuarioNoReclama() {
+        for (String usuario : new String[] {null, "", "  "}) {
+            assertThrows(IllegalArgumentException.class, () -> client.reclamarTarea("7501", usuario));
+        }
+    }
+
+    @Test
+    void elConflictoDeReclamarConservaElCuerpoDelMotor() {
+        String conflicto = "{\"message\":\"Task is already claimed\",\"exception\":\"Task '7501' is already claimed "
+                + "by someone else.\"}";
+        server.expect(requestTo(URI.create(TAREAS + "/7501")))
+                .andRespond(withStatus(HttpStatus.CONFLICT).contentType(MediaType.APPLICATION_JSON).body(conflicto));
+
+        FlowableRespuestaException error = assertThrows(FlowableRespuestaException.class,
+                () -> client.reclamarTarea("7501", "jefeAdministrativo"));
+
+        assertEquals(409, error.getEstado());
+        assertArrayEquals(conflicto.getBytes(StandardCharsets.UTF_8), error.getCuerpo());
+    }
+
+    @Test
+    void completaConLasVariablesComoNombreTipoYValor() {
+        server.expect(requestTo(URI.create(TAREAS + "/7501")))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().json("{\"action\":\"complete\",\"variables\":["
+                        + "{\"name\":\"aulaFisica\",\"type\":\"boolean\",\"value\":true},"
+                        + "{\"name\":\"presupuesto\",\"type\":\"long\",\"value\":1000}]}", true))
+                .andRespond(withSuccess());
+
+        client.completarTarea("7501", List.of(
+                new CompletarTareaRequest.Variable("aulaFisica", "boolean", true),
+                new CompletarTareaRequest.Variable("presupuesto", "long", 1000)));
+    }
+
+    @Test
+    void completarSinVariablesMandaUnaListaVacia() {
+        server.expect(requestTo(URI.create(TAREAS + "/7501")))
+                .andExpect(content().json("{\"action\":\"complete\",\"variables\":[]}", true))
+                .andRespond(withSuccess());
+
+        client.completarTarea("7501", List.of());
     }
 
     /** Un 401/403 del motor es la cuenta del backend: no se reenvía, sale como falta de respuesta. */

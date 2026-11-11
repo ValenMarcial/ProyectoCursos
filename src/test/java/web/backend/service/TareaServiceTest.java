@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -22,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.ResourceAccessException;
 
+import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
 import web.backend.api.dto.VariableResponse;
@@ -193,6 +195,151 @@ class TareaServiceTest {
 
         assertThrows(TareaException.class, () -> service.variables(SIN_GRUPOS, "7420"));
         verify(flowable, never()).buscarTareas(any(), any(List.class), anyString(), anyInt(), anyInt());
+    }
+
+    @Test
+    void reclamarUnaTareaDelGrupoUsaElUsuarioDeLaSesion() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea(null)));
+        when(flowable.gruposCandidatos("7501")).thenReturn(List.of("Administracion"));
+
+        service.reclamar(JEFE, "7501");
+
+        verify(flowable).reclamarTarea("7501", "jefeAdministrativo");
+    }
+
+    /** Si la tiene un compañero del grupo se manda igual: el 409 lo da el motor. */
+    @Test
+    void reclamarUnaTareaTomadaPorUnCompaneroLaMandaAlMotor() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("empleadoAdministrativo")));
+        when(flowable.gruposCandidatos("7501")).thenReturn(List.of("Administracion"));
+        FlowableRespuestaException conflicto = new FlowableRespuestaException(409, new byte[0], null, null);
+        doThrow(conflicto).when(flowable).reclamarTarea("7501", "jefeAdministrativo");
+
+        assertSame(conflicto, assertThrows(FlowableRespuestaException.class, () -> service.reclamar(JEFE, "7501")));
+    }
+
+    @Test
+    void reclamarUnaTareaYaPropiaNoLlamaAlMotor() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeAdministrativo")));
+
+        service.reclamar(JEFE, "7501");
+
+        verify(flowable, never()).reclamarTarea(anyString(), anyString());
+        verify(flowable, never()).gruposCandidatos(anyString());
+    }
+
+    @Test
+    void reclamarUnaTareaAjenaDa403SinReclamar() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea(null)));
+        when(flowable.gruposCandidatos("7501")).thenReturn(List.of("Docentes"));
+
+        TareaException error = assertThrows(TareaException.class, () -> service.reclamar(JEFE, "7501"));
+
+        assertEquals(Motivo.NO_AUTORIZADA, error.getMotivo());
+        verify(flowable, never()).reclamarTarea(anyString(), anyString());
+    }
+
+    @Test
+    void reclamarUnaTareaInexistenteDa404() {
+        when(flowable.obtenerTarea("9999")).thenReturn(Optional.empty());
+
+        TareaException error = assertThrows(TareaException.class, () -> service.reclamar(JEFE, "9999"));
+
+        assertEquals(Motivo.TAREA_NO_ENCONTRADA, error.getMotivo());
+    }
+
+    /** Un claim con el usuario vacío liberaría la tarea: se corta antes de llamar a Flowable. */
+    @Test
+    void conElUsuarioVacioNoSeLlamaAFlowable() {
+        UsuarioSesion vacio = new UsuarioSesion(" ", "", ADMINISTRACION);
+
+        assertEquals(Motivo.USUARIO_INVALIDO,
+                assertThrows(TareaException.class, () -> service.reclamar(vacio, "7501")).getMotivo());
+        assertEquals(Motivo.USUARIO_INVALIDO,
+                assertThrows(TareaException.class, () -> service.completar(vacio, "7501", null)).getMotivo());
+        verifyNoInteractions(flowable);
+    }
+
+    @Test
+    void completarUnaTareaPropiaMandaLasVariables() {
+        List<CompletarTareaRequest.Variable> variables = List.of(
+                new CompletarTareaRequest.Variable("aulaFisica", "boolean", true),
+                new CompletarTareaRequest.Variable("presupuesto", "long", 1000),
+                new CompletarTareaRequest.Variable("fechaInicioPosible", "date", "2027-03-01T00:00:00Z"),
+                new CompletarTareaRequest.Variable("listaDefinitiva", "string", "Ana; Juan"));
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeAdministrativo")));
+
+        service.completar(JEFE, "7501", variables);
+
+        verify(flowable).completarTarea("7501", variables);
+    }
+
+    @Test
+    void completarSinVariablesMandaUnaListaVacia() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeAdministrativo")));
+
+        service.completar(JEFE, "7501", null);
+
+        verify(flowable).completarTarea("7501", List.of());
+    }
+
+    @Test
+    void completarUnaTareaDelGrupoSinReclamarDa403ReclamalaPrimero() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("empleadoAdministrativo")));
+        when(flowable.gruposCandidatos("7501")).thenReturn(List.of("Administracion"));
+
+        TareaException error = assertThrows(TareaException.class, () -> service.completar(JEFE, "7501", null));
+
+        assertEquals(Motivo.NO_ASIGNADA, error.getMotivo());
+        verify(flowable, never()).completarTarea(anyString(), any());
+    }
+
+    @Test
+    void completarUnaTareaAjenaDa403() {
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("docente1")));
+        when(flowable.gruposCandidatos("7501")).thenReturn(List.of("Docentes"));
+
+        TareaException error = assertThrows(TareaException.class, () -> service.completar(JEFE, "7501", null));
+
+        assertEquals(Motivo.NO_AUTORIZADA, error.getMotivo());
+    }
+
+    /** Las variables se validan antes de consultar al motor, con el nombre en el mensaje. */
+    @Test
+    void lasVariablesFueraDeLaListaOConOtroTipoSeRechazan() {
+        Object[][] invalidas = {
+                {"resultado", "string", "finalizado"},        // la setea el motor
+                {"docenteSeleccionado", "string", "docente1"}, // la setea otra tarea, no esta web
+                {"presupuesto", "integer", 1000},              // tipo distinto del esperado
+                {"presupuesto", "long", "mil"},                // valor que no es del tipo
+                {"presupuesto", "long", 10.5},                 // long no acepta decimales
+                {"aulaFisica", "boolean", "true"},             // booleano como texto
+                {"fechaInicioPosible", "date", 20270301},      // fecha que no es texto
+                {"programa", "string", null},                  // valor nulo
+                {null, "string", "x"}};                        // sin nombre
+        for (Object[] datos : invalidas) {
+            List<CompletarTareaRequest.Variable> variables =
+                    List.of(new CompletarTareaRequest.Variable((String) datos[0], (String) datos[1], datos[2]));
+
+            TareaException error = assertThrows(TareaException.class,
+                    () -> service.completar(JEFE, "7501", variables));
+
+            assertEquals(Motivo.VARIABLE_INVALIDA, error.getMotivo());
+            assertTrue(error.getMessage().endsWith(" " + datos[0]), error.getMessage());
+        }
+        verifyNoInteractions(flowable);
+    }
+
+    @Test
+    void unaVariableRepetidaSeRechaza() {
+        List<CompletarTareaRequest.Variable> variables = List.of(
+                new CompletarTareaRequest.Variable("aulaFisica", "boolean", true),
+                new CompletarTareaRequest.Variable("aulaFisica", "boolean", false));
+
+        TareaException error = assertThrows(TareaException.class, () -> service.completar(JEFE, "7501", variables));
+
+        assertEquals(Motivo.VARIABLE_INVALIDA, error.getMotivo());
+        verifyNoInteractions(flowable);
     }
 
     private static TareaResponse tarea(String asignado) {
