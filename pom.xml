@@ -81,9 +81,9 @@
         </dependency>
         <!-- Flowable UI provides Groovy scripting at runtime; include it to execute real BPMN script tasks in tests. -->
         <dependency>
-          <groupId>org.codehaus.groovy</groupId>
+          <groupId>org.apache.groovy</groupId>
           <artifactId>groovy-jsr223</artifactId>
-          <version>3.0.17</version>
+          <version>4.0.3</version>
           <scope>test</scope>
         </dependency>
         <!-- Parser YAML requerido por la configuración que utiliza el motor. -->

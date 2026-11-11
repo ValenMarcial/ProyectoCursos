@@ -1,6 +1,7 @@
 package flowable.proposal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -20,6 +21,7 @@ import org.flowable.bpmn.model.ScriptTask;
 import org.flowable.bpmn.model.ServiceTask;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.SubProcess;
+import org.flowable.bpmn.model.TerminateEventDefinition;
 import org.flowable.bpmn.model.ThrowEvent;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.ProcessEngine;
@@ -227,14 +229,10 @@ class ProjectCoursesProcessDeploymentTest {
         SubProcess prepararCurso = getPrepararCurso();
         BoundaryEvent capturaEnReserva = (BoundaryEvent) prepararCurso
                 .getFlowElement("sid-7A782D3B-FA48-4B06-9E9D-22C32BD6F574");
-        BoundaryEvent capturaEnPreparacion = (BoundaryEvent) model.getMainProcess()
-                .getFlowElement("sid-6931943F-5BD2-45CD-BE56-52DE64896B0C");
-        EndEvent propagarError = (EndEvent) prepararCurso
+        EndEvent finSinAulas = (EndEvent) prepararCurso
                 .getFlowElement("sid-481F402E-5806-475E-8AB2-1148DE4E7B9C");
         ScriptTask notificarCierre = (ScriptTask) model.getMainProcess()
                 .getFlowElement("sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1");
-        SequenceFlow rutaAlCierre = (SequenceFlow) model.getMainProcess()
-                .getFlowElement("sid-E13FA448-268A-485E-B2D7-0A4F47B0CA58");
 
         assertEquals("sid-065649F8-9F01-4C34-B290-C37474CC479D", capturaEnReserva.getAttachedToRefId());
         assertEquals("errorSIN_AULAS", errorDefinition(capturaEnReserva).getErrorCode());
@@ -244,13 +242,24 @@ class ProjectCoursesProcessDeploymentTest {
                 "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
         assertCompensationActivityRef(prepararCurso, "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E",
                 "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
-        assertEquals("errorSIN_AULAS", errorDefinition(propagarError).getErrorCode());
-        assertEquals("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF",
-                capturaEnPreparacion.getAttachedToRefId());
-        assertEquals("errorSIN_AULAS", errorDefinition(capturaEnPreparacion).getErrorCode());
-        assertEquals("motivoCierre", errorDefinition(capturaEnPreparacion).getErrorVariableName());
-        assertEquals(capturaEnPreparacion.getId(), rutaAlCierre.getSourceRef());
-        assertEquals(notificarCierre.getId(), rutaAlCierre.getTargetRef());
+        assertTrue(finSinAulas.getEventDefinitions().stream().anyMatch(TerminateEventDefinition.class::isInstance));
+        assertEquals(2, finSinAulas.getExecutionListeners().size());
+        assertTrue(finSinAulas.getExecutionListeners().stream().anyMatch(listener ->
+                "start".equals(listener.getEvent())
+                        && "${execution.setVariable('cancelada', true)}".equals(listener.getImplementation())));
+        assertTrue(finSinAulas.getExecutionListeners().stream().anyMatch(listener ->
+                "start".equals(listener.getEvent())
+                        && "${execution.setVariable('motivoCierre', 'SIN_AULAS')}".equals(listener.getImplementation())));
+        assertNull(model.getMainProcess().getFlowElement("sid-6931943F-5BD2-45CD-BE56-52DE64896B0C"));
+        assertNull(model.getMainProcess().getFlowElement("sid-E13FA448-268A-485E-B2D7-0A4F47B0CA58"));
+        SequenceFlow haciaGateway = (SequenceFlow) model.getMainProcess()
+                .getFlowElement("sid-7F9A54E9-3068-4959-A418-744D51117FC7");
+        SequenceFlow haciaCierre = (SequenceFlow) model.getMainProcess()
+                .getFlowElement("sid-E0E2CBD8-5B0B-406D-9E0B-F1AA7D68526C");
+        assertEquals(prepararCurso.getId(), haciaGateway.getSourceRef());
+        assertEquals(haciaGateway.getTargetRef(), haciaCierre.getSourceRef());
+        assertEquals(notificarCierre.getId(), haciaCierre.getTargetRef());
+        assertEquals("${cancelada}", haciaCierre.getConditionExpression());
         assertFlow(prepararCurso, "sid-C1AD5A67-E90B-46B4-80B1-E58A31C5774B",
                 capturaEnReserva.getId(), "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1");
         assertFlow(prepararCurso, "sid-FEB357E8-1D07-4C42-92CB-572D8F4F5ED0",
@@ -258,30 +267,21 @@ class ProjectCoursesProcessDeploymentTest {
         assertFlow(prepararCurso, "sid-61EABF9D-A1D6-4500-85D4-2F24C546B443",
                 "sid-AD35AD31-1F32-478B-BEBE-CA591851B965", "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E");
         assertFlow(prepararCurso, "sid-0CA04C12-36C6-46F0-BA41-799C1CE9B7E2",
-                "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E", propagarError.getId());
+                "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E", finSinAulas.getId());
         assertEquals("if (execution.hasVariable(\"motivoCierre\")) { println \"Curso cancelado por falta de aulas disponibles: \" + execution.processInstanceId } else { println \"Curso cancelado: \" + execution.processInstanceId }; execution.setVariable(\"resultado\", \"cancelado\")",
                 notificarCierre.getScript());
         assertTrue(model.getGraphicInfo(capturaEnReserva.getId()) != null);
-        assertTrue(model.getGraphicInfo(capturaEnPreparacion.getId()) != null);
-        assertTrue(model.getFlowLocationGraphicInfo(rutaAlCierre.getId()).size() >= 2);
+        assertNull(model.getGraphicInfo("sid-6931943F-5BD2-45CD-BE56-52DE64896B0C"));
     }
 
     @Test
     void ejecutaSinAulasEnElBpmnRealYFinalizaNotificandoElCierre() {
         String primera = iniciarSolicitud();
         String segunda = iniciarSolicitud();
-        String tercera = iniciarSolicitud();
+        String tercera = iniciarPreparacion();
         engine.getRuntimeService().setVariable(primera, "aulaAsignada", "Aula 1");
         engine.getRuntimeService().setVariable(segunda, "aulaAsignada", "Aula 2");
 
-        Task tareaActiva = engine.getTaskService().createTaskQuery()
-                .processInstanceId(tercera)
-                .singleResult();
-        engine.getRuntimeService().createChangeActivityStateBuilder()
-                .processInstanceId(tercera)
-                .moveActivityIdTo(tareaActiva.getTaskDefinitionKey(),
-                        "sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050")
-                .changeState();
         Task evaluarRecursos = engine.getTaskService().createTaskQuery()
                 .processInstanceId(tercera)
                 .taskDefinitionKey("sid-F3381B5B-C506-4AC2-A09D-747447EFB31B")
@@ -299,20 +299,116 @@ class ProjectCoursesProcessDeploymentTest {
                 .variableName("resultado")
                 .singleResult()
                 .getValue());
-        assertTrue(engine.getHistoryService().createHistoricVariableInstanceQuery()
+        assertEquals("SIN_AULAS", engine.getHistoryService().createHistoricVariableInstanceQuery()
                 .processInstanceId(tercera)
                 .variableName("motivoCierre")
-                .count() > 0);
+                .singleResult().getValue());
+        assertEquals(true, engine.getHistoryService().createHistoricVariableInstanceQuery()
+                .processInstanceId(tercera)
+                .variableName("cancelada")
+                .singleResult().getValue());
         assertHistoricActivity(tercera, "sid-7A782D3B-FA48-4B06-9E9D-22C32BD6F574");
         assertHistoricActivity(tercera, "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1");
         assertHistoricActivity(tercera, "sid-AD35AD31-1F32-478B-BEBE-CA591851B965");
         assertHistoricActivity(tercera, "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E");
         assertHistoricActivity(tercera, "sid-481F402E-5806-475E-8AB2-1148DE4E7B9C");
-        assertHistoricActivity(tercera, "sid-6931943F-5BD2-45CD-BE56-52DE64896B0C");
+        assertHistoricActivity(tercera, "sid-E72D5A77-AC5C-460D-B6D3-69530D2A39AD");
+        assertHistoricActivity(tercera, "sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1");
+        assertEquals(0, engine.getTaskService().createTaskQuery().processInstanceId(tercera).count());
+        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(tercera)
+                .activityId("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85")
+                .count());
         assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
                 .processInstanceId(tercera)
                 .activityId("sid-CF527638-CD0A-48BF-9EF6-DDB557838793")
                 .count());
+    }
+
+    @Test
+    void cancelaPreparacionAntesDeReservarRecursos() {
+        String instancia = iniciarPreparacion();
+
+        enviarCancelacion(instancia);
+
+        assertCierreCancelado(instancia);
+        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(instancia)
+                .activityId("sid-CF527638-CD0A-48BF-9EF6-DDB557838793")
+                .count());
+    }
+
+    @Test
+    void cancelaPreparacionYCompensaLosRecursosReservados() {
+        String instancia = iniciarPreparacion();
+        completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+                "aulaFisica", true, "aulaVirtual", true, "equipamiento", true));
+        assertEquals("Aula 1", engine.getRuntimeService().getVariable(instancia, "aulaAsignada"));
+        completarTarea(instancia, "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB", Map.of());
+        completarTarea(instancia, "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790", Map.of());
+
+        enviarCancelacion(instancia);
+
+        assertCierreCancelado(instancia);
+        assertHistoricActivity(instancia, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+        assertHistoricActivity(instancia, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
+        assertHistoricActivity(instancia, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        String siguiente = iniciarPreparacion();
+        completarTarea(siguiente, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+                "aulaFisica", true, "aulaVirtual", false, "equipamiento", false));
+        assertEquals("Aula 1", engine.getRuntimeService().getVariable(siguiente, "aulaAsignada"));
+    }
+
+    @Test
+    void preparacionNormalContinuaHastaDefinirDocente() {
+        String instancia = iniciarPreparacion();
+        completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+                "aulaFisica", true, "aulaVirtual", false, "equipamiento", false));
+        completarTarea(instancia, "sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB", Map.of());
+        String nomina = engine.getRuntimeService().createExecutionQuery().processInstanceId(instancia)
+                .activityId("sid-40B80C57-5A63-4D5C-A43B-710C8B140370").singleResult().getId();
+        engine.getRuntimeService().trigger(nomina);
+        completarTarea(instancia, "sid-67285B9F-672D-4038-A765-E67245B387D1", Map.of());
+
+        assertEquals(false, engine.getRuntimeService().getVariable(instancia, "cancelada"));
+        assertEquals(1, engine.getTaskService().createTaskQuery().processInstanceId(instancia)
+                .taskDefinitionKey("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85").count());
+        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(instancia).activityId("sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1").count());
+    }
+
+    private String iniciarPreparacion() {
+        String instancia = iniciarSolicitud();
+        Task tarea = engine.getTaskService().createTaskQuery().processInstanceId(instancia).singleResult();
+        engine.getRuntimeService().createChangeActivityStateBuilder().processInstanceId(instancia)
+                .moveActivityIdTo(tarea.getTaskDefinitionKey(), "sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF")
+                .changeState();
+        return instancia;
+    }
+
+    private void completarTarea(String instancia, String tareaId, Map<String, Object> variables) {
+        Task tarea = engine.getTaskService().createTaskQuery().processInstanceId(instancia)
+                .taskDefinitionKey(tareaId).singleResult();
+        engine.getTaskService().complete(tarea.getId(), variables);
+    }
+
+    private void enviarCancelacion(String instancia) {
+        String ejecucion = engine.getRuntimeService().createExecutionQuery().processInstanceId(instancia)
+                .messageEventSubscriptionName("msgCancelacion").singleResult().getId();
+        engine.getRuntimeService().messageEventReceived("msgCancelacion", ejecucion);
+    }
+
+    private void assertCierreCancelado(String instancia) {
+        assertEquals(0, engine.getRuntimeService().createProcessInstanceQuery().processInstanceId(instancia).count());
+        assertEquals(0, engine.getTaskService().createTaskQuery().processInstanceId(instancia).count());
+        assertEquals(true, engine.getHistoryService().createHistoricVariableInstanceQuery()
+                .processInstanceId(instancia).variableName("cancelada").singleResult().getValue());
+        assertEquals("cancelado", engine.getHistoryService().createHistoricVariableInstanceQuery()
+                .processInstanceId(instancia).variableName("resultado").singleResult().getValue());
+        assertHistoricActivity(instancia, "sid-E72D5A77-AC5C-460D-B6D3-69530D2A39AD");
+        assertHistoricActivity(instancia, "sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1");
+        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(instancia).activityId("sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85").count());
     }
 
     private String iniciarSolicitud() {
@@ -328,14 +424,6 @@ class ProjectCoursesProcessDeploymentTest {
     }
 
     private static ErrorEventDefinition errorDefinition(BoundaryEvent event) {
-        return event.getEventDefinitions().stream()
-                .filter(ErrorEventDefinition.class::isInstance)
-                .map(ErrorEventDefinition.class::cast)
-                .findFirst()
-                .orElseThrow();
-    }
-
-    private static ErrorEventDefinition errorDefinition(EndEvent event) {
         return event.getEventDefinitions().stream()
                 .filter(ErrorEventDefinition.class::isInstance)
                 .map(ErrorEventDefinition.class::cast)
