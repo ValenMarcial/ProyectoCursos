@@ -45,6 +45,9 @@ export const tamanioPagina = 100;
  * la sesión.
  */
 export const rutasApi = {
+  /** Sesión del personal: POST inicia, GET consulta y DELETE cierra. */
+  sesion: `${baseApi}/sesion`,
+
   /**
    * Ruta para listar tareas.
    * Recibe: { alcance, start, size }; alcance es obligatorio ('mias' o 'grupo').
@@ -87,6 +90,14 @@ export const rutasApi = {
     return `${baseApi}/instancias/${encodeURIComponent(instanciaId)}/variables`;
   },
 };
+
+/**
+ * Pantalla de login a la que se manda al usuario cuando el backend responde 401
+ * (sesión vencida o sin iniciar). Se le agrega ?volver=<pantalla actual>.
+ * PENDIENTE: el login lo hace Santos y todavía no existe. Mientras sea null, el
+ * 401 solo muestra el aviso en la pantalla, sin redirigir.
+ */
+export const rutaLogin = null;
 
 /** Ids de las tareas de Administración, tal como están en el BPMN. */
 export const tareas = {

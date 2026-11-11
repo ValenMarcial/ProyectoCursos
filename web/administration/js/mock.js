@@ -27,6 +27,13 @@ export const usuarioSimulado = 'jefeAdministrativo';
 /** Grupos de la sesión simulada. */
 const gruposSimulados = [grupoAdministracion];
 
+/**
+ * Hay sesión iniciada. Arranca en true para que las pantallas anden sin login;
+ * DELETE /api/sesion la cierra (y todo pasa a responder 401) hasta un POST.
+ * Como el resto del mock vive en memoria, se reinicia al recargar la página.
+ */
+let sesionActiva = true;
+
 // Mensajes del backend (TareaException.Motivo en el backend), copiados para que el
 // mock responda igual.
 const mensajes = {
@@ -36,6 +43,10 @@ const mensajes = {
   noAutorizada: 'La tarea no es tuya ni de tu grupo.',
   noAsignada: 'La tarea no está asignada a vos: reclamala primero.',
   variableInvalida: 'Variable no permitida o con tipo o valor incorrecto:',
+  // Mensajes de SesionException.Motivo.
+  datosInvalidos: 'Ingresá el usuario y la clave. El usuario no puede contener ":".',
+  credencialesInvalidas: 'Usuario o clave incorrectos.',
+  sinSesion: 'No hay una sesión iniciada.',
 };
 
 /**
@@ -125,6 +136,7 @@ let datos = crearDatosIniciales();
  */
 export function reiniciarMock() {
   datos = crearDatosIniciales();
+  sesionActiva = true;
 }
 
 /**
@@ -347,6 +359,28 @@ function leerVariables(instanciaId) {
 }
 
 /**
+ * Simula /api/sesion. Solo existe el usuario simulado; la clave no se revisa,
+ * pero no puede faltar (como en el backend).
+ * Recibe: método y cuerpo. Devuelve: la respuesta.
+ */
+function sesion(metodo, cuerpo) {
+  const datosSesion = { usuario: usuarioSimulado, nombre: 'Jefe administrativo', grupos: gruposSimulados };
+  if (metodo === 'POST') {
+    if (!cuerpo?.usuario?.trim() || !cuerpo?.clave) return errorBackend(400, mensajes.datosInvalidos);
+    if (cuerpo.usuario !== usuarioSimulado) return errorBackend(401, mensajes.credencialesInvalidas);
+    sesionActiva = true;
+    return responder(200, datosSesion);
+  }
+  if (!sesionActiva) return errorBackend(401, mensajes.sinSesion);
+  if (metodo === 'GET') return responder(200, datosSesion);
+  if (metodo === 'DELETE') {
+    sesionActiva = false;
+    return responder(204);
+  }
+  return responder(405, { status: 405, error: 'Method Not Allowed' });
+}
+
+/**
  * Transporte simulado, con la misma firma que enviarReal.
  * Recibe: método HTTP, ruta y cuerpo opcional.
  * Devuelve: promesa de { estado, cuerpo }.
@@ -356,6 +390,10 @@ export async function enviarSimulado(metodo, ruta, cuerpo) {
   const url = new URL(ruta, 'http://mock.local');
   const partes = url.pathname.slice(baseApi.length + 1).split('/').map(decodeURIComponent);
   const [recurso, id, accion] = partes;
+
+  if (recurso === 'sesion' && partes.length === 1) return sesion(metodo, cuerpo);
+  // Como SesionInterceptor: sin sesión, el resto de la API responde 401.
+  if (!sesionActiva) return errorBackend(401, mensajes.sinSesion);
 
   if (recurso === 'tareas') {
     if (metodo === 'GET' && partes.length === 1) return listar(url.searchParams);
