@@ -67,6 +67,7 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Liberar Aula Virtual | Script (compensación) | Log |
 | Reservar aula | Service task (`flowable.classroom.ReserveClassroom`) | Simula el web service de aulas: asigna la primera aula libre en `aulaAsignada` o lanza el error `SIN_AULAS` (escenario 7). Ver "Reservar y liberar aula" |
 | Liberar Aula | Service task (`flowable.classroom.ReleaseClassroom`, compensación) | Simula la liberación en el web service y elimina `aulaAsignada` |
+| Entrada a Preparar curso | Execution listener | Inicializa la variable de proceso `cancelada = false` al iniciar el subproceso |
 
 ## Reservar y liberar aula
 
@@ -81,16 +82,11 @@ El web service de aulas está simulado (enunciado 4.1.3) y deja el log `[WS Aula
 Cambios en el BPMN:
 
 ```xml
-<!-- dentro de <definitions>, junto a los <message> -->
-<error id="errSinAulas" errorCode="SIN_AULAS"/>
-
 <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:class="flowable.classroom.ReserveClassroom"/>
 <serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true" flowable:class="flowable.classroom.ReleaseClassroom"/>
 ```
 
-Flowable 6.8 vincula el boundary de compensación con su tarea mediante una `association`, no mediante un `sequenceFlow`. Con `sequenceFlow`, la instancia falla al llegar a la tarea con el error `Parent activity for boundary compensation event could not be found`. Lo reproduje en un test aislado.
-
-Hay que reemplazar los tres `sequenceFlow` que salen de los boundaries "Liberar recursos" por associations dentro del `<subProcess>`:
+Flowable 6.8 vincula cada boundary de compensación con su tarea compensatoria mediante una `association`, no mediante un `sequenceFlow`. El modelo ya usa estas associations:
 
 ```xml
 <association id="assocLiberarAula" sourceRef="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" targetRef="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" associationDirection="One"/>
@@ -98,7 +94,9 @@ Hay que reemplazar los tres `sequenceFlow` que salen de los boundaries "Liberar 
 <association id="assocLiberarEquipamiento" sourceRef="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" targetRef="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" associationDirection="One"/>
 ```
 
-**Manejo de `SIN_AULAS`:** el boundary de error del subproceso "Preparar curso" no tiene `errorRef`, así que hoy ya atrapa cualquier error. Eso incluye `SIN_AULAS`, que termina en "Notificar Cierre" con `resultado = "cancelado"`. Si se agrega un boundary de error propio sobre "Reservar aula", tiene que declararse antes que el boundary de compensación. En el orden inverso, Flowable 6.8 falla con el mismo error de arriba.
+**Referencias de compensación:** cada disparador usa como `activityRef` el ID de la actividad original dentro de "Preparar curso": `sid-065649F8-9F01-4C34-B290-C37474CC479D` (Reservar aula), `sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB` (Solicitar Aula Virtual) y `sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790` (Contratar equipamiento). El mismo patrón se usa tanto en la cancelación como en la liberación al finalizar normalmente. Los boundary events de compensación permanecen asociados a sus respectivas tareas compensatorias.
+
+**Manejo de `SIN_AULAS`:** `ReserveClassroom` lanza una `BpmnError` con código `SIN_AULAS` cuando no quedan aulas. Un boundary event en "Reservar aula" captura el error dentro de "Preparar curso" y dispara los tres eventos de compensación, cada uno dirigido a su tarea original; Flowable solo ejecuta las compensaciones de actividades que ya terminaron. Luego se propaga el mismo error a un boundary event en "Preparar curso", que lleva a "Notificar Cierre" y al fin del proceso, sin pasar por la XOR. Ese boundary guarda el error en `motivoCierre`, que permite distinguir el mensaje de falta de aulas; el resultado sigue siendo `cancelado`. Los tests del servicio comprueban el error cuando dos aulas están ocupadas y el test del proceso ejecuta el BPMN real hasta el cierre.
 
 ## Registrar y elaborar propuesta
 
