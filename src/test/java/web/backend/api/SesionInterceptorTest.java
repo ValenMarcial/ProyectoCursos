@@ -5,7 +5,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,19 +18,28 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import web.backend.api.dto.IniciarSolicitudRequest;
 import web.backend.api.dto.IniciarSolicitudResponse;
+import web.backend.api.dto.PaginaResponse;
 import web.backend.service.SesionException.Motivo;
 import web.backend.service.SesionService;
 import web.backend.service.SolicitudService;
+import web.backend.service.TareaService;
 import web.backend.service.UsuarioSesion;
 
-@WebMvcTest(controllers = {SesionController.class, SolicitudController.class})
+@WebMvcTest(controllers = {SesionController.class, SolicitudController.class, TareaController.class})
+@Import(SesionInterceptorTest.OtrosMetodosDeSolicitudes.class)
 class SesionInterceptorTest {
     private static final String SIN_SESION = "{\"message\":\"" + Motivo.SIN_SESION.getMensaje() + "\"}";
 
@@ -39,6 +51,9 @@ class SesionInterceptorTest {
 
     @MockBean
     private SolicitudService solicitudes;
+
+    @MockBean
+    private TareaService tareas;
 
     // BackendApplication declara el RestTemplate de Flowable; acá no se usa y se reemplaza.
     @MockBean
@@ -87,12 +102,12 @@ class SesionInterceptorTest {
     @Test
     void conSesionLasRutasProtegidasPasanElInterceptor() throws Exception {
         MockHttpSession sesion = new MockHttpSession();
-        sesion.setAttribute(SesionController.ATRIBUTO_USUARIO,
-                new UsuarioSesion("jefeAdministrativo", "Jefe administrativo", List.of("Administracion")));
+        UsuarioSesion jefe = new UsuarioSesion("jefeAdministrativo", "Jefe administrativo", List.of("Administracion"));
+        sesion.setAttribute(SesionController.ATRIBUTO_USUARIO, jefe);
+        when(tareas.listar(jefe, "mias", null, null)).thenReturn(new PaginaResponse<>(List.of(), 0, 0, 50));
 
-        // Todavía no hay controller de tareas: pasar el interceptor termina en 404, no en 401.
-        mvc.perform(get("/api/tareas").session(sesion))
-                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/tareas").param("alcance", "mias").session(sesion))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -134,18 +149,77 @@ class SesionInterceptorTest {
     }
 
     /**
-     * La excepción de /api/solicitudes es por ruta, no por método: otro método no pasa por el
-     * interceptor y lo rechaza Spring (405), no la sesión (401).
+     * La excepción de /api/solicitudes es por método: solo el POST es libre. GET, PUT y DELETE
+     * (OtrosMetodosDeSolicitudes, endpoints que hoy no existen) piden sesión.
      */
     @Test
-    void otroMetodoSobreSolicitudesLoResuelveSpringYNoLaSesion() throws Exception {
+    void otroMetodoSobreSolicitudesPideSesion() throws Exception {
         mvc.perform(get("/api/solicitudes"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().json(SIN_SESION, true));
+        mvc.perform(put("/api/solicitudes").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().json(SIN_SESION, true));
+        mvc.perform(delete("/api/solicitudes"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().json(SIN_SESION, true));
+    }
+
+    @Test
+    void conSesionOtroMetodoSobreSolicitudesLlegaAlController() throws Exception {
+        MockHttpSession sesion = new MockHttpSession();
+        sesion.setAttribute(SesionController.ATRIBUTO_USUARIO,
+                new UsuarioSesion("jefeAdministrativo", "Jefe administrativo", List.of("Administracion")));
+
+        mvc.perform(get("/api/solicitudes").session(sesion))
+                .andExpect(status().isOk());
+    }
+
+    /**
+     * Un método sin ningún endpoint en la ruta lo rechaza Spring con 405 antes de llegar al
+     * interceptor. No expone nada: el 405 no trae datos.
+     */
+    @Test
+    void unMetodoSinEndpointLoResuelveSpringAntesDelInterceptor() throws Exception {
+        mvc.perform(patch("/api/solicitudes"))
                 .andExpect(status().isMethodNotAllowed());
+    }
+
+    /** El preflight de CORS del alta pública (sin cookies) no pide sesión. */
+    @Test
+    void elPreflightDelAltaPublicaNoPideSesion() throws Exception {
+        mvc.perform(options("/api/solicitudes")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST"))
+                .andExpect(status().isOk());
     }
 
     @Test
     void losArchivosEstaticosNoPidenSesion() throws Exception {
         mvc.perform(get("/index.html"))
                 .andExpect(status().isOk());
+    }
+
+    /**
+     * Endpoints de prueba con otros métodos sobre /api/solicitudes. Hoy SolicitudController
+     * solo tiene POST; sin un endpoint, Spring responde 405 antes del interceptor y no se
+     * podría ver si la ruta pide sesión.
+     */
+    @RestController
+    static class OtrosMetodosDeSolicitudes {
+        @GetMapping("/api/solicitudes")
+        String listar() {
+            return "ok";
+        }
+
+        @PutMapping("/api/solicitudes")
+        String reemplazar() {
+            return "ok";
+        }
+
+        @DeleteMapping("/api/solicitudes")
+        String borrar() {
+            return "ok";
+        }
     }
 }

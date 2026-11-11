@@ -2,6 +2,7 @@ package web.backend.api;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -12,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.web.cors.CorsUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import web.backend.api.dto.MensajeErrorResponse;
@@ -19,12 +21,25 @@ import web.backend.service.SesionException.Motivo;
 import web.backend.service.UsuarioSesion;
 
 /**
- * Corta con 401 los pedidos que llegan sin sesión a la API (todo /api salvo el login y
- * el alta pública). Qué rutas pasan por acá lo decide SesionWebConfig. Flowable no controla quién usa sus
+ * Corta con 401 los pedidos que llegan sin sesión a la API (todo /api). Solo pasan sin sesión
+ * los pedidos públicos, por método y ruta exactos: el login y el alta pública de solicitudes.
+ * Qué rutas pasan por acá lo decide SesionWebConfig. Flowable no controla quién usa sus
  * tareas, así que este es el primer filtro: sin sesión no hay forma de llegar al motor.
  */
 public class SesionInterceptor implements HandlerInterceptor {
     private static final String BARRA = "/";
+    /** Ruta del alta pública; tiene que coincidir con el @RequestMapping de SolicitudController. */
+    static final String RUTA_SOLICITUDES = "/api/solicitudes";
+
+    /**
+     * Pedidos que pasan sin sesión, como "MÉTODO ruta". Es por método a propósito: GET, PUT o
+     * DELETE sobre las mismas rutas exigen sesión.
+     * - POST /api/sesion: el login (GET y DELETE de esa ruta piden sesión).
+     * - POST /api/solicitudes: el alta de la web pública y de las empresas, sin login.
+     */
+    private static final Set<String> PEDIDOS_PUBLICOS = Set.of(
+            pedido(HttpMethod.POST, SesionController.RUTA),
+            pedido(HttpMethod.POST, RUTA_SOLICITUDES));
 
     private final ObjectMapper objectMapper;
 
@@ -35,7 +50,10 @@ public class SesionInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        if (esLogin(request) || tieneSesion(request)) {
+        // El preflight de CORS (OPTIONS) lo manda el navegador sin cookies antes del POST público
+        // desde otro origen. Spring lo responde solo con los encabezados de CORS, sin llegar al
+        // controller, así que dejarlo pasar no expone nada.
+        if (CorsUtils.isPreFlightRequest(request) || esPublico(request) || tieneSesion(request)) {
             return true;
         }
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -45,14 +63,18 @@ public class SesionInterceptor implements HandlerInterceptor {
         return false;
     }
 
-    // POST /api/sesion es el login: comparte ruta con GET y DELETE, pero tiene que andar sin sesión.
-    private static boolean esLogin(HttpServletRequest request) {
+    /** Indica si el pedido es uno de PEDIDOS_PUBLICOS (método y ruta exactos). */
+    private static boolean esPublico(HttpServletRequest request) {
         String ruta = request.getRequestURI().substring(request.getContextPath().length());
         // Spring acepta la barra final en la ruta del controller, así que acá también.
         if (ruta.endsWith(BARRA)) {
             ruta = ruta.substring(0, ruta.length() - 1);
         }
-        return HttpMethod.POST.matches(request.getMethod()) && SesionController.RUTA.equals(ruta);
+        return PEDIDOS_PUBLICOS.contains(request.getMethod() + " " + ruta);
+    }
+
+    private static String pedido(HttpMethod metodo, String ruta) {
+        return metodo.name() + " " + ruta;
     }
 
     // Una sesión sin usuario (por ejemplo, creada por otra parte del sitio) no alcanza.
