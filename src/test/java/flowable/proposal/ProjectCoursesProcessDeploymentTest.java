@@ -369,6 +369,9 @@ class ProjectCoursesProcessDeploymentTest {
                 .activityId("sid-40B80C57-5A63-4D5C-A43B-710C8B140370").singleResult().getId();
         engine.getRuntimeService().trigger(nomina);
         completarTarea(instancia, "sid-67285B9F-672D-4038-A765-E67245B387D1", Map.of());
+        // "Preparación completa" es asíncrona: cada rama que llega deja un job para la unión.
+        engine.getManagementService().createJobQuery().processInstanceId(instancia).list()
+                .forEach(job -> engine.getManagementService().executeJob(job.getId()));
 
         assertEquals(false, engine.getRuntimeService().getVariable(instancia, "cancelada"));
         assertEquals(1, engine.getTaskService().createTaskQuery().processInstanceId(instancia)

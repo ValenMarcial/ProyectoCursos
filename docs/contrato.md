@@ -202,17 +202,23 @@ El Execution Listener `flowable.result.RecordProcessResult` (enunciado 3.4) corr
 
 Usa la conexión de la transacción del motor, porque Flowable y las tablas de la institución están en la misma base. El UPDATE se ejecuta justo antes del commit, así el estado y el cierre de la instancia se confirman o se deshacen juntos. Probado en Flowable UI: si la instancia no logra terminar, no queda ningún estado cambiado.
 
-Para que corra hay que aplicar la migración (`make db-migrate`) y engancharlo a nivel proceso, dentro de `<process>` y antes del primer elemento:
+Está enganchado a nivel proceso (listener `end` del `<process>`; en el Modeler, propiedades del proceso → "Execution listeners") y necesita la migración `003` (`make db-migrate`).
 
-```xml
-<process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
-  <extensionElements>
-    <flowable:executionListener event="end" class="flowable.result.RecordProcessResult"></flowable:executionListener>
-  </extensionElements>
-  ...
-```
+Dónde se define `resultado` en cada camino:
 
-En el Modeler se configura en las propiedades del proceso (clic en un lugar vacío del lienzo), en "Execution listeners".
+| Resultado | Dónde se setea | Momento |
+|---|---|---|
+| `no_viable` | Script de "Notificar Decisión" | Al no ser viable la solicitud |
+| `rechazado` | Listener `end` del evento "Rechazo" | Antes de "Archivar solicitud", así la tarea ya muestra el motivo |
+| `cerrado_por_falta_de_respuesta` | Listener `take` del flujo "Sí" de "¿Se enviaron 2 recordatorios?" | Antes de "Archivar solicitud" |
+| `cancelado` | Script de "Notificar Cierre" | Cancelación o falta de aulas |
+| `finalizado` | Listener `start` del fin del proceso, después de "Enviar informe" | Al cerrar el curso |
+
+`src/test/java/flowable/result/ProcessResultModelTest.java` recorre los cinco cierres sobre el BPMN real y verifica la variable, `solicitudes.resultado` y, cuando hay curso, `cursos.estado`. También se probó en Flowable UI con `make recorrido`.
+
+## Unión asíncrona de "Preparar curso"
+
+La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Prepara materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
 
 ## Errores de negocio y errores internos
 
@@ -230,8 +236,6 @@ Una clase nueva con validaciones de negocio debe seguir la misma regla. El backe
 
 Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:
 
-- `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
-- Enganchar `RecordProcessResult` a nivel proceso (ver "Resultado del proceso").
 - Asignaciones y grupos candidatos de las demás tareas de usuario.
 - Enganchar en el BPMN las clases de "Reservar aula" y "Liberar Aula", y vincular las compensaciones con `association` (ver "Reservar y liberar aula").
 
