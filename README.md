@@ -208,7 +208,7 @@ make recorrido ESCENARIO=final RECURSOS=virtual FLOWABLE_USER=juan FLOWABLE_PASS
 
 Al terminar muestra las actividades recorridas, el valor de `resultado` y si la instancia terminó. Si el proceso se queda en algún paso, avisa dónde. Cada corrida crea una empresa "Empresa recorrido HHMMSS"; las instancias se pueden seguir en la Admin app mientras corre. Necesita el backend y Flowable levantados y el BPMN desplegado; solo usa Python 3 sin dependencias.
 
-Con el BPMN actual de master, `final` y `cancelar` se quedan en "Preparar curso" (un subproceso con boundary de error y subproceso de evento no termina en Flowable 6.8; se corrige en la PR de cancelación). El script lo informa en lugar de quedarse esperando.
+Cada escenario termina con su `resultado` (`finalizado`, `cancelado`, `rechazado` o `cerrado_por_falta_de_respuesta`), que `RecordProcessResult` registra en `solicitudes.resultado` y, si hay curso, en `cursos.estado`.
 
 #### Problema conocido: Flowable se queda en "Waiting for changelog lock"
 

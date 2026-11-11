@@ -10,6 +10,9 @@
   <message id="msgCancelacion" name="msgCancelacion"></message>
   <error id="errorSIN_AULAS" errorCode="SIN_AULAS"></error>
   <process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
+    <extensionElements>
+      <flowable:executionListener event="end" class="flowable.result.RecordProcessResult"></flowable:executionListener>
+    </extensionElements>
     <laneSet id="laneSet_process-proyecto-curso">
       <lane id="sid-16EED2DB-CECD-46D1-B6ED-AD042E6C8943" name="Administración">
         <flowNodeRef>sid-2D84D16F-5BCA-4574-80CE-44A6021D4D79</flowNodeRef>
@@ -119,6 +122,9 @@
       <messageEventDefinition messageRef="msgAceptacion"></messageEventDefinition>
     </intermediateCatchEvent>
     <intermediateCatchEvent id="sid-2EDEE778-CCB8-4D86-B10B-F0CA6DE47860" name="Rechazo">
+      <extensionElements>
+        <flowable:executionListener event="end" expression="${execution.setVariable('resultado', 'rechazado')}"></flowable:executionListener>
+      </extensionElements>
       <messageEventDefinition messageRef="msgRechazo"></messageEventDefinition>
     </intermediateCatchEvent>
     <intermediateCatchEvent id="sid-B1226B89-72C5-427D-85EF-783C6E99CC5D" name="Modificaciones">
@@ -157,7 +163,7 @@
       </userTask>
       <receiveTask id="sid-40B80C57-5A63-4D5C-A43B-710C8B140370" name="Recibir nómina"></receiveTask>
       <inclusiveGateway id="sid-F56481F0-A401-4687-B4C2-BC209FDBBD4E" name="Recursos necesarios"></inclusiveGateway>
-      <parallelGateway id="sid-420D072A-C42B-404D-BBDA-B884DD90C410" name="Preparación completa"></parallelGateway>
+      <parallelGateway id="sid-420D072A-C42B-404D-BBDA-B884DD90C410" name="Preparación completa" flowable:async="true"></parallelGateway>
       <userTask id="sid-67285B9F-672D-4038-A765-E67245B387D1" name="Confeccionar lista definitiva" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true">
         <extensionElements>
           <flowable:taskListener event="create" class="flowable.assignment.AssignToLeastBusyAdministrative"></flowable:taskListener>
@@ -271,7 +277,11 @@
     <intermediateThrowEvent id="sid-88F847B3-5FE2-4251-A612-120F9DD46CA9" name="Liberar Aula">
       <compensateEventDefinition activityRef="sid-065649F8-9F01-4C34-B290-C37474CC479D"></compensateEventDefinition>
     </intermediateThrowEvent>
-    <endEvent id="sid-343EF313-279B-45FF-9F2C-343A3C2804DB"></endEvent>
+    <endEvent id="sid-343EF313-279B-45FF-9F2C-343A3C2804DB">
+      <extensionElements>
+        <flowable:executionListener event="start" expression="${execution.setVariable('resultado', 'finalizado')}"></flowable:executionListener>
+      </extensionElements>
+    </endEvent>
     <intermediateThrowEvent id="sid-CAF881B2-93D6-479B-9C01-806B1059E125" name="Liberar Aula Virtual">
       <compensateEventDefinition activityRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB"></compensateEventDefinition>
     </intermediateThrowEvent>
@@ -328,6 +338,9 @@
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${!isViable}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="sid-5C90C2C2-9088-4F1F-89E1-76BEB450D337" name="Si" sourceRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" targetRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62">
+      <extensionElements>
+        <flowable:executionListener event="take" expression="${execution.setVariable('resultado', 'cerrado_por_falta_de_respuesta')}"></flowable:executionListener>
+      </extensionElements>
       <conditionExpression xsi:type="tFormalExpression"><![CDATA[${recordatoriosEnviados >= 2}]]></conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="sid-EF2410A6-40EC-4D9F-8431-37420AAA9D3C" name="No" sourceRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73" targetRef="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB">
