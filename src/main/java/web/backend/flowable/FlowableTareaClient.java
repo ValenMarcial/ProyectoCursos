@@ -3,6 +3,7 @@ package web.backend.flowable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -18,12 +19,14 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
 import web.backend.api.dto.VariableResponse;
 
 /**
- * Consultas de tareas y variables a la API REST de Flowable, con la cuenta admin del RestTemplate.
+ * Consultas y acciones (reclamar, completar) sobre tareas y variables en la API REST de Flowable,
+ * con la cuenta admin del RestTemplate.
  * Flowable no sabe quién usa la web: los permisos los aplica TareaService con el usuario de la
  * sesión. Es una clase aparte de FlowableRestClient (solicitudes y sesión) para no mezclar temas;
  * usa el mismo bean RestTemplate y la misma base-url.
@@ -163,6 +166,49 @@ public class FlowableTareaClient {
                     texto(variable, "name"), texto(variable, "type"), variable.get("value")));
         }
         return resultado;
+    }
+
+    /**
+     * Reclama la tarea para el usuario: manda {"action":"claim","assignee":usuario}.
+     * Recibe el id de la tarea y el usuario. Un claim sin assignee LIBERA la tarea en Flowable,
+     * así que con el usuario vacío se corta antes con IllegalArgumentException.
+     * Si la tarea ya la tiene otra persona, el 409 del motor sale como FlowableRespuestaException.
+     */
+    public void reclamarTarea(String tareaId, String usuario) {
+        if (usuario == null || usuario.isBlank()) {
+            throw new IllegalArgumentException("Un claim sin assignee libera la tarea: hace falta el usuario.");
+        }
+        Map<String, Object> cuerpo = new LinkedHashMap<>();
+        cuerpo.put("action", "claim");
+        cuerpo.put("assignee", usuario);
+        accion("reclamar una tarea", tareaId, cuerpo);
+    }
+
+    /**
+     * Completa la tarea con las variables recibidas: manda {"action":"complete","variables":[...]}.
+     * Recibe el id de la tarea y las variables ya validadas por TareaService (puede ser una lista
+     * vacía). Los errores de negocio del motor (400) salen como FlowableRespuestaException.
+     */
+    public void completarTarea(String tareaId, List<CompletarTareaRequest.Variable> variables) {
+        List<Map<String, Object>> lista = new ArrayList<>();
+        for (CompletarTareaRequest.Variable variable : variables) {
+            // Se arma cada variable de nuevo: solo viajan nombre, tipo y valor.
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", variable.getName());
+            item.put("type", variable.getType());
+            item.put("value", variable.getValue());
+            lista.add(item);
+        }
+        Map<String, Object> cuerpo = new LinkedHashMap<>();
+        cuerpo.put("action", "complete");
+        cuerpo.put("variables", lista);
+        accion("completar una tarea", tareaId, cuerpo);
+    }
+
+    /** Manda una acción (claim, complete) a la tarea. Flowable responde 200 sin datos útiles. */
+    private void accion(String descripcion, String tareaId, Map<String, Object> cuerpo) {
+        URI uri = url(RUTA_TAREA, tareaId);
+        consultar(descripcion, () -> restTemplate.postForEntity(uri, cuerpo, Void.class));
     }
 
     /**

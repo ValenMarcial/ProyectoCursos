@@ -2,7 +2,9 @@ package web.backend.service;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -10,6 +12,7 @@ import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 
+import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
 import web.backend.api.dto.VariableResponse;
@@ -48,6 +51,34 @@ public class TareaService {
             // Cierre: código del error que cerró el curso (hoy SIN_AULAS), para mostrar el motivo.
             "motivoCierre");
 
+    // Tipos de Flowable que acepta la lista de escritura.
+    private static final String TIPO_TEXTO = "string";
+    private static final String TIPO_ENTERO_LARGO = "long";
+    private static final String TIPO_BOOLEANO = "boolean";
+    private static final String TIPO_FECHA = "date";
+
+    /**
+     * Variables que la web puede escribir al completar, con su tipo de Flowable (lista cerrada,
+     * igual a tiposVariables de contrato.js). Los tipos van fijos porque los listeners castean
+     * (presupuesto a Long, las fechas a Date). Quedan afuera las que setean el motor o los
+     * listeners (resultado, docenteSeleccionado, aulaAsignada, isViable, cancelada, motivoCierre).
+     * Limitación: es una sola lista para todo el proceso, no por tarea; una tarea podría recibir
+     * una variable que es de otra. El motor sigue validando cada formulario con sus listeners.
+     */
+    static final Map<String, String> VARIABLES_ESCRITURA = Map.of(
+            // Propuesta.
+            "programa", TIPO_TEXTO,
+            "presupuesto", TIPO_ENTERO_LARGO,
+            "fechaInicioPosible", TIPO_FECHA,
+            "fechaFinPropuesta", TIPO_FECHA,
+            // Recursos.
+            "aulaFisica", TIPO_BOOLEANO,
+            "aulaVirtual", TIPO_BOOLEANO,
+            "equipamiento", TIPO_BOOLEANO,
+            // Lista definitiva e informe (nombres pendientes de acordar).
+            "listaDefinitiva", TIPO_TEXTO,
+            "informeResultados", TIPO_TEXTO);
+
     private final FlowableTareaClient flowable;
 
     public TareaService(FlowableTareaClient flowable) {
@@ -85,19 +116,57 @@ public class TareaService {
      */
     public TareaResponse obtener(UsuarioSesion usuario, String tareaId) {
         return conFlowable(() -> {
-            Optional<TareaResponse> tarea = flowable.obtenerTarea(tareaId);
-            if (tarea.isEmpty()) {
-                throw new TareaException(Motivo.TAREA_NO_ENCONTRADA);
-            }
-            if (usuario.getUsuario().equals(tarea.get().getAssignee())) {
-                return tarea.get();
-            }
-            // Si el usuario no tiene grupos no hace falta consultar los candidatos.
-            if (!usuario.getGrupos().isEmpty()
-                    && !Collections.disjoint(usuario.getGrupos(), flowable.gruposCandidatos(tareaId))) {
-                return tarea.get();
+            TareaResponse tarea = buscar(tareaId);
+            if (esSuya(usuario, tarea) || esDeSuGrupo(usuario, tareaId)) {
+                return tarea;
             }
             throw new TareaException(Motivo.TAREA_NO_ENCONTRADA);
+        });
+    }
+
+    /**
+     * Reclama la tarea para el usuario de la sesión. El assignee sale SIEMPRE de la sesión: el
+     * controller no lee ningún cuerpo. Exige que la tarea sea de uno de sus grupos o ya suya.
+     * Recibe el usuario de la sesión y el id de la tarea. Lanza TareaException: USUARIO_INVALIDO
+     * (sin llamar a Flowable), TAREA_NO_ENCONTRADA o NO_AUTORIZADA. Si la tiene otra persona,
+     * el 409 del motor sigue de largo como FlowableRespuestaException.
+     */
+    public void reclamar(UsuarioSesion usuario, String tareaId) {
+        String yo = usuarioValido(usuario);
+        conFlowable(() -> {
+            TareaResponse tarea = buscar(tareaId);
+            // Ya es suya: no hay nada que cambiar en el motor.
+            if (yo.equals(tarea.getAssignee())) {
+                return null;
+            }
+            if (!esDeSuGrupo(usuario, tareaId)) {
+                throw new TareaException(Motivo.NO_AUTORIZADA);
+            }
+            flowable.reclamarTarea(tareaId, yo);
+            return null;
+        });
+    }
+
+    /**
+     * Completa la tarea con las variables recibidas, solo si está asignada al usuario de la sesión.
+     * Las variables se validan antes de consultar al motor contra VARIABLES_ESCRITURA (nombre,
+     * tipo y valor); null equivale a ninguna.
+     * Recibe el usuario de la sesión, el id de la tarea y las variables. Lanza TareaException:
+     * USUARIO_INVALIDO, VARIABLE_INVALIDA, TAREA_NO_ENCONTRADA, NO_AUTORIZADA (ni suya ni de su
+     * grupo) o NO_ASIGNADA (de su grupo pero sin reclamar). Los errores de negocio del motor
+     * (400) siguen de largo como FlowableRespuestaException.
+     */
+    public void completar(UsuarioSesion usuario, String tareaId, List<CompletarTareaRequest.Variable> variables) {
+        String yo = usuarioValido(usuario);
+        List<CompletarTareaRequest.Variable> validas = validarEscritura(variables);
+        conFlowable(() -> {
+            TareaResponse tarea = buscar(tareaId);
+            if (!yo.equals(tarea.getAssignee())) {
+                // Solo en el caso de error se consultan los candidatos, para elegir el mensaje.
+                throw new TareaException(esDeSuGrupo(usuario, tareaId) ? Motivo.NO_ASIGNADA : Motivo.NO_AUTORIZADA);
+            }
+            flowable.completarTarea(tareaId, validas);
+            return null;
         });
     }
 
@@ -124,6 +193,77 @@ public class TareaService {
             }
             return permitidas;
         });
+    }
+
+    /** Busca la tarea del proceso o lanza TAREA_NO_ENCONTRADA si no existe. */
+    private TareaResponse buscar(String tareaId) {
+        Optional<TareaResponse> tarea = flowable.obtenerTarea(tareaId);
+        if (tarea.isEmpty()) {
+            throw new TareaException(Motivo.TAREA_NO_ENCONTRADA);
+        }
+        return tarea.get();
+    }
+
+    /** Indica si la tarea está asignada al usuario de la sesión. */
+    private static boolean esSuya(UsuarioSesion usuario, TareaResponse tarea) {
+        return usuario.getUsuario().equals(tarea.getAssignee());
+    }
+
+    /**
+     * Indica si alguno de los grupos del usuario es candidato de la tarea (aunque ya la haya
+     * tomado otra persona). Sin grupos no consulta a Flowable.
+     */
+    private boolean esDeSuGrupo(UsuarioSesion usuario, String tareaId) {
+        return !usuario.getGrupos().isEmpty()
+                && !Collections.disjoint(usuario.getGrupos(), flowable.gruposCandidatos(tareaId));
+    }
+
+    /** Devuelve el usuario de la sesión, o lanza USUARIO_INVALIDO si está vacío. */
+    private static String usuarioValido(UsuarioSesion usuario) {
+        String nombre = usuario == null ? null : usuario.getUsuario();
+        if (nombre == null || nombre.isBlank()) {
+            throw new TareaException(Motivo.USUARIO_INVALIDO);
+        }
+        return nombre;
+    }
+
+    /**
+     * Valida las variables a escribir: nombre en VARIABLES_ESCRITURA, el mismo tipo, un valor no
+     * nulo que coincida con el tipo y sin nombres repetidos. Devuelve la lista (vacía si vino null).
+     * Lanza TareaException(VARIABLE_INVALIDA) con el nombre de la primera variable rechazada.
+     */
+    private static List<CompletarTareaRequest.Variable> validarEscritura(List<CompletarTareaRequest.Variable> variables) {
+        if (variables == null) {
+            return Collections.emptyList();
+        }
+        Set<String> vistas = new HashSet<>();
+        for (CompletarTareaRequest.Variable variable : variables) {
+            String nombre = variable == null ? null : variable.getName();
+            String tipo = nombre == null ? null : VARIABLES_ESCRITURA.get(nombre);
+            if (tipo == null || !tipo.equals(variable.getType()) || !valorDelTipo(tipo, variable.getValue())
+                    || !vistas.add(nombre)) {
+                throw new TareaException(Motivo.VARIABLE_INVALIDA, String.valueOf(nombre));
+            }
+        }
+        return variables;
+    }
+
+    /**
+     * Indica si el valor JSON corresponde al tipo de Flowable. Las fechas van como texto ISO
+     * (las convierte el motor); long acepta enteros, no decimales.
+     */
+    private static boolean valorDelTipo(String tipo, Object valor) {
+        switch (tipo) {
+            case TIPO_TEXTO:
+            case TIPO_FECHA:
+                return valor instanceof String;
+            case TIPO_ENTERO_LARGO:
+                return valor instanceof Integer || valor instanceof Long;
+            case TIPO_BOOLEANO:
+                return valor instanceof Boolean;
+            default:
+                return false;
+        }
     }
 
     /**

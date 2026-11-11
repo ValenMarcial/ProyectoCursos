@@ -1,12 +1,16 @@
 package web.backend.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -15,6 +19,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -23,6 +28,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestTemplate;
 
+import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
 import web.backend.flowable.FlowableRespuestaException;
@@ -135,6 +141,123 @@ class TareaControllerTest {
                 .andExpect(status().isInternalServerError())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json(cuerpo, true));
+    }
+
+    /** El cuerpo de reclamar se ignora: el servicio solo recibe el usuario de la sesión y el id. */
+    @Test
+    void reclamarResponde204EIgnoraElCuerpo() throws Exception {
+        mvc.perform(post(TareaController.RUTA + "/7501/reclamar").session(sesion)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"assignee\":\"docente1\"}"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+        verify(tareas).reclamar(JEFE, "7501");
+    }
+
+    @Test
+    void reclamarSinCuerpoResponde204() throws Exception {
+        mvc.perform(post(TareaController.RUTA + "/7501/reclamar").session(sesion))
+                .andExpect(status().isNoContent());
+        verify(tareas).reclamar(JEFE, "7501");
+    }
+
+    @Test
+    void reclamarUnaTareaAjenaResponde403ConMensaje() throws Exception {
+        doThrow(new TareaException(Motivo.NO_AUTORIZADA)).when(tareas).reclamar(JEFE, "7501");
+
+        mvc.perform(post(TareaController.RUTA + "/7501/reclamar").session(sesion))
+                .andExpect(status().isForbidden())
+                .andExpect(content().json(mensaje(Motivo.NO_AUTORIZADA), true));
+    }
+
+    @Test
+    void elConflictoDelMotorAlReclamarSeReenviaIdentico() throws Exception {
+        String cuerpo = "{\"message\":\"Task is already claimed\",\"exception\":\"Task '7501' is already claimed by "
+                + "someone else.\"}";
+        doThrow(new FlowableRespuestaException(409, cuerpo.getBytes(StandardCharsets.UTF_8),
+                MediaType.APPLICATION_JSON, null)).when(tareas).reclamar(JEFE, "7501");
+
+        mvc.perform(post(TareaController.RUTA + "/7501/reclamar").session(sesion))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json(cuerpo, true));
+    }
+
+    /** Solo viajan las variables: action, assignee y cualquier otro campo se descartan. */
+    @Test
+    void completarPasaSoloLasVariables() throws Exception {
+        mvc.perform(post(TareaController.RUTA + "/7501/completar").session(sesion)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"delegate\",\"assignee\":\"docente1\",\"variables\":["
+                                + "{\"name\":\"aulaFisica\",\"type\":\"boolean\",\"value\":true,\"scope\":\"local\"}]}"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<List<CompletarTareaRequest.Variable>> variables = ArgumentCaptor.forClass(List.class);
+        verify(tareas).completar(eq(JEFE), eq("7501"), variables.capture());
+        assertEquals(1, variables.getValue().size());
+        assertEquals("aulaFisica", variables.getValue().get(0).getName());
+        assertEquals("boolean", variables.getValue().get(0).getType());
+        assertEquals(true, variables.getValue().get(0).getValue());
+    }
+
+    @Test
+    void completarSinCuerpoPasaVariablesNulas() throws Exception {
+        mvc.perform(post(TareaController.RUTA + "/7501/completar").session(sesion))
+                .andExpect(status().isNoContent());
+        verify(tareas).completar(JEFE, "7501", null);
+    }
+
+    @Test
+    void completarConUnCuerpoInvalidoResponde400ConMensaje() throws Exception {
+        for (String cuerpo : new String[] {"{no es json", "{\"variables\":\"aulaFisica\"}"}) {
+            mvc.perform(post(TareaController.RUTA + "/7501/completar").session(sesion)
+                            .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().json(mensaje(Motivo.CUERPO_INVALIDO), true));
+        }
+        verifyNoInteractions(tareas);
+    }
+
+    @Test
+    void unaVariableInvalidaResponde400ConSuNombre() throws Exception {
+        doThrow(new TareaException(Motivo.VARIABLE_INVALIDA, "resultado"))
+                .when(tareas).completar(eq(JEFE), eq("7501"), any());
+
+        mvc.perform(post(TareaController.RUTA + "/7501/completar").session(sesion)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"variables\":[{\"name\":\"resultado\",\"type\":\"string\",\"value\":\"x\"}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("{\"message\":\"" + Motivo.VARIABLE_INVALIDA.getMensaje() + " resultado\"}", true));
+    }
+
+    @Test
+    void completarSinReclamarResponde403ConMensaje() throws Exception {
+        doThrow(new TareaException(Motivo.NO_ASIGNADA)).when(tareas).completar(JEFE, "7501", null);
+
+        mvc.perform(post(TareaController.RUTA + "/7501/completar").session(sesion))
+                .andExpect(status().isForbidden())
+                .andExpect(content().json(mensaje(Motivo.NO_ASIGNADA), true));
+    }
+
+    @Test
+    void unRechazoDeNegocioDelMotorAlCompletarSeReenviaIdentico() throws Exception {
+        String cuerpo = "{\"message\":\"Bad request\",\"exception\":\"Debe seleccionar al menos un recurso.\"}";
+        doThrow(new FlowableRespuestaException(400, cuerpo.getBytes(StandardCharsets.UTF_8),
+                MediaType.APPLICATION_JSON, null)).when(tareas).completar(JEFE, "7501", null);
+
+        mvc.perform(post(TareaController.RUTA + "/7501/completar").session(sesion))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(content().json(cuerpo, true));
+    }
+
+    /** Las acciones exigen sesión: sin cookie las corta SesionInterceptor antes del controller. */
+    @Test
+    void lasAccionesSinSesionResponden401() throws Exception {
+        for (String accion : new String[] {"/7501/reclamar", "/7501/completar"}) {
+            mvc.perform(post(TareaController.RUTA + accion))
+                    .andExpect(status().isUnauthorized());
+        }
+        verifyNoInteractions(tareas);
     }
 
     static String mensaje(Motivo motivo) {
