@@ -98,9 +98,9 @@ Flowable 6.8 vincula cada boundary de compensación con su tarea compensatoria m
 
 **Manejo de `SIN_AULAS`:** `ReserveClassroom` lanza una `BpmnError` con código `SIN_AULAS` cuando no quedan aulas. Un boundary event en "Reservar aula" captura el error dentro de "Preparar curso" y dispara los tres eventos de compensación, cada uno dirigido a su tarea original; Flowable solo ejecuta las compensaciones de actividades que ya terminaron. Luego se propaga el mismo error a un boundary event en "Preparar curso", que lleva a "Notificar Cierre" y al fin del proceso, sin pasar por la XOR. Ese boundary guarda el error en `motivoCierre`, que permite distinguir el mensaje de falta de aulas; el resultado sigue siendo `cancelado`. Los tests del servicio comprueban el error cuando dos aulas están ocupadas y el test del proceso ejecuta el BPMN real hasta el cierre.
 
-## Registrar y elaborar propuesta
+## Registrar y revisar propuesta
 
-La tarea de usuario `Registrar y Elaborar propuesta` se asigna exclusivamente al usuario `jefeAdministrativo`. Su formulario requiere estos campos:
+Las tareas de usuario `Registrar y Elaborar propuesta` y `Revisar propuesta` se asignan exclusivamente al usuario `jefeAdministrativo`. Sus formularios requieren estos campos:
 
 | Campo | Tipo | Uso |
 |---|---|---|
@@ -110,6 +110,8 @@ La tarea de usuario `Registrar y Elaborar propuesta` se asigna exclusivamente al
 | `fechaFinPropuesta` | date | Fecha posible de finalización |
 
 Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cero y que `fechaFinPropuesta` sea posterior o igual a `fechaInicioPosible`; si alguna regla no se cumple, la tarea no se completa. Si la validación pasa, el flujo continúa automáticamente a `Enviar propuesta` y luego espera la respuesta de la empresa. El envío está simulado en el log de Flowable; todavía no integra correo u otro canal externo. Las fechas propuestas no son la fecha confirmada de inicio: `fechaInicio` sigue siendo la fecha que la empresa informa al aceptar la propuesta.
+
+Cuando la empresa solicita modificaciones, `Revisar propuesta` permite actualizar esos mismos valores y aplica el mismo listener de validación antes de volver a enviar la propuesta.
 
 ## Confeccionar lista definitiva
 
@@ -147,10 +149,10 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | Variable | Tipo | La define | La usa |
 |---|---|---|---|
 | `isViable` | boolean | Tarea "Evaluar Viabilidad" (ver sección de viabilidad) | Gateway "Es viable?" |
-| `programa` | string | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
-| `presupuesto` | long | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa y validación no negativa |
-| `fechaInicioPosible` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa y validación de fechas |
-| `fechaFinPropuesta` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
+| `programa` | string | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa |
+| `presupuesto` | long | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa y validación no negativa |
+| `fechaInicioPosible` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa y validación de fechas |
+| `fechaFinPropuesta` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa |
 | `plazoRecordatorio` | String (duración ISO-8601) | "Enviar propuesta" (`P5D`, si no existe) | Timer "5 días" |
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
@@ -189,7 +191,7 @@ Las siguientes tareas tienen responsables fijos en el modelo BPMN:
 | Definir Docente que desarrolla el curso | `jefeDeEquipo` |
 | Elaborar informe de resultados | `jefeDeEquipo` |
 
-Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
+Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable`, `cancelado`, `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado`.
 
 ## Resultado del proceso
 
@@ -202,7 +204,9 @@ El Execution Listener `flowable.result.RecordProcessResult` (enunciado 3.4) corr
 
 Usa la conexión de la transacción del motor, porque Flowable y las tablas de la institución están en la misma base. El UPDATE se ejecuta justo antes del commit, así el estado y el cierre de la instancia se confirman o se deshacen juntos. Probado en Flowable UI: si la instancia no logra terminar, no queda ningún estado cambiado.
 
-Está enganchado a nivel proceso (listener `end` del `<process>`; en el Modeler, propiedades del proceso → "Execution listeners") y necesita la migración `003` (`make db-migrate`).
+El rechazo y la falta de respuesta asignan respectivamente `rechazado` y `cerrado_por_falta_de_respuesta` en los flujos que llegan a `Archivar solicitud`, por lo que la variable ya está disponible mientras la tarea está pendiente. Al salir de `Enviar informe a empresa y Archivar expediente`, el flujo asigna `finalizado` antes de liberar los recursos. El resultado se persiste al terminar la instancia, no al crear la tarea de archivo.
+
+El listener está configurado a nivel proceso, dentro de `<process>` y antes del primer elemento. Para que pueda escribir los resultados hay que aplicar la migración (`make db-migrate`):
 
 Dónde se define `resultado` en cada camino:
 
