@@ -6,7 +6,7 @@ FLOWABLE_REST := http://127.0.0.1:8080/flowable-ui/process-api
 FLOWABLE_USER ?= admin
 FLOWABLE_PASSWORD ?= test
 
-.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy seed import
+.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy seed import recorrido
 
 # Dejar en flowable-lib/ el .jar y las librerías de Drools que Flowable UI no trae.
 # Está fuera de target/ y se vacía sin borrar la carpeta: es la que monta el contenedor de Flowable,
@@ -48,6 +48,14 @@ seed:
 # Solo corregir el BPMN e importarlo al Modeler, sin tocar usuarios ni grupos.
 import:
 	mvn -q compile exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
+
+# Recorrer el proceso de punta a punta por la API: make recorrido ESCENARIO=final|cancelar|rechazo|sin-respuesta
+# Opcional: RECURSOS=fisica,virtual,equipamiento. Usa FLOWABLE_USER y FLOWABLE_PASSWORD.
+ESCENARIO ?= final
+RECURSOS ?= fisica,virtual,equipamiento
+recorrido:
+	FLOWABLE_USER=$(FLOWABLE_USER) FLOWABLE_PASSWORD=$(FLOWABLE_PASSWORD) \
+		python3 infra/scripts/recorrido.py $(ESCENARIO) --recursos $(RECURSOS)
 
 dev-down:
 	$(DEV_COMPOSE) down

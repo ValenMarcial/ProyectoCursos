@@ -194,6 +194,22 @@ Si el BPMN tiene errores, Flowable rechaza el despliegue y `make deploy` muestra
 
 `make deploy` usa por defecto el usuario `admin`/`test` de Flowable UI. Se puede cambiar con `make deploy FLOWABLE_USER=... FLOWABLE_PASSWORD=...`.
 
+### Recorrer el proceso de punta a punta
+
+La Task app de Flowable UI no muestra los formularios del BPMN (`formProperty`), y los pasos de la empresa (aceptación, nómina, cancelación) todavía no tienen pantalla. `make recorrido` hace todo eso por la API REST: inicia una solicitud desde el backend, completa las tareas con sus datos y manda los mensajes. Sirve para probar, para la demo y para generar ejecuciones con cierres distintos (minería, 4.4).
+
+```bash
+make recorrido ESCENARIO=final           # acepta, prepara, desarrolla el curso y cierra con el informe (~1 minuto)
+make recorrido ESCENARIO=cancelar        # acepta y cancela durante "Preparar curso"
+make recorrido ESCENARIO=rechazo         # la empresa rechaza y se archiva
+make recorrido ESCENARIO=sin-respuesta   # dos recordatorios y se archiva (~1 minuto)
+make recorrido ESCENARIO=final RECURSOS=virtual FLOWABLE_USER=juan FLOWABLE_PASSWORD=Juan
+```
+
+Al terminar muestra las actividades recorridas, el valor de `resultado` y si la instancia terminó. Si el proceso se queda en algún paso, avisa dónde. Cada corrida crea una empresa "Empresa recorrido HHMMSS"; las instancias se pueden seguir en la Admin app mientras corre. Necesita el backend y Flowable levantados y el BPMN desplegado; solo usa Python 3 sin dependencias.
+
+Con el BPMN actual de master, `final` y `cancelar` se quedan en "Preparar curso" (un subproceso con boundary de error y subproceso de evento no termina en Flowable 6.8; se corrige en la PR de cancelación). El script lo informa en lugar de quedarse esperando.
+
 #### Problema conocido: Flowable se queda en "Waiting for changelog lock"
 
 Si Flowable se corta mientras crea o actualiza sus tablas (por ejemplo, porque se reinició varias veces seguidas), puede quedar un bloqueo en la base y el siguiente arranque espera para siempre. Para liberarlo:
