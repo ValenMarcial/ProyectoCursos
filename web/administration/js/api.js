@@ -1,8 +1,9 @@
 /**
  * Módulo api.js
  *
- * Adaptador entre las pantallas de Administración y la API. Las pantallas solo
- * usan listarTareas, reclamarTarea, completarTarea y obtenerVariables.
+ * Adaptador entre las pantallas de Administración y la API del backend (/api/...).
+ * Las pantallas usan listarTareas, reclamarTarea, completarTarea y obtenerVariables;
+ * obtenerTarea queda disponible para la bandeja y la PR de reutilización.
  *
  * La interfaz es la misma en modo mock y en modo real: lo único que cambia es
  * la función de transporte, elegida con modoApi en contrato.js. Las conversiones
@@ -12,7 +13,7 @@
  * o completar lo controla el backend.
  */
 
-import { modoApi, rutasApi, tiposVariables } from './contrato.js';
+import { alcances, modoApi, rutasApi, tamanioPagina, tiposVariables } from './contrato.js';
 import { enviarSimulado } from './mock.js';
 
 /**
@@ -197,14 +198,16 @@ function normalizarTarea(tarea) {
  * Devuelve: promesa de { estado, cuerpo }; cuerpo es null si no hay JSON.
  */
 export async function enviarReal(metodo, ruta, cuerpo) {
-  const opciones = { method: metodo };
+  // same-origin es el valor por defecto; va explícito porque la sesión depende de la
+  // cookie: la web y la API se sirven desde el mismo backend.
+  const opciones = { method: metodo, credentials: 'same-origin' };
   if (cuerpo !== undefined) {
     opciones.headers = { 'Content-Type': 'application/json' };
     opciones.body = JSON.stringify(cuerpo);
   }
 
   const respuesta = await fetch(ruta, opciones);
-  // Reclamar y completar responden 200 sin cuerpo, y un error puede no ser JSON.
+  // Reclamar y completar responden 204 sin cuerpo, y un error puede no ser JSON.
   const texto = await respuesta.text();
   let datos = null;
   try {
@@ -240,37 +243,75 @@ export function crearApi(enviar) {
     return respuesta.cuerpo;
   }
 
+  /**
+   * Trae todas las tareas de un alcance, recorriendo las páginas del backend.
+   * Recibe: alcance ('mias' o 'grupo').
+   * Devuelve: lista de tareas en el formato de Flowable.
+   */
+  async function todasLasPaginas(alcance) {
+    const encontradas = [];
+    let total = Infinity;
+    // Se corta también si una página vuelve vacía, para no quedar en un bucle si el
+    // total cambia mientras se recorre (alguien completó una tarea en el medio).
+    while (encontradas.length < total) {
+      const pagina = await pedir('GET', rutasApi.tareas({ alcance, start: encontradas.length, size: tamanioPagina }));
+      total = pagina.total;
+      if (pagina.data.length === 0) break;
+      encontradas.push(...pagina.data);
+    }
+    return encontradas;
+  }
+
   return {
     /**
-     * Lista tareas.
-     * Recibe: { usuario } para las asignadas o { grupo } para las disponibles.
+     * Lista tareas del usuario de la sesión.
+     * Recibe: { alcance } con 'mias' (asignadas) o 'grupo' (sin asignar, de sus
+     * grupos). Sin alcance trae las dos, primero las propias y sin repetir: es lo
+     * que usan las pantallas, que después filtran por tarea del BPMN.
      * Devuelve: lista de tareas normalizadas.
      */
-    async listarTareas({ usuario, grupo } = {}) {
-      const cuerpo = await pedir('GET', rutasApi.tareas({ usuario, grupo }));
-      return cuerpo.data.map(normalizarTarea);
+    async listarTareas({ alcance } = {}) {
+      const pedidos = alcance ? [alcance] : [alcances.mias, alcances.grupo];
+      const vistas = new Set();
+      const resultado = [];
+      for (const cadaAlcance of pedidos) {
+        for (const tarea of await todasLasPaginas(cadaAlcance)) {
+          // Una tarea puede cambiar de alcance entre los dos pedidos (alguien la reclamó).
+          if (vistas.has(tarea.id)) continue;
+          vistas.add(tarea.id);
+          resultado.push(normalizarTarea(tarea));
+        }
+      }
+      return resultado;
+    },
+
+    /**
+     * Lee una tarea del usuario o de uno de sus grupos.
+     * Recibe: id de la tarea. Devuelve: la tarea normalizada.
+     * Lanza: ErrorApi 'noEncontrado' si no existe o no la puede ver.
+     */
+    async obtenerTarea(id) {
+      return normalizarTarea(await pedir('GET', rutasApi.tarea(id)));
     },
 
     /**
      * Reclama una tarea de grupo.
      * Recibe: id de la tarea. Devuelve: nada.
-     * No manda assignee: el backend lo toma de la sesión, no del navegador, así
-     * nadie puede reclamar a nombre de otro. Por eso solo recibe el id: desde la
-     * web no hay forma de pedir un claim vacío, que en Flowable libera la tarea.
-     * El backend tiene que ignorar cualquier assignee del cuerpo y nunca reenviar
-     * a Flowable un claim sin el usuario de la sesión.
+     * Va sin cuerpo: el backend toma el assignee de la sesión, no del navegador, así
+     * nadie puede reclamar a nombre de otro, y nunca le manda a Flowable un claim
+     * sin usuario (que libera la tarea en vez de tomarla).
      */
     async reclamarTarea(id) {
-      await pedir('POST', rutasApi.tarea(id), { action: 'claim' });
+      await pedir('POST', rutasApi.reclamar(id));
     },
 
     /**
-     * Completa una tarea.
+     * Completa una tarea asignada al usuario de la sesión.
      * Recibe: id y objeto { nombreVariable: valor }, con fechas en dd/MM/yyyy.
      * Devuelve: nada.
      */
     async completarTarea(id, valores) {
-      await pedir('POST', rutasApi.tarea(id), { action: 'complete', variables: armarVariables(valores) });
+      await pedir('POST', rutasApi.completar(id), { variables: armarVariables(valores) });
     },
 
     /**
@@ -295,4 +336,6 @@ function elegirTransporte() {
   throw new Error(`modoApi inválido en contrato.js: ${modoApi}`);
 }
 
-export const { listarTareas, reclamarTarea, completarTarea, obtenerVariables } = crearApi(elegirTransporte());
+export const {
+  listarTareas, obtenerTarea, reclamarTarea, completarTarea, obtenerVariables,
+} = crearApi(elegirTransporte());

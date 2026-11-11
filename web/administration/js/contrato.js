@@ -28,30 +28,55 @@ export const modoApi = 'mock';
 export const baseApi = '/api';
 
 /**
- * Arma las rutas de la API.
- * PROVISORIAS: el backend todavía no tiene estos endpoints. Se propone que
- * repitan el formato de la API REST de Flowable, ya verificado en la Fase 0.
+ * Alcances de GET /api/tareas, en minúscula como los espera el backend.
+ * mias: asignadas al usuario de la sesión. grupo: sin asignar, de sus grupos.
+ */
+export const alcances = {
+  mias: 'mias',
+  grupo: 'grupo',
+};
+
+/** Tamaño de página que se pide al listar: es el máximo que acepta el backend. */
+export const tamanioPagina = 100;
+
+/**
+ * Arma las rutas de la API del backend (tareas: lectura en la #56, acciones en
+ * la #57). El usuario nunca va en la ruta ni en el cuerpo: el backend lo toma de
+ * la sesión.
  */
 export const rutasApi = {
   /**
    * Ruta para listar tareas.
-   * Recibe: filtros { usuario, grupo }, ambos opcionales.
+   * Recibe: { alcance, start, size }; alcance es obligatorio ('mias' o 'grupo').
    * Devuelve: la ruta con su query string.
    */
-  tareas({ usuario, grupo } = {}) {
-    const parametros = new URLSearchParams();
-    if (usuario) parametros.set('assignee', usuario);
-    if (grupo) parametros.set('candidateGroup', grupo);
-    const consulta = parametros.toString();
-    return `${baseApi}/tareas${consulta ? `?${consulta}` : ''}`;
+  tareas({ alcance, start = 0, size = tamanioPagina }) {
+    const parametros = new URLSearchParams({ alcance, start: String(start), size: String(size) });
+    return `${baseApi}/tareas?${parametros}`;
   },
 
   /**
-   * Ruta para actuar sobre una tarea (reclamar o completar).
+   * Ruta de una tarea (GET para leerla).
    * Recibe: id de la tarea. Devuelve: la ruta.
    */
   tarea(id) {
     return `${baseApi}/tareas/${encodeURIComponent(id)}`;
+  },
+
+  /**
+   * Ruta para reclamar una tarea (POST sin cuerpo).
+   * Recibe: id de la tarea. Devuelve: la ruta.
+   */
+  reclamar(id) {
+    return `${rutasApi.tarea(id)}/reclamar`;
+  },
+
+  /**
+   * Ruta para completar una tarea (POST con { variables }).
+   * Recibe: id de la tarea. Devuelve: la ruta.
+   */
+  completar(id) {
+    return `${rutasApi.tarea(id)}/completar`;
   },
 
   /**
