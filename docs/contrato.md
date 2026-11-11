@@ -278,6 +278,7 @@ Cuando una clase rechaza un dato por una regla de negocio, lanza `FlowableIllega
 | `flowable.proposal.ValidateProposalDates` | Presupuesto obligatorio y no negativo; fechas obligatorias; fin posterior o igual al inicio |
 | `flowable.resources.ValidateResourceSelection` | Al menos un recurso elegido |
 | `flowable.proposal.CreateCourseOnAcceptance` | `fechaInicio` acordada no posterior a `fechaFinPropuesta` |
+| `flowable.assignment.ValidateSelectedTeacher` | `docenteSeleccionado` obligatorio y del grupo `Docentes` |
 
 Una clase nueva con validaciones de negocio debe seguir la misma regla. El backend reenvía el status que recibe de Flowable.
 
