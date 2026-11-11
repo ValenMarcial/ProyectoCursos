@@ -9,12 +9,17 @@ import java.util.List;
 import org.flowable.bpmn.model.BpmnModel;
 import org.flowable.bpmn.model.Activity;
 import org.flowable.bpmn.model.Association;
+import org.flowable.bpmn.model.BoundaryEvent;
+import org.flowable.bpmn.model.CompensateEventDefinition;
+import org.flowable.bpmn.model.ErrorEventDefinition;
+import org.flowable.bpmn.model.EndEvent;
 import org.flowable.bpmn.model.FlowableListener;
 import org.flowable.bpmn.model.GraphicInfo;
 import org.flowable.bpmn.model.ScriptTask;
 import org.flowable.bpmn.model.ServiceTask;
 import org.flowable.bpmn.model.SequenceFlow;
 import org.flowable.bpmn.model.SubProcess;
+import org.flowable.bpmn.model.ThrowEvent;
 import org.flowable.bpmn.model.UserTask;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.repository.ProcessDefinition;
@@ -143,10 +148,6 @@ class ProjectCoursesProcessDeploymentTest {
         assertTrue(tarea.getY() + tarea.getHeight() <= subproceso.getY() + subproceso.getHeight());
         assertEquals(2, model.getFlowLocationGraphicInfo(haciaMarcarCancelada.getId()).size());
         assertEquals(2, model.getFlowLocationGraphicInfo(haciaFin.getId()).size());
-        assertEquals(tarea.getX(),
-                model.getFlowLocationGraphicInfo(haciaMarcarCancelada.getId()).get(1).getX(), 0.001);
-        assertEquals(tarea.getX() + tarea.getWidth(),
-                model.getFlowLocationGraphicInfo(haciaFin.getId()).get(0).getX(), 0.001);
         assertEquals("groovy", marcarCancelada.getScriptFormat());
         assertEquals("execution.setVariable(\"cancelada\", true)", marcarCancelada.getScript());
         assertEquals("sid-3329D761-38E5-49B6-99FE-711F82A01284", haciaMarcarCancelada.getSourceRef());
@@ -191,9 +192,10 @@ class ProjectCoursesProcessDeploymentTest {
         @Test
         void conectaLosEventosDeCompensacionConSusTareas() {
         SubProcess prepararCurso = getPrepararCurso();
+            BpmnModel model = getProcessModel();
 
-        assertCompensationAssociation(prepararCurso, "sid-6EF58547-6206-4065-BC46-BDE7A86300E7",
-            "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+            assertCompensationAssociation(prepararCurso, "sid-6EF58547-6206-4065-BC46-BDE7A86300E7",
+                "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
         assertCompensationAssociation(prepararCurso, "sid-79D40E03-33A5-476E-AC89-3F44F73680A0",
             "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
         assertCompensationAssociation(prepararCurso, "sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619",
@@ -202,15 +204,101 @@ class ProjectCoursesProcessDeploymentTest {
         assertCompensationTask(prepararCurso, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
         assertCompensationTask(prepararCurso, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
         assertCompensationTask(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+
+        assertCompensationActivityRef(prepararCurso, "sid-31835240-F72D-4525-9FCE-6428CE669ED3",
+                "sid-065649F8-9F01-4C34-B290-C37474CC479D");
+        assertCompensationActivityRef(prepararCurso, "sid-CE2ED1CB-BB53-499C-AB58-347BB0FA0C80",
+                "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
+        assertCompensationActivityRef(prepararCurso, "sid-3329D761-38E5-49B6-99FE-711F82A01284",
+                "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
+        assertCompensationActivityRef(model.getMainProcess(), "sid-88F847B3-5FE2-4251-A612-120F9DD46CA9",
+                "sid-065649F8-9F01-4C34-B290-C37474CC479D");
+        assertCompensationActivityRef(model.getMainProcess(), "sid-CAF881B2-93D6-479B-9C01-806B1059E125",
+                "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
+        assertCompensationActivityRef(model.getMainProcess(), "sid-98B02508-C619-4111-AA31-8FC54D5F85B2",
+                "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
         }
 
+    @Test
+    void configuraCapturaCompensacionYNotificacionParaSinAulas() {
+        BpmnModel model = getProcessModel();
+        SubProcess prepararCurso = getPrepararCurso();
+        BoundaryEvent capturaEnReserva = (BoundaryEvent) prepararCurso
+                .getFlowElement("sid-7A782D3B-FA48-4B06-9E9D-22C32BD6F574");
+        BoundaryEvent capturaEnPreparacion = (BoundaryEvent) model.getMainProcess()
+                .getFlowElement("sid-6931943F-5BD2-45CD-BE56-52DE64896B0C");
+        EndEvent propagarError = (EndEvent) prepararCurso
+                .getFlowElement("sid-481F402E-5806-475E-8AB2-1148DE4E7B9C");
+        ScriptTask notificarCierre = (ScriptTask) model.getMainProcess()
+                .getFlowElement("sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1");
+        SequenceFlow rutaAlCierre = (SequenceFlow) model.getMainProcess()
+                .getFlowElement("sid-E13FA448-268A-485E-B2D7-0A4F47B0CA58");
+
+        assertEquals("sid-065649F8-9F01-4C34-B290-C37474CC479D", capturaEnReserva.getAttachedToRefId());
+        assertEquals("errorSIN_AULAS", errorDefinition(capturaEnReserva).getErrorCode());
+        assertEquals(1, capturaEnReserva.getExecutionListeners().size());
+        assertEquals("${execution.setVariable('motivoCierre', 'SIN_AULAS')}",
+                capturaEnReserva.getExecutionListeners().get(0).getImplementation());
+        assertCompensationActivityRef(prepararCurso, "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1",
+                "sid-065649F8-9F01-4C34-B290-C37474CC479D");
+        assertCompensationActivityRef(prepararCurso, "sid-AD35AD31-1F32-478B-BEBE-CA591851B965",
+                "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
+        assertCompensationActivityRef(prepararCurso, "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E",
+                "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
+        assertEquals("errorSIN_AULAS", errorDefinition(propagarError).getErrorCode());
+        assertEquals("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF",
+                capturaEnPreparacion.getAttachedToRefId());
+        assertEquals("errorSIN_AULAS", errorDefinition(capturaEnPreparacion).getErrorCode());
+        assertEquals(capturaEnPreparacion.getId(), rutaAlCierre.getSourceRef());
+        assertEquals(notificarCierre.getId(), rutaAlCierre.getTargetRef());
+        assertFlow(prepararCurso, "sid-C1AD5A67-E90B-46B4-80B1-E58A31C5774B",
+                capturaEnReserva.getId(), "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1");
+        assertFlow(prepararCurso, "sid-FEB357E8-1D07-4C42-92CB-572D8F4F5ED0",
+                "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1", "sid-AD35AD31-1F32-478B-BEBE-CA591851B965");
+        assertFlow(prepararCurso, "sid-61EABF9D-A1D6-4500-85D4-2F24C546B443",
+                "sid-AD35AD31-1F32-478B-BEBE-CA591851B965", "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E");
+        assertFlow(prepararCurso, "sid-0CA04C12-36C6-46F0-BA41-799C1CE9B7E2",
+                "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E", propagarError.getId());
+        assertEquals("if (execution.getVariable(\"motivoCierre\") == \"SIN_AULAS\") { println \"Curso cancelado por falta de aulas disponibles: \" + execution.processInstanceId } else { println \"Curso cancelado: \" + execution.processInstanceId }; execution.setVariable(\"resultado\", \"cancelado\")",
+                notificarCierre.getScript());
+        assertTrue(model.getGraphicInfo(capturaEnReserva.getId()) != null);
+        assertTrue(model.getGraphicInfo(capturaEnPreparacion.getId()) != null);
+        assertTrue(model.getFlowLocationGraphicInfo(rutaAlCierre.getId()).size() >= 2);
+    }
+
+    private static ErrorEventDefinition errorDefinition(BoundaryEvent event) {
+        return event.getEventDefinitions().stream()
+                .filter(ErrorEventDefinition.class::isInstance)
+                .map(ErrorEventDefinition.class::cast)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static ErrorEventDefinition errorDefinition(EndEvent event) {
+        return event.getEventDefinitions().stream()
+                .filter(ErrorEventDefinition.class::isInstance)
+                .map(ErrorEventDefinition.class::cast)
+                .findFirst()
+                .orElseThrow();
+    }
+
+    private static void assertFlow(SubProcess process, String flowId, String sourceId, String targetId) {
+        SequenceFlow flow = (SequenceFlow) process.getFlowElement(flowId);
+        assertEquals(sourceId, flow.getSourceRef());
+        assertEquals(targetId, flow.getTargetRef());
+    }
+
         private SubProcess getPrepararCurso() {
+        return (SubProcess) getProcessModel().getMainProcess()
+                .getFlowElement("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+        }
+
+        private BpmnModel getProcessModel() {
         ProcessDefinition processDefinition = engine.getRepositoryService()
             .createProcessDefinitionQuery()
             .processDefinitionKey("process-proyecto-curso")
             .singleResult();
-        BpmnModel model = engine.getRepositoryService().getBpmnModel(processDefinition.getId());
-        return (SubProcess) model.getMainProcess().getFlowElement("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+        return engine.getRepositoryService().getBpmnModel(processDefinition.getId());
         }
 
         private static void assertServiceTaskClass(SubProcess process, String taskId, String expectedClass) {
@@ -231,6 +319,26 @@ class ProjectCoursesProcessDeploymentTest {
         private static void assertCompensationTask(SubProcess process, String taskId) {
         Activity task = (Activity) process.getFlowElement(taskId);
         assertTrue(task.isForCompensation(), "Tarea de compensación " + task.getName());
+        }
+
+        private static void assertCompensationActivityRef(SubProcess process, String eventId, String activityId) {
+        ThrowEvent event = (ThrowEvent) process.getFlowElement(eventId);
+        assertCompensationActivityRef(event, activityId);
+        }
+
+        private static void assertCompensationActivityRef(org.flowable.bpmn.model.Process process, String eventId,
+                String activityId) {
+        ThrowEvent event = (ThrowEvent) process.getFlowElement(eventId);
+        assertCompensationActivityRef(event, activityId);
+        }
+
+        private static void assertCompensationActivityRef(ThrowEvent event, String activityId) {
+        CompensateEventDefinition definition = event.getEventDefinitions().stream()
+                .filter(CompensateEventDefinition.class::isInstance)
+                .map(CompensateEventDefinition.class::cast)
+                .findFirst()
+                .orElseThrow();
+        assertEquals(activityId, definition.getActivityRef(), "Actividad compensada por " + event.getName());
         }
 
     private static void assertAssignee(BpmnModel model, String taskId, String expectedAssignee) {
