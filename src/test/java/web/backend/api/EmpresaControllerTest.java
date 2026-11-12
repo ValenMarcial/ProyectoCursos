@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -114,6 +115,19 @@ class EmpresaControllerTest {
 
         mvc.perform(get(EmpresaController.RUTA + "/cursos")).andExpect(status().isUnauthorized());
         mvc.perform(get(EmpresaController.RUTA + "/cursos").session(personal)).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void cerrarLaSesionDeEmpresaNoCierraLaDelPersonal() throws Exception {
+        MockHttpSession sesion = sesionDeEmpresa();
+        UsuarioSesion jefe = new UsuarioSesion("jefeAdministrativo", "Jefe", List.of("Administracion"));
+        sesion.setAttribute(SesionController.ATRIBUTO_USUARIO, jefe);
+
+        mvc.perform(delete(EmpresaController.RUTA_SESION).session(sesion)).andExpect(status().isNoContent());
+
+        assertEquals(null, sesion.getAttribute(EmpresaController.ATRIBUTO_EMPRESA));
+        assertEquals(jefe, sesion.getAttribute(SesionController.ATRIBUTO_USUARIO));
+        mvc.perform(get(EmpresaController.RUTA + "/cursos").session(sesion)).andExpect(status().isUnauthorized());
     }
 
     @Test
