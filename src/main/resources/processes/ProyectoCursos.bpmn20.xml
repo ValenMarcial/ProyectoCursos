@@ -157,7 +157,7 @@
       </extensionElements>
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
-      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Preparar materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true">
         <extensionElements>
           <flowable:formProperty id="aulaFisica" name="Requiere aula presencial" type="boolean"></flowable:formProperty>
@@ -225,7 +225,7 @@
         <intermediateThrowEvent id="sid-31835240-F72D-4525-9FCE-6428CE669ED3" name="Liberar Aula">
           <compensateEventDefinition activityRef="sid-065649F8-9F01-4C34-B290-C37474CC479D"></compensateEventDefinition>
         </intermediateThrowEvent>
-        <intermediateThrowEvent id="sid-CE2ED1CB-BB53-499C-AB58-347BB0FA0C80" name="Liverar Aula Virtual">
+        <intermediateThrowEvent id="sid-CE2ED1CB-BB53-499C-AB58-347BB0FA0C80" name="Liberar Aula Virtual">
           <compensateEventDefinition activityRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB"></compensateEventDefinition>
         </intermediateThrowEvent>
         <sequenceFlow id="sid-08271985-A006-46DC-820A-3A8BD93CEB20" sourceRef="sid-3329D761-38E5-49B6-99FE-711F82A01284" targetRef="sid-2FCA85E9-D3B7-4DBB-9C3A-83CBA2BAA625"></sequenceFlow>
