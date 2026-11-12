@@ -595,17 +595,19 @@ class ProjectCoursesProcessDeploymentTest {
     }
 
     private void assertHistoricActivity(String processInstanceId, String activityId) {
-        assertEquals(1, engine.getHistoryService().createHistoricActivityInstanceQuery()
-                .processInstanceId(processInstanceId)
-                .activityId(activityId)
-                .count(), "Se ejecutó la actividad BPMN " + activityId);
+        assertHistoricActivityCount(processInstanceId, activityId, 1);
     }
 
     private void assertNoHistoricActivity(String processInstanceId, String activityId) {
-        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+        assertHistoricActivityCount(processInstanceId, activityId, 0);
+    }
+
+    private void assertHistoricActivityCount(String processInstanceId, String activityId, long expected) {
+        assertEquals(expected, engine.getHistoryService().createHistoricActivityInstanceQuery()
                 .processInstanceId(processInstanceId)
                 .activityId(activityId)
-                .count(), "No se ejecutó la actividad BPMN " + activityId);
+                .count(), "Conteo histórico inesperado para la actividad BPMN " + activityId
+                + " (esperado: " + expected + ")");
     }
 
     private static ErrorEventDefinition errorDefinition(BoundaryEvent event) {
