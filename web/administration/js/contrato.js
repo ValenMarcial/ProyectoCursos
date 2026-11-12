@@ -111,10 +111,11 @@ export const rutasApi = {
 /**
  * Pantalla de login a la que se manda al usuario cuando el backend responde 401
  * (sesión vencida o sin iniciar). Se le agrega ?volver=<pantalla actual>.
- * PENDIENTE: el login lo hace Santos y todavía no existe. Mientras sea null, el
- * 401 solo muestra el aviso en la pantalla, sin redirigir.
+ * Es la fuente única: la leen el adaptador de Administración, el de Docentes y
+ * web/common/js/navegacion.js. Va absoluta desde la raíz del sitio para que
+ * sirva desde cualquier carpeta. Con null, el 401 solo muestra el aviso.
  */
-export const rutaLogin = null;
+export const rutaLogin = '/common/login.html';
 
 /** Ids de las tareas de Administración, tal como están en el BPMN. */
 export const tareas = {
