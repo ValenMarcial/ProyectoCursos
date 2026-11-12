@@ -53,7 +53,8 @@ Con `make dev-up` y `make deploy`, iniciando solicitudes con `POST /api/solicitu
 
 - Aceptación, rechazo, nómina y cancelación se envían bien desde la ventana y desde la consola; el proceso avanza y guarda `fechaInicio` y `participantes`.
 - La fecha de aceptación se envía con zona horaria: si se escribe sin zona se usa la de esta máquina. Se comprobó que Flowable lee una fecha sin zona como UTC, así que una hora local quedaba corrida.
-- Después de la cancelación la instancia queda detenida en el subproceso "Cancelación" (no termina ni define `resultado`). Es del modelo BPMN, no del simulador.
+- Cancelación, reprobada el 12/11/2026 con el BPMN de master: la instancia termina en "Notificar Cierre" con `resultado = cancelado` (también en `solicitudes.resultado` y `cursos.estado`). Solo se compensa lo que ya se había conseguido: con el aula reservada y el aula virtual completada, se liberaron las dos, y el equipamiento, que no se había contratado, no se tocó. Antes la instancia quedaba detenida en el subproceso "Cancelación"; se corrigió en el BPMN (#55).
+- Después de la aceptación, las habilitadas pasan a ser `NOMINA` y `CANCELACION`, como espera el proceso.
 
 ## Pendiente
 
