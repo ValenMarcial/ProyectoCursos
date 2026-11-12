@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="test">
+  <!-- Como el BPMN real, tiene una tarea de reglas (Drools). La app nunca la ejecuta, pero el motor tiene que
+       poder cargar la definición para leer variables, reclamar y completar. -->
+  <process id="materialesReglasTest" name="Materiales con reglas (prueba)" isExecutable="true">
+    <startEvent id="inicio"/>
+    <sequenceFlow sourceRef="inicio" targetRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB"/>
+    <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Preparar materiales" flowable:candidateGroups="Administracion"/>
+    <sequenceFlow sourceRef="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" targetRef="espera"/>
+    <userTask id="espera" name="Espera"/>
+    <sequenceFlow sourceRef="espera" targetRef="reglas"/>
+    <businessRuleTask id="reglas" name="Evaluar Viabilidad" flowable:ruleVariablesInput="${cantidad}" flowable:resultVariable="resultadoReglas"/>
+    <sequenceFlow sourceRef="reglas" targetRef="fin"/>
+    <endEvent id="fin"/>
+  </process>
+</definitions>

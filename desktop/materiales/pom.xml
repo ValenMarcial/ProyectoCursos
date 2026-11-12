@@ -27,6 +27,14 @@
       <artifactId>snakeyaml</artifactId>
       <version>1.27</version>
     </dependency>
+    <!-- El BPMN real tiene una tarea de reglas ("Evaluar Viabilidad"): para cargar la definición del
+         proceso el motor necesita las interfaces de KIE, aunque esta app nunca ejecuta esa tarea.
+         Misma versión que usa el motor del proyecto. -->
+    <dependency>
+      <groupId>org.kie</groupId>
+      <artifactId>kie-api</artifactId>
+      <version>7.63.0.Final</version>
+    </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
