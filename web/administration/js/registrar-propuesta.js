@@ -2,7 +2,8 @@
  * Módulo registrar-propuesta.js
  *
  * Pantalla 1, "Registrar y Elaborar propuesta": muestra los datos de la
- * solicitud, valida el formulario, completa la tarea y genera el PDF.
+ * solicitud, valida el formulario, completa la tarea y muestra la vista previa
+ * del PDF de la propuesta, que se descarga solo con el botón.
  *
  * Toda la comunicación pasa por api.js. Los datos se muestran con textContent
  * porque vienen de un formulario público: nunca se interpretan como HTML.
@@ -36,6 +37,10 @@ const bloquePropuesta = document.getElementById('bloque-propuesta');
 const formulario = document.getElementById('formulario-propuesta');
 const botonCompletar = document.getElementById('boton-completar');
 const bloqueResultado = document.getElementById('bloque-resultado');
+const tituloResultado = document.getElementById('titulo-resultado');
+const vistaPrevia = document.getElementById('vista-previa-pdf');
+const sinVisor = document.getElementById('sin-visor');
+const enlaceAbrir = document.getElementById('abrir-pdf');
 const botonDescargar = document.getElementById('boton-descargar');
 
 // Se completan en iniciar() y los usa el envío del formulario.
@@ -230,7 +235,24 @@ function descargarPdf(pdf) {
 }
 
 /**
- * Procesa el envío: valida, arma el PDF, completa la tarea y descarga.
+ * Muestra el PDF en la vista previa y deja listos los botones de descargar y abrir.
+ * Recibe: el objeto devuelto por armarPdfPropuesta. No devuelve nada.
+ */
+function mostrarVistaPrevia(pdf) {
+  enlaceAbrir.href = pdf.url;
+  // false indica que el navegador no muestra PDF embebidos (por ejemplo, en el celular);
+  // si no lo informa (undefined), se intenta igual y quedan los botones de respaldo.
+  if (navigator.pdfViewerEnabled === false) {
+    vistaPrevia.hidden = true;
+    sinVisor.hidden = false;
+  } else {
+    vistaPrevia.src = pdf.url;
+  }
+  botonDescargar.addEventListener('click', () => descargarPdf(pdf));
+}
+
+/**
+ * Procesa el envío: valida, arma el PDF, completa la tarea y muestra la vista previa.
  * Recibe: el evento submit. Devuelve: promesa sin valor.
  */
 async function alEnviar(evento) {
@@ -278,7 +300,9 @@ async function alEnviar(evento) {
       [variables.fechaFinPropuesta]: fechaFin,
     });
   } catch (error) {
-    // Tras un rechazo la tarea sigue activa: se deja corregir y reintentar.
+    // Tras un rechazo la tarea sigue activa: se deja corregir y reintentar. El PDF
+    // no se va a mostrar y cada reintento arma uno nuevo, así que se libera.
+    pdf.liberar();
     botonCompletar.disabled = false;
     mostrarError(error);
     return;
@@ -286,9 +310,10 @@ async function alEnviar(evento) {
 
   bloquePropuesta.hidden = true;
   bloqueResultado.hidden = false;
-  botonDescargar.addEventListener('click', () => descargarPdf(pdf));
-  mostrarAviso('La propuesta quedó registrada. Si el PDF no se descargó solo, usá el botón.', 'exito');
-  descargarPdf(pdf);
+  mostrarVistaPrevia(pdf);
+  // El botón pulsado desapareció con el formulario: el foco pasa al título del PDF.
+  tituloResultado.focus();
+  mostrarAviso('La propuesta quedó registrada. Revisá el PDF y descargalo con el botón.', 'exito');
 }
 
 /**
