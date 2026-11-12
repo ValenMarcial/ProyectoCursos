@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acceso del personal</title>
+  <!-- Por ahora usa los estilos de Administración (formularios, avisos y botones) -->
+  <link rel="stylesheet" href="../administration/css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Acceso del personal</h1>
+    <p>Ingresá con tu usuario y clave de Flowable.</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Si ya hay sesión: seguir o entrar con otro usuario -->
+    <section id="bloque-sesion" class="bloque" hidden>
+      <!-- .formulario se usa por la grilla: deja los botones con su ancho, uno abajo del otro -->
+      <div class="tarjeta formulario">
+        <p id="texto-sesion"></p>
+        <div>
+          <a id="continuar" class="boton" href="../index.html">Continuar</a>
+          <button type="button" id="otro-usuario" class="boton boton-secundario">Entrar con otro usuario</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Formulario de ingreso -->
+    <section id="bloque-ingreso" class="bloque" hidden>
+      <div class="tarjeta">
+        <!--
+          method="post": si el JavaScript no carga, el envío nativo no deja la clave en la URL.
+          novalidate: los errores los muestra login.js, en español.
+        -->
+        <form id="formulario-ingreso" class="formulario" method="post" novalidate>
+          <div class="campo">
+            <label for="usuario">Usuario</label>
+            <input type="text" id="usuario" name="usuario" autocomplete="username"
+                   autocapitalize="off" spellcheck="false" required>
+          </div>
+
+          <div class="campo">
+            <label for="clave">Clave</label>
+            <input type="password" id="clave" name="clave" autocomplete="current-password" required>
+          </div>
+
+          <button type="submit" id="ingresar" class="boton">Ingresar</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/login.js"></script>
+
+</body>
+</html>
