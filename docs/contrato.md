@@ -136,7 +136,7 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
 Las siguientes tareas tienen al grupo `Administracion` como grupo candidato en Flowable:
 
 - `Confeccionar lista definitiva` (además, se asigna automáticamente a un miembro menos ocupado).
-- `Prepara materiales`.
+- `Preparar materiales`.
 - `Evaluar Recursos`.
 - `Solicitar Aula Virtual`.
 - `Contratar equipamiento`.
@@ -222,7 +222,7 @@ Dónde se define `resultado` en cada camino:
 
 ## Unión asíncrona de "Preparar curso"
 
-La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Prepara materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
+La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Preparar materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
 
 ## Acceso de las empresas (escenario 10)
 
