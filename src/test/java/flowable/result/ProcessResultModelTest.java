@@ -177,6 +177,12 @@ class ProcessResultModelTest {
         dispararTimer(instancia);
         completar(instancia, DESARROLLAR_CURSO, Map.of());
         completar(instancia, ELABORAR_INFORME, Map.of());
+        for (String compensacion : List.of(LIBERAR_AULA, LIBERAR_AULA_VIRTUAL, LIBERAR_EQUIPAMIENTO)) {
+            assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                    .processInstanceId(instancia)
+                    .activityId(compensacion)
+                    .count(), "Todavía no se ejecutó " + compensacion);
+        }
         completar(instancia, ENVIAR_INFORME, Map.of());
 
         assertTerminadaCon(instancia, "finalizado", 7L, 70L);
