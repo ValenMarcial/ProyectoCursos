@@ -45,6 +45,10 @@ class ProcessResultModelTest {
     private static final String DESARROLLAR_CURSO = "sid-378C089F-415C-4EC6-B426-E2D989460B8C";
     private static final String ELABORAR_INFORME = "sid-8EE040F3-0293-488C-AE3F-3BD79DB56897";
     private static final String ENVIAR_INFORME = "sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63";
+    private static final String EQUIPAMIENTO = "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790";
+    private static final String LIBERAR_AULA = "sid-CF527638-CD0A-48BF-9EF6-DDB557838793";
+    private static final String LIBERAR_AULA_VIRTUAL = "sid-892710F9-B2AE-4002-82D0-131829D8FA29";
+    private static final String LIBERAR_EQUIPAMIENTO = "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E";
 
     private StandaloneInMemProcessEngineConfiguration config;
     private ProcessEngine engine;
@@ -155,6 +159,33 @@ class ProcessResultModelTest {
     }
 
     @Test
+    void elFinNormalLiberaTodosLosRecursosReservados() throws SQLException {
+        String instancia = llegarAPrepararCurso(7L, 70L);
+        completar(instancia, PREPARAR_MATERIALES, Map.of());
+        runtimeService.trigger(ejecucion(instancia, RECIBIR_NOMINA), Map.of(
+                "participantes", "Ana Pérez, Juan Gómez"));
+        completar(instancia, LISTA_DEFINITIVA, Map.of());
+        completar(instancia, EVALUAR_RECURSOS, Map.of(
+                "aulaFisica", true,
+                "aulaVirtual", true,
+                "equipamiento", true));
+        assertEquals("Aula 1", runtimeService.getVariable(instancia, "aulaAsignada"));
+        completar(instancia, AULA_VIRTUAL, Map.of());
+        completar(instancia, EQUIPAMIENTO, Map.of());
+        ejecutarJobs(instancia);
+        completar(instancia, DEFINIR_DOCENTE, Map.of("docenteSeleccionado", "docente1"));
+        dispararTimer(instancia);
+        completar(instancia, DESARROLLAR_CURSO, Map.of());
+        completar(instancia, ELABORAR_INFORME, Map.of());
+        completar(instancia, ENVIAR_INFORME, Map.of());
+
+        assertTerminadaCon(instancia, "finalizado", 7L, 70L);
+        assertHistoricActivity(instancia, LIBERAR_AULA);
+        assertHistoricActivity(instancia, LIBERAR_AULA_VIRTUAL);
+        assertHistoricActivity(instancia, LIBERAR_EQUIPAMIENTO);
+    }
+
+    @Test
     void laUnionDePreparacionEsAsincrona() {
         String instancia = llegarAPrepararCurso(6L, 60L);
         completar(instancia, PREPARAR_MATERIALES, Map.of());
@@ -228,6 +259,13 @@ class ProcessResultModelTest {
         for (Job job : managementService.createJobQuery().processInstanceId(instancia).list()) {
             managementService.executeJob(job.getId());
         }
+    }
+
+    private void assertHistoricActivity(String instancia, String actividad) {
+        assertEquals(1, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(instancia)
+                .activityId(actividad)
+                .count(), "Se ejecutó la actividad BPMN " + actividad);
     }
 
     private void assertTerminadaCon(String instancia, String resultado, long solicitudId, Long cursoId)
