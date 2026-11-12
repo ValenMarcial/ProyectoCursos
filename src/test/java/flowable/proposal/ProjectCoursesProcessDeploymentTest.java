@@ -431,16 +431,15 @@ class ProjectCoursesProcessDeploymentTest {
     }
 
     @Test
-    void cancelaPreparacionAntesDeReservarRecursos() {
+    void cancelaSinRecursosNoEjecutaCompensaciones() {
         String instancia = iniciarPreparacion();
 
         enviarCancelacion(instancia);
 
         assertCierreCancelado(instancia);
-        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
-                .processInstanceId(instancia)
-                .activityId("sid-CF527638-CD0A-48BF-9EF6-DDB557838793")
-                .count());
+        assertNoHistoricActivity(instancia, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+        assertNoHistoricActivity(instancia, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
+        assertNoHistoricActivity(instancia, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
     }
 
     @Test
