@@ -246,6 +246,33 @@ class ProjectCoursesProcessDeploymentTest {
     }
 
     @Test
+    void asignaResultadoUnaSolaVezEnRechazoYEnFinNormal() {
+        BpmnModel model = getProcessModel();
+
+        List<FlowableListener> rechazo = model.getMainProcess()
+                .getFlowElement("sid-2EDEE778-CCB8-4D86-B10B-F0CA6DE47860")
+                .getExecutionListeners();
+        assertEquals(1, rechazo.size());
+        assertEquals("end", rechazo.get(0).getEvent());
+        assertEquals("${execution.setVariable('resultado', 'rechazado')}",
+                rechazo.get(0).getImplementation());
+        assertTrue(model.getMainProcess()
+                .getFlowElement("sid-748C8A20-2795-4083-8BFA-E3CE09B3AB95")
+                .getExecutionListeners().isEmpty());
+
+        List<FlowableListener> finNormal = model.getMainProcess()
+                .getFlowElement("sid-343EF313-279B-45FF-9F2C-343A3C2804DB")
+                .getExecutionListeners();
+        assertEquals(1, finNormal.size());
+        assertEquals("start", finNormal.get(0).getEvent());
+        assertEquals("${execution.setVariable('resultado', 'finalizado')}",
+                finNormal.get(0).getImplementation());
+        assertTrue(model.getMainProcess()
+                .getFlowElement("sid-74237920-0988-4552-A34F-AB4A19332A3F")
+                .getExecutionListeners().isEmpty());
+    }
+
+    @Test
     void marcaCanceladaAlFinalizarLaRamaDeCancelacion() {
         ProcessDefinition definition = engine.getRepositoryService().createProcessDefinitionQuery()
                 .processDefinitionKey("process-proyecto-curso").singleResult();

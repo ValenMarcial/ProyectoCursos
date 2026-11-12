@@ -136,7 +136,7 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
 Las siguientes tareas tienen al grupo `Administracion` como grupo candidato en Flowable:
 
 - `Confeccionar lista definitiva` (además, se asigna automáticamente a un miembro menos ocupado).
-- `Prepara materiales`.
+- `Preparar materiales`.
 - `Evaluar Recursos`.
 - `Solicitar Aula Virtual`.
 - `Contratar equipamiento`.
@@ -204,7 +204,7 @@ El Execution Listener `flowable.result.RecordProcessResult` (enunciado 3.4) corr
 
 Usa la conexión de la transacción del motor, porque Flowable y las tablas de la institución están en la misma base. El UPDATE se ejecuta justo antes del commit, así el estado y el cierre de la instancia se confirman o se deshacen juntos. Probado en Flowable UI: si la instancia no logra terminar, no queda ningún estado cambiado.
 
-El rechazo y la falta de respuesta asignan respectivamente `rechazado` y `cerrado_por_falta_de_respuesta` en los flujos que llegan a `Archivar solicitud`, por lo que la variable ya está disponible mientras la tarea está pendiente. Al salir de `Enviar informe a empresa y Archivar expediente`, el flujo asigna `finalizado` antes de liberar los recursos. El resultado se persiste al terminar la instancia, no al crear la tarea de archivo.
+El rechazo se asigna al completar el evento "Rechazo", por lo que la variable ya está disponible mientras "Archivar solicitud" está pendiente. La falta de respuesta se asigna al tomar el flujo "Sí" de "¿Se enviaron 2 recordatorios?". La finalización normal se asigna al entrar al fin del proceso, después de "Enviar informe" y de las compensaciones. El resultado se persiste al terminar la instancia, no al crear la tarea de archivo.
 
 El listener está configurado a nivel proceso, dentro de `<process>` y antes del primer elemento. Para que pueda escribir los resultados hay que aplicar la migración (`make db-migrate`):
 
@@ -222,7 +222,7 @@ Dónde se define `resultado` en cada camino:
 
 ## Unión asíncrona de "Preparar curso"
 
-La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Prepara materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
+La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Preparar materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
 
 ## Acceso de las empresas (escenario 10)
 

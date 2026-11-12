@@ -157,7 +157,7 @@
       </extensionElements>
       <startEvent id="sid-C58276F7-2D24-45DB-B7DA-8FB3C5FE7050" flowable:formFieldValidation="true"></startEvent>
       <parallelGateway id="sid-6236FDAA-5819-426B-BC14-0B157140A03E" name="Preparación en paralelo"></parallelGateway>
-      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Prepara materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
+      <userTask id="sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB" name="Preparar materiales" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true"></userTask>
       <userTask id="sid-F3381B5B-C506-4AC2-A09D-747447EFB31B" name="Evaluar Recursos" flowable:candidateGroups="Administracion" flowable:formFieldValidation="true">
         <extensionElements>
           <flowable:formProperty id="aulaFisica" name="Requiere aula presencial" type="boolean"></flowable:formProperty>
@@ -225,7 +225,7 @@
         <intermediateThrowEvent id="sid-31835240-F72D-4525-9FCE-6428CE669ED3" name="Liberar Aula">
           <compensateEventDefinition activityRef="sid-065649F8-9F01-4C34-B290-C37474CC479D"></compensateEventDefinition>
         </intermediateThrowEvent>
-        <intermediateThrowEvent id="sid-CE2ED1CB-BB53-499C-AB58-347BB0FA0C80" name="Liverar Aula Virtual">
+        <intermediateThrowEvent id="sid-CE2ED1CB-BB53-499C-AB58-347BB0FA0C80" name="Liberar Aula Virtual">
           <compensateEventDefinition activityRef="sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB"></compensateEventDefinition>
         </intermediateThrowEvent>
         <sequenceFlow id="sid-08271985-A006-46DC-820A-3A8BD93CEB20" sourceRef="sid-3329D761-38E5-49B6-99FE-711F82A01284" targetRef="sid-2FCA85E9-D3B7-4DBB-9C3A-83CBA2BAA625"></sequenceFlow>
@@ -352,19 +352,11 @@
     <sequenceFlow id="sid-AF02A812-7E6F-41A7-A6FC-75B5199D3722" sourceRef="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" targetRef="sid-E8F551D6-A49F-44CF-82E5-69F2EF55DBB3"></sequenceFlow>
     <sequenceFlow id="sid-E46D48BB-6457-48A1-8782-E6AE62B2FB8D" sourceRef="sid-AE90424C-2654-4C64-909C-BD085A34654C" targetRef="sid-714497F0-B842-4DC0-8BE6-AFBDC8CB9F73"></sequenceFlow>
     <sequenceFlow id="sid-4D9A4D7F-AD32-4A04-BF08-184CE4F56D50" sourceRef="sid-1F2A59D8-79CE-4E8B-88FF-9FDF0B2CF6EB" targetRef="sid-8E7F098B-B495-4B18-9D81-09D9B338C643"></sequenceFlow>
-    <sequenceFlow id="sid-748C8A20-2795-4083-8BFA-E3CE09B3AB95" sourceRef="sid-2EDEE778-CCB8-4D86-B10B-F0CA6DE47860" targetRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62">
-      <extensionElements>
-        <flowable:executionListener expression="${execution.setVariable('resultado', 'rechazado')}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
+    <sequenceFlow id="sid-748C8A20-2795-4083-8BFA-E3CE09B3AB95" sourceRef="sid-2EDEE778-CCB8-4D86-B10B-F0CA6DE47860" targetRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62"></sequenceFlow>
     <sequenceFlow id="sid-AAC9E3A3-D01B-459D-A391-B785FD8FC5EF" sourceRef="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3" targetRef="sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF"></sequenceFlow>
     <sequenceFlow id="sid-E7B9DFA2-6CA0-4872-878C-B24BB73AF76C" sourceRef="sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1" targetRef="sid-2DBA8D2D-BCDA-4492-950F-3FEE9B0959BA"></sequenceFlow>
     <sequenceFlow id="sid-37F3E62A-45C9-43DD-925D-DBC4C603DF5A" sourceRef="sid-4D6E40C0-BF7F-46C4-AF01-7D3B3F96589A" targetRef="sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85"></sequenceFlow>
-    <sequenceFlow id="sid-74237920-0988-4552-A34F-AB4A19332A3F" sourceRef="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" targetRef="sid-88F847B3-5FE2-4251-A612-120F9DD46CA9">
-      <extensionElements>
-        <flowable:executionListener expression="${execution.setVariable('resultado', 'finalizado')}"></flowable:executionListener>
-      </extensionElements>
-    </sequenceFlow>
+    <sequenceFlow id="sid-74237920-0988-4552-A34F-AB4A19332A3F" sourceRef="sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63" targetRef="sid-88F847B3-5FE2-4251-A612-120F9DD46CA9"></sequenceFlow>
     <sequenceFlow id="sid-DCB76746-BEC2-4D4E-B75D-D7EF8464635C" sourceRef="sid-DA4178CD-28E4-4E74-A085-B6D7BE829D62" targetRef="sid-4AE2563B-27A7-4FE6-8F56-F852E09E7AD5"></sequenceFlow>
     <sequenceFlow id="sid-3BDFD0AF-EB4E-423D-A25D-4C74585AA585" sourceRef="sid-C279BA20-BEB4-4850-B878-FAC01445ABE0" targetRef="sid-9CF3938A-D55A-46D1-A063-DD4464916986"></sequenceFlow>
     <sequenceFlow id="sid-F31FAA7A-FFC1-4AB5-B435-1E320FE82A40" sourceRef="sid-BCDCCC94-87B1-4A9C-AA42-860B0CB20553" targetRef="sid-78883D13-C7C2-49D2-BE16-8D4D46141AD3"></sequenceFlow>
