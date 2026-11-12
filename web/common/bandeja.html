@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bandeja de tareas</title>
+  <!-- Por ahora usa los estilos de Administración (tarjetas, avisos y botones) -->
+  <link rel="stylesheet" href="../administration/css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Bandeja de tareas</h1>
+    <p id="sesion" hidden></p>
+    <p><button type="button" id="cerrar-sesion" class="boton boton-secundario" hidden>Cerrar sesión</button></p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Tareas asignadas al usuario de la sesión -->
+    <section id="bloque-mias" class="bloque" aria-labelledby="titulo-mias" hidden>
+      <h2 id="titulo-mias">Mis tareas</h2>
+      <p id="vacio-mias" hidden>No tenés tareas asignadas.</p>
+      <div id="lista-mias" class="tarjetas"></div>
+    </section>
+
+    <!-- Tareas sin asignar de los grupos del usuario: se toman con "Tomar" -->
+    <section id="bloque-grupo" class="bloque" aria-labelledby="titulo-grupo" hidden>
+      <h2 id="titulo-grupo">Del grupo</h2>
+      <p id="vacio-grupo" hidden>No hay tareas del grupo para tomar.</p>
+      <div id="lista-grupo" class="tarjetas"></div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/bandeja.js"></script>
+
+</body>
+</html>
