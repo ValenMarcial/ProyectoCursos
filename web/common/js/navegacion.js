@@ -2,23 +2,20 @@
  * Módulo navegacion.js
  *
  * Decide a dónde va el personal después del login: valida la pantalla pedida en
- * ?volver= y, si no sirve, elige un destino por defecto según sus grupos.
+ * ?volver= y, si no sirve, lo lleva a la bandeja común.
  *
  * Son funciones puras (no leen window ni el DOM), así se pueden probar con Node.
  * Las rutas son absolutas desde la raíz del sitio: valen igual con el backend
  * (:8081) que con python3 -m http.server levantado en web/.
  */
 
-import { grupoAdministracion, rutaLogin } from '../../administration/js/contrato.js';
+import { rutaLogin } from '../../administration/js/contrato.js';
 
 /** Parámetro de la URL del login con la pantalla a la que hay que volver. */
 export const parametroVolver = 'volver';
 
-/** Menú de Administración: destino por defecto del grupo Administracion. */
-export const rutaAdministracion = '/administration/index.html';
-
-/** Portada del sitio: destino por defecto de cualquier otro usuario. */
-export const rutaPortada = '/index.html';
+/** Bandeja común del personal: destino por defecto después del login, para cualquier grupo. */
+export const rutaBandeja = '/common/bandeja.html';
 
 // Caracteres de control (incluye tab y salto de línea). El parser de URL los
 // descarta en silencio, así que "/\t/otro.sitio" terminaría siendo "//otro.sitio".
@@ -52,22 +49,13 @@ export function rutaVolverSegura(volver, origen) {
 }
 
 /**
- * Elige el destino por defecto según los grupos del usuario.
- * Recibe: la lista de grupos de la sesión (puede faltar).
- * Devuelve: la ruta del menú de Administración o, para cualquier otro grupo, la portada.
- */
-export function destinoPorDefecto(grupos) {
-  return Array.isArray(grupos) && grupos.includes(grupoAdministracion) ? rutaAdministracion : rutaPortada;
-}
-
-/**
  * Elige a dónde ir después del login: la pantalla pedida si es segura y, si no,
- * el destino por defecto.
- * Recibe: el valor de ?volver=, los grupos del usuario y el origen del sitio.
+ * la bandeja común (sirve para cualquier grupo: muestra las tareas de cada uno).
+ * Recibe: el valor de ?volver= y el origen del sitio.
  * Devuelve: la ruta destino.
  */
-export function elegirDestino(volver, grupos, origen) {
-  return rutaVolverSegura(volver, origen) ?? destinoPorDefecto(grupos);
+export function elegirDestino(volver, origen) {
+  return rutaVolverSegura(volver, origen) ?? rutaBandeja;
 }
 
 /**
