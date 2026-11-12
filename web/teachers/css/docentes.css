@@ -1,0 +1,162 @@
+/*
+ * Estilos de las pantallas del equipo docente.
+ *
+ * Reutiliza los de Administración (que a su vez importan la base común) para que
+ * avisos, botones, tarjetas y datos se vean igual en todo el sitio. Cuando esos
+ * estilos pasen a web/common, solo cambia este @import.
+ *
+ * El enunciado (1.4) pide que el jefe docente defina el docente "mediante la
+ * aplicación móvil": estas pantallas se piensan primero para el celular, con
+ * objetivos táctiles de al menos 44 px.
+ */
+@import url("../../administration/css/administracion.css");
+
+/* Marca de modo simulado, discreta pero siempre visible arriba. */
+.modo-simulado {
+  margin: 0 0 1rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px dashed var(--borde);
+  border-radius: 8px;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* Administración solo estiliza input y textarea; el selector del modo simulado se ve igual. */
+.campo select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.6rem;
+  background: var(--fondo);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  font: inherit;
+  color-scheme: light dark;
+}
+
+.sesion {
+  margin: 0.5rem 0 0;
+  color: var(--texto-suave);
+}
+
+/* Bandeja: una tarjeta por tarea, en una sola columna en el celular. */
+.bandeja {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bandeja .tarjeta p {
+  flex: none;
+  margin: 0 0 0.75rem;
+}
+
+.bandeja .detalle-tarea {
+  color: var(--texto);
+}
+
+/* Opciones de docente: cada una ocupa todo el ancho y se toca fácil con el dedo. */
+.opciones-docente {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.opciones-docente legend {
+  padding: 0;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+
+.opciones-docente p {
+  margin: 0 0 0.25rem;
+  color: var(--texto-suave);
+}
+
+.opcion-docente {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.6rem 0.9rem;
+  background: var(--fondo);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.opcion-docente input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--acento);
+}
+
+.opcion-docente:has(input:checked) {
+  border-color: var(--acento);
+  box-shadow: 0 0 0 1px var(--acento);
+}
+
+.opcion-docente:has(input:focus-visible) {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.opcion-docente .usuario {
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+.opciones-docente-error .opcion-docente {
+  border-color: var(--texto);
+}
+
+/* Confirmación en la misma pantalla antes de una acción que no se deshace. */
+.confirmacion {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.confirmacion p {
+  margin: 0;
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.boton {
+  min-height: 44px;
+}
+
+/* En el celular los botones ocupan todo el ancho, más fáciles de tocar. */
+@media (max-width: 480px) {
+  .cabecera {
+    padding: 1.5rem 1rem 1rem;
+  }
+
+  .cabecera h1 {
+    font-size: 1.6rem;
+  }
+
+  .contenedor {
+    padding: 0 1rem 1.5rem;
+  }
+
+  .formulario .boton,
+  .acciones .boton,
+  .bandeja .boton,
+  .tarjeta > .boton {
+    width: 100%;
+    text-align: center;
+  }
+}
