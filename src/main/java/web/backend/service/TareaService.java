@@ -34,7 +34,8 @@ public class TareaService {
      * Variables de la instancia que puede leer la web (lista cerrada). Las que solo usan el
      * motor y los listeners (solicitudId, empresaId, cursoId, isViable, amountCursos,
      * recordatoriosEnviados, plazoRecordatorio, docenteSeleccionado, aulaAsignada, cancelada)
-     * quedan afuera. Es una sola lista para todo el proceso: no distingue por tarea.
+     * quedan afuera. docenteSeleccionado se puede escribir (ver VARIABLES_ESCRITURA) pero NO
+     * leer: ninguna pantalla la muestra. Es una sola lista para todo el proceso: no distingue por tarea.
      */
     static final Set<String> VARIABLES_LECTURA = Set.of(
             // Solicitud de la empresa.
@@ -61,7 +62,10 @@ public class TareaService {
      * Variables que la web puede escribir al completar, con su tipo de Flowable (lista cerrada,
      * igual a tiposVariables de contrato.js). Los tipos van fijos porque los listeners castean
      * (presupuesto a Long, las fechas a Date). Quedan afuera las que setean el motor o los
-     * listeners (resultado, docenteSeleccionado, aulaAsignada, isViable, cancelada, motivoCierre).
+     * listeners (resultado, aulaAsignada, isViable, cancelada, motivoCierre).
+     * docenteSeleccionado es el id de usuario de Flowable (por ejemplo "docente2", no el nombre)
+     * que elige el jefe de equipo en "Definir Docente"; acá solo se exige que sea texto, y que el
+     * usuario exista en el grupo Docentes lo valida el listener ValidateSelectedTeacher del motor.
      * Limitación: es una sola lista para todo el proceso, no por tarea; una tarea podría recibir
      * una variable que es de otra. El motor sigue validando cada formulario con sus listeners.
      */
@@ -77,7 +81,9 @@ public class TareaService {
             "equipamiento", TIPO_BOOLEANO,
             // Lista definitiva e informe (nombres pendientes de acordar).
             "listaDefinitiva", TIPO_TEXTO,
-            "informeResultados", TIPO_TEXTO);
+            "informeResultados", TIPO_TEXTO,
+            // Definir Docente: id de usuario del docente elegido.
+            "docenteSeleccionado", TIPO_TEXTO);
 
     private final FlowableTareaClient flowable;
 

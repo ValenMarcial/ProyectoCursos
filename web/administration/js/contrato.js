@@ -143,6 +143,8 @@ export const variables = {
   equipamiento: 'equipamiento',
   listaDefinitiva: 'listaDefinitiva', // PENDIENTE: nombre a acordar
   informeResultados: 'informeResultados', // PENDIENTE: nombre a acordar
+  // Id de usuario de Flowable del docente que elige el jefe en "Definir Docente".
+  docenteSeleccionado: 'docenteSeleccionado',
 };
 
 /**
@@ -160,6 +162,7 @@ export const tiposVariables = {
   [variables.equipamiento]: 'boolean',
   [variables.listaDefinitiva]: 'string',
   [variables.informeResultados]: 'string',
+  [variables.docenteSeleccionado]: 'string',
 };
 
 /**

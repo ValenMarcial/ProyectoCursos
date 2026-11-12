@@ -327,6 +327,7 @@ function completar(id, item, nuevas = []) {
   }
 
   // Registrar y Evaluar Recursos son las tareas de estas pantallas con validación en el BPMN.
+  // ValidateSelectedTeacher (Definir Docente) no se simula: el mock no tiene tareas de Docentes.
   let rechazo = null;
   if (item.taskDefinitionKey === tareas.registrarPropuesta) rechazo = validarPropuesta(nuevas);
   if (item.taskDefinitionKey === tareas.evaluarRecursos) rechazo = validarRecursos(nuevas);
