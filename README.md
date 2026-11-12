@@ -152,6 +152,12 @@ mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
 mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-import"
 ```
 
+La seed se conecta a `jdbc:postgresql://localhost:5432/Institucion` con `UserPostgres` y `Password`. Si tu Postgres está en otro puerto o tiene otras credenciales, usá las mismas variables que la app de materiales:
+
+```bash
+MOTOR_DB_URL=jdbc:postgresql://localhost:5433/Institucion MOTOR_DB_USER=UserPostgres MOTOR_DB_PASSWORD=... make seed
+```
+
 Usar `--no-seed` y `--no-import` juntos es un error: `Main` muestra el uso y termina con código de salida distinto de cero, porque no habría nada para hacer. Un argumento desconocido también produce un error. Aun con `--no-seed` se crea el motor IDM y se conecta a `Institucion`.
 
 También podés compilar y ejecutar en un solo comando, una vez que `make dev-up` haya terminado y Flowable esté listo: `mvn compile exec:java -Dexec.mainClass=flowable.seed.Main`. `Main` conecta con `Institucion` y ejecuta `FlowableSeed`, que crea los usuarios con IDs del `1` al `10`, los grupos `Admin`, `Administracion` y `Docentes`, y sus membresías. Los datos se guardan en las tablas de identidad de Flowable, no en una tabla propia de usuarios.
