@@ -41,6 +41,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class ProjectCoursesProcessDeploymentTest {
+    private static final String PREPARAR_CURSO = "sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF";
+    private static final String EVALUAR_RECURSOS = "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B";
+    private static final String RESERVAR_AULA = "sid-065649F8-9F01-4C34-B290-C37474CC479D";
+    private static final String AULA_VIRTUAL = "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB";
+    private static final String EQUIPAMIENTO = "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790";
+    private static final String LIBERAR_AULA = "sid-CF527638-CD0A-48BF-9EF6-DDB557838793";
+    private static final String LIBERAR_AULA_VIRTUAL = "sid-892710F9-B2AE-4002-82D0-131829D8FA29";
+    private static final String LIBERAR_EQUIPAMIENTO = "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E";
+
     private ProcessEngine engine;
 
     @BeforeEach
@@ -206,16 +215,16 @@ class ProjectCoursesProcessDeploymentTest {
                 .processDefinitionKey("process-proyecto-curso")
                 .singleResult();
         BpmnModel model = engine.getRepositoryService().getBpmnModel(processDefinition.getId());
-        SubProcess prepararCurso = (SubProcess) model.getMainProcess().getFlowElement("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+        SubProcess prepararCurso = (SubProcess) model.getMainProcess().getFlowElement(PREPARAR_CURSO);
 
         assertCandidateGroup(prepararCurso, "sid-67285B9F-672D-4038-A765-E67245B387D1");
         assertCandidateGroup(prepararCurso, "sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB");
-        assertCandidateGroup(prepararCurso, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B");
-        assertCandidateGroup(prepararCurso, "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
-        assertCandidateGroup(prepararCurso, "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
+        assertCandidateGroup(prepararCurso, EVALUAR_RECURSOS);
+        assertCandidateGroup(prepararCurso, AULA_VIRTUAL);
+        assertCandidateGroup(prepararCurso, EQUIPAMIENTO);
 
         ScriptTask liberarEquipamiento = (ScriptTask) prepararCurso
-                .getFlowElement("sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+                .getFlowElement(LIBERAR_EQUIPAMIENTO);
         assertTrue(liberarEquipamiento.isForCompensation());
         assertEquals("println \"Equipamiento Liberado: \" + execution.processInstanceId",
                 liberarEquipamiento.getScript());
@@ -269,7 +278,7 @@ class ProjectCoursesProcessDeploymentTest {
     void configuraLasCondicionesDelGatewayDeRecursos() {
         SubProcess prepararCurso = getPrepararCurso();
         UserTask evaluarRecursos = (UserTask) prepararCurso
-                .getFlowElement("sid-F3381B5B-C506-4AC2-A09D-747447EFB31B");
+                .getFlowElement(EVALUAR_RECURSOS);
 
         assertEquals(1, evaluarRecursos.getTaskListeners().size());
         assertEquals("complete", evaluarRecursos.getTaskListeners().get(0).getEvent());
@@ -292,9 +301,9 @@ class ProjectCoursesProcessDeploymentTest {
         void conectaLasTareasDeAulaConSusDelegates() {
         SubProcess prepararCurso = getPrepararCurso();
 
-        assertServiceTaskClass(prepararCurso, "sid-065649F8-9F01-4C34-B290-C37474CC479D",
+        assertServiceTaskClass(prepararCurso, RESERVAR_AULA,
             "flowable.classroom.ReserveClassroom");
-        assertServiceTaskClass(prepararCurso, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793",
+        assertServiceTaskClass(prepararCurso, LIBERAR_AULA,
             "flowable.classroom.ReleaseClassroom");
         }
 
@@ -304,28 +313,28 @@ class ProjectCoursesProcessDeploymentTest {
             BpmnModel model = getProcessModel();
 
             assertCompensationAssociation(prepararCurso, "sid-6EF58547-6206-4065-BC46-BDE7A86300E7",
-                "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+                LIBERAR_AULA);
         assertCompensationAssociation(prepararCurso, "sid-79D40E03-33A5-476E-AC89-3F44F73680A0",
-            "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
+            LIBERAR_AULA_VIRTUAL);
         assertCompensationAssociation(prepararCurso, "sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619",
-            "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+            LIBERAR_EQUIPAMIENTO);
 
-        assertCompensationTask(prepararCurso, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
-        assertCompensationTask(prepararCurso, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
-        assertCompensationTask(prepararCurso, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        assertCompensationTask(prepararCurso, LIBERAR_AULA);
+        assertCompensationTask(prepararCurso, LIBERAR_AULA_VIRTUAL);
+        assertCompensationTask(prepararCurso, LIBERAR_EQUIPAMIENTO);
 
         assertCompensationActivityRef(prepararCurso, "sid-31835240-F72D-4525-9FCE-6428CE669ED3",
-                "sid-065649F8-9F01-4C34-B290-C37474CC479D");
+                RESERVAR_AULA);
         assertCompensationActivityRef(prepararCurso, "sid-CE2ED1CB-BB53-499C-AB58-347BB0FA0C80",
-                "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
+                AULA_VIRTUAL);
         assertCompensationActivityRef(prepararCurso, "sid-3329D761-38E5-49B6-99FE-711F82A01284",
-                "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
+                EQUIPAMIENTO);
         assertCompensationActivityRef(model.getMainProcess(), "sid-88F847B3-5FE2-4251-A612-120F9DD46CA9",
-                "sid-065649F8-9F01-4C34-B290-C37474CC479D");
+                RESERVAR_AULA);
         assertCompensationActivityRef(model.getMainProcess(), "sid-CAF881B2-93D6-479B-9C01-806B1059E125",
-                "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
+                AULA_VIRTUAL);
         assertCompensationActivityRef(model.getMainProcess(), "sid-98B02508-C619-4111-AA31-8FC54D5F85B2",
-                "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
+                EQUIPAMIENTO);
         }
 
     @Test
@@ -339,14 +348,14 @@ class ProjectCoursesProcessDeploymentTest {
         ScriptTask notificarCierre = (ScriptTask) model.getMainProcess()
                 .getFlowElement("sid-5F2866C1-0E11-4CC6-BD34-2875F370E0D1");
 
-        assertEquals("sid-065649F8-9F01-4C34-B290-C37474CC479D", capturaEnReserva.getAttachedToRefId());
+        assertEquals(RESERVAR_AULA, capturaEnReserva.getAttachedToRefId());
         assertEquals("errorSIN_AULAS", errorDefinition(capturaEnReserva).getErrorCode());
         assertCompensationActivityRef(prepararCurso, "sid-1B42D920-0C4F-482C-9C3B-99E980DF50F1",
-                "sid-065649F8-9F01-4C34-B290-C37474CC479D");
+                RESERVAR_AULA);
         assertCompensationActivityRef(prepararCurso, "sid-AD35AD31-1F32-478B-BEBE-CA591851B965",
-                "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB");
+                AULA_VIRTUAL);
         assertCompensationActivityRef(prepararCurso, "sid-3215FB81-B8CC-4C88-B29E-7E3B40FB7A4E",
-                "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");
+                EQUIPAMIENTO);
         assertTrue(finSinAulas.getEventDefinitions().stream().anyMatch(TerminateEventDefinition.class::isInstance));
         assertEquals(2, finSinAulas.getExecutionListeners().size());
         assertTrue(finSinAulas.getExecutionListeners().stream().anyMatch(listener ->
@@ -389,7 +398,7 @@ class ProjectCoursesProcessDeploymentTest {
 
         Task evaluarRecursos = engine.getTaskService().createTaskQuery()
                 .processInstanceId(tercera)
-                .taskDefinitionKey("sid-F3381B5B-C506-4AC2-A09D-747447EFB31B")
+                .taskDefinitionKey(EVALUAR_RECURSOS)
                 .singleResult();
         engine.getTaskService().complete(evaluarRecursos.getId(), Map.of(
                 "aulaFisica", true,
@@ -426,7 +435,7 @@ class ProjectCoursesProcessDeploymentTest {
                 .count());
         assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
                 .processInstanceId(tercera)
-                .activityId("sid-CF527638-CD0A-48BF-9EF6-DDB557838793")
+                .activityId(LIBERAR_AULA)
                 .count());
     }
 
@@ -437,28 +446,28 @@ class ProjectCoursesProcessDeploymentTest {
         enviarCancelacion(instancia);
 
         assertCierreCancelado(instancia);
-        assertNoHistoricActivity(instancia, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
-        assertNoHistoricActivity(instancia, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
-        assertNoHistoricActivity(instancia, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        assertNoHistoricActivity(instancia, LIBERAR_AULA);
+        assertNoHistoricActivity(instancia, LIBERAR_AULA_VIRTUAL);
+        assertNoHistoricActivity(instancia, LIBERAR_EQUIPAMIENTO);
     }
 
     @Test
     void cancelaPreparacionYCompensaLosRecursosReservados() {
         String instancia = iniciarPreparacion();
-        completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+        completarTarea(instancia, EVALUAR_RECURSOS, Map.of(
                 "aulaFisica", true, "aulaVirtual", true, "equipamiento", true));
         assertEquals("Aula 1", engine.getRuntimeService().getVariable(instancia, "aulaAsignada"));
-        completarTarea(instancia, "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB", Map.of());
-        completarTarea(instancia, "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790", Map.of());
+        completarTarea(instancia, AULA_VIRTUAL, Map.of());
+        completarTarea(instancia, EQUIPAMIENTO, Map.of());
 
         enviarCancelacion(instancia);
 
         assertCierreCancelado(instancia);
-        assertHistoricActivity(instancia, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
-        assertHistoricActivity(instancia, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
-        assertHistoricActivity(instancia, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        assertHistoricActivity(instancia, LIBERAR_AULA);
+        assertHistoricActivity(instancia, LIBERAR_AULA_VIRTUAL);
+        assertHistoricActivity(instancia, LIBERAR_EQUIPAMIENTO);
         String siguiente = iniciarPreparacion();
-        completarTarea(siguiente, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+        completarTarea(siguiente, EVALUAR_RECURSOS, Map.of(
                 "aulaFisica", true, "aulaVirtual", false, "equipamiento", false));
         assertEquals("Aula 1", engine.getRuntimeService().getVariable(siguiente, "aulaAsignada"));
     }
@@ -466,7 +475,7 @@ class ProjectCoursesProcessDeploymentTest {
     @Test
     void cancelaConUnaSolaReservaYLiberaSoloEsa() {
         String instancia = iniciarPreparacion();
-        completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+        completarTarea(instancia, EVALUAR_RECURSOS, Map.of(
                 "aulaFisica", true,
                 "aulaVirtual", false,
                 "equipamiento", false));
@@ -475,15 +484,15 @@ class ProjectCoursesProcessDeploymentTest {
         enviarCancelacion(instancia);
 
         assertCierreCancelado(instancia);
-        assertHistoricActivity(instancia, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
-        assertNoHistoricActivity(instancia, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
-        assertNoHistoricActivity(instancia, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+        assertHistoricActivity(instancia, LIBERAR_AULA);
+        assertNoHistoricActivity(instancia, LIBERAR_AULA_VIRTUAL);
+        assertNoHistoricActivity(instancia, LIBERAR_EQUIPAMIENTO);
     }
 
     @Test
     void preparacionNormalContinuaHastaDefinirDocente() {
         String instancia = iniciarPreparacion();
-        completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+        completarTarea(instancia, EVALUAR_RECURSOS, Map.of(
                 "aulaFisica", true, "aulaVirtual", false, "equipamiento", false));
         completarTarea(instancia, "sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB", Map.of());
         String nomina = engine.getRuntimeService().createExecutionQuery().processInstanceId(instancia)
@@ -509,7 +518,7 @@ class ProjectCoursesProcessDeploymentTest {
 
     private String iniciarPreparacion() {
         String instancia = iniciarSolicitud();
-                moverDesdeRegistro(instancia, "sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+                moverDesdeRegistro(instancia, PREPARAR_CURSO);
                 return instancia;
         }
 
@@ -615,7 +624,7 @@ class ProjectCoursesProcessDeploymentTest {
 
         private SubProcess getPrepararCurso() {
         return (SubProcess) getProcessModel().getMainProcess()
-                .getFlowElement("sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF");
+                .getFlowElement(PREPARAR_CURSO);
         }
 
         private BpmnModel getProcessModel() {
