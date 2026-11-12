@@ -114,6 +114,9 @@ function crearDatosIniciales() {
       // tarea queda sin assignee y con Administracion como candidato. Va última para
       // que la pantalla siga abriendo por defecto la tarea asignada.
       tarea('tarea-lista-sin-asignar', 'Confeccionar lista definitiva', tareas.confeccionarLista, 'instancia-8', null, administracion, 8),
+      // Evaluar Recursos ya reclamada por la sesión: la pantalla muestra el formulario
+      // sin pedir que se tome. Va última para no cambiar la tarea que se abre por defecto.
+      tarea('tarea-evaluar-propia', 'Evaluar Recursos', tareas.evaluarRecursos, 'instancia-9', usuarioSimulado, administracion, 9),
     ],
     instancias: {
       'instancia-1': [...solicitud],
@@ -124,6 +127,7 @@ function crearDatosIniciales() {
       'instancia-6': [...solicitud, ...propuesta, variable('participantes', 'string', 'Ana Pérez, Juan Gómez')],
       'instancia-7': [...solicitud, ...propuesta, variable(nombres.informeResultados, 'string', 'El curso se dictó con normalidad.')],
       'instancia-8': [...solicitud, ...propuesta, variable('participantes', 'string', 'Lucía Fernández, Pedro Ruiz')],
+      'instancia-9': [...solicitud, ...propuesta, aceptacion],
     },
   };
 }

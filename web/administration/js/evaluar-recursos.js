@@ -4,9 +4,10 @@
  * Pantalla 4, "Evaluar Recursos": muestra la propuesta aceptada, reclama la
  * tarea de grupo y registra qué recursos requiere el curso.
  *
- * El formulario aparece recién después de reclamar. Quién tiene la tarea lo
- * resuelve el propio reclamo: si ya es de esta persona, pasa; si es de otra,
- * responde 409. Abrir la página no reclama nada, para no reservar tareas sin querer.
+ * Si la tarea ya es de esta persona, el formulario aparece directo; si está sin
+ * asignar, aparece después de reclamarla. Si otra persona la reclamó en el medio,
+ * el reclamo responde 409. Abrir la página no reclama nada, para no reservar
+ * tareas sin querer.
  *
  * Toda la comunicación pasa por api.js. Los datos se muestran con textContent:
  * nunca se interpretan como HTML.
@@ -158,6 +159,18 @@ function recordarTareaEnUrl(id) {
 }
 
 /**
+ * Oculta el bloque de reclamo y muestra el formulario.
+ * Recibe: { enfocar }, true para llevar el foco a la primera casilla (después de
+ * tomar, porque el botón pulsado desaparece). No devuelve nada.
+ */
+function mostrarFormulario({ enfocar = false } = {}) {
+  recordarTareaEnUrl(tareaActual.id);
+  bloqueReclamo.hidden = true;
+  bloqueRecursos.hidden = false;
+  if (enfocar) casillas[0].focus();
+}
+
+/**
  * Reclama la tarea y, si se pudo, muestra el formulario.
  * No recibe nada. Devuelve: promesa sin valor.
  */
@@ -177,11 +190,8 @@ async function alTomar() {
     return;
   }
 
-  recordarTareaEnUrl(tareaActual.id);
-  bloqueReclamo.hidden = true;
-  bloqueRecursos.hidden = false;
-  // El botón pulsado desapareció: sin esto, el foco del teclado se perdería.
-  casillas[0].focus();
+  // El botón pulsado desapareció: sin el foco, el teclado quedaría perdido.
+  mostrarFormulario({ enfocar: true });
 }
 
 /**
@@ -274,7 +284,8 @@ function alPresionarTecla(evento) {
 }
 
 /**
- * Carga la pantalla: busca la tarea y muestra la propuesta y el botón para tomarla.
+ * Carga la pantalla: busca la tarea y muestra la propuesta y, según quién la
+ * tenga, el formulario (ya es suya) o el botón para tomarla (sin asignar).
  * No recibe nada. Devuelve: promesa sin valor.
  */
 async function iniciar() {
@@ -294,7 +305,13 @@ async function iniciar() {
 
   mostrarPropuesta(valores);
   bloquePropuesta.hidden = false;
-  bloqueReclamo.hidden = false;
+  // listarTareas solo trae las propias y las sin asignar del grupo: con asignado, es suya.
+  // Si se pasa a obtenerTarea (también trae las de compañeros), comparar con usuarioActual().
+  if (tareaActual.asignado) {
+    mostrarFormulario();
+  } else {
+    bloqueReclamo.hidden = false;
+  }
 }
 
 botonTomar.addEventListener('click', alTomar);
