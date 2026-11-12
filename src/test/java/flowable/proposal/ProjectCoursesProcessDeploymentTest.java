@@ -465,6 +465,23 @@ class ProjectCoursesProcessDeploymentTest {
     }
 
     @Test
+    void cancelaConUnaSolaReservaYLiberaSoloEsa() {
+        String instancia = iniciarPreparacion();
+        completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
+                "aulaFisica", true,
+                "aulaVirtual", false,
+                "equipamiento", false));
+        assertEquals("Aula 1", engine.getRuntimeService().getVariable(instancia, "aulaAsignada"));
+
+        enviarCancelacion(instancia);
+
+        assertCierreCancelado(instancia);
+        assertHistoricActivity(instancia, "sid-CF527638-CD0A-48BF-9EF6-DDB557838793");
+        assertNoHistoricActivity(instancia, "sid-892710F9-B2AE-4002-82D0-131829D8FA29");
+        assertNoHistoricActivity(instancia, "sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E");
+    }
+
+    @Test
     void preparacionNormalContinuaHastaDefinirDocente() {
         String instancia = iniciarPreparacion();
         completarTarea(instancia, "sid-F3381B5B-C506-4AC2-A09D-747447EFB31B", Map.of(
@@ -574,6 +591,13 @@ class ProjectCoursesProcessDeploymentTest {
                 .processInstanceId(processInstanceId)
                 .activityId(activityId)
                 .count(), "Se ejecutó la actividad BPMN " + activityId);
+    }
+
+    private void assertNoHistoricActivity(String processInstanceId, String activityId) {
+        assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
+                .processInstanceId(processInstanceId)
+                .activityId(activityId)
+                .count(), "No se ejecutó la actividad BPMN " + activityId);
     }
 
     private static ErrorEventDefinition errorDefinition(BoundaryEvent event) {
