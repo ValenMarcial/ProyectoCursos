@@ -203,10 +203,12 @@ make recorrido ESCENARIO=final           # acepta, prepara, desarrolla el curso 
 make recorrido ESCENARIO=cancelar        # acepta y cancela durante "Preparar curso"
 make recorrido ESCENARIO=rechazo         # la empresa rechaza y se archiva
 make recorrido ESCENARIO=sin-respuesta   # dos recordatorios y se archiva (~1 minuto)
+make recorrido ESCENARIO=limite          # completa hasta 5 cursos en ejecución y la solicitud siguiente no es viable (escenario 5)
+make recorrido ESCENARIO=limpiar-limite  # cancela los cursos que dejó «limite»
 make recorrido ESCENARIO=final RECURSOS=virtual FLOWABLE_USER=juan FLOWABLE_PASSWORD=Juan
 ```
 
-Al terminar muestra las actividades recorridas, el valor de `resultado` y si la instancia terminó. Si el proceso se queda en algún paso, avisa dónde. Cada corrida crea una empresa "Empresa recorrido HHMMSS"; las instancias se pueden seguir en la Admin app mientras corre. Necesita el backend y Flowable levantados y el BPMN desplegado; solo usa Python 3 sin dependencias.
+Al terminar muestra las actividades recorridas, el valor de `resultado` y si la instancia terminó. Si el proceso se queda en algún paso, avisa dónde. Cada corrida crea una empresa "Empresa recorrido HHMMSS" (`limite` crea "Empresa límite 2" a "Empresa límite 5", según cuántos cursos haya ya en ejecución, y los deja esperando en "Preparar curso" para mostrarlos en la defensa); las instancias se pueden seguir en la Admin app mientras corre. Necesita el backend y Flowable levantados y el BPMN desplegado; solo usa Python 3 sin dependencias.
 
 Cada escenario termina con su `resultado` (`finalizado`, `cancelado`, `rechazado` o `cerrado_por_falta_de_respuesta`), que `RecordProcessResult` registra en `solicitudes.resultado` y, si hay curso, en `cursos.estado`.
 

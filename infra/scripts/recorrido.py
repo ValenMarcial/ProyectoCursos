@@ -13,6 +13,8 @@ Escenarios:
     cancelar        acepta y cancela durante "Preparar curso" (libera lo conseguido)
     rechazo         la empresa rechaza la propuesta y se archiva la solicitud
     sin-respuesta   la empresa no responde: dos recordatorios y se archiva (~1 minuto)
+    limite          completa hasta 5 cursos en ejecución y muestra que la siguiente solicitud no es viable
+    limpiar-limite  cancela los cursos que dejó «limite» (los de "Empresa límite N")
 
 Variables de entorno:
     FLOWABLE_USER / FLOWABLE_PASSWORD   cuenta con acceso a la API REST (por defecto admin / test)
@@ -52,6 +54,10 @@ DEFINIR_DOCENTE = "sid-A3B3F53F-1D5E-42AA-AAC0-C69120F53E85"
 DESARROLLAR_CURSO = "sid-378C089F-415C-4EC6-B426-E2D989460B8C"
 ELABORAR_INFORME = "sid-8EE040F3-0293-488C-AE3F-3BD79DB56897"
 ENVIAR_INFORME = "sid-BA739FA3-D40A-4AFD-AD69-062B808ABF63"
+
+PROCESO = "process-proyecto-curso"
+LIMITE_CURSOS = 5          # mismo umbral que rules/viability.drl
+EMPRESA_LIMITE = "Empresa límite"
 
 ESPERA_TAREA = 30          # segundos para que aparezca una tarea que sigue en el mismo pedido
 ESPERA_TIMER = 150         # segundos para los timers (el ejecutor de Flowable revisa cada ~10 s)
@@ -151,10 +157,10 @@ def mensaje(instancia, nombre, valores=None):
     paso("mensaje " + nombre)
 
 
-def iniciar_solicitud(plazo=None):
+def iniciar_solicitud(plazo=None, empresa=None):
     sello = datetime.now().strftime("%H%M%S")
     solicitud = {
-        "empresaNombre": "Empresa recorrido " + sello,
+        "empresaNombre": empresa or "Empresa recorrido " + sello,
         "contactoNombre": "Ana Pérez",
         "contactoEmail": "ana@example.com",
         "tematica": "BPMN " + sello,
@@ -250,11 +256,56 @@ def escenario_sin_respuesta(instancia, _recursos):
     completar(instancia, ARCHIVAR_SOLICITUD, segundos=ESPERA_TIMER)
 
 
+def cursos_en_ejecucion():
+    """Instancias activas con cursoId: las que cuenta EvaluateViability (ya pasaron por "Habilitar acceso")."""
+    return api("POST", "/query/process-instances?size=100", {
+        "processDefinitionKey": PROCESO,
+        "variables": [{"name": "cursoId", "operation": "greaterThan", "value": 0, "type": "long"}],
+    })["data"]
+
+
+def variable(instancia, nombre):
+    valores = api("GET", "/runtime/process-instances/{}/variables".format(instancia))
+    return next((v["value"] for v in valores if v["name"] == nombre), None)
+
+
+def completar_cupos():
+    """Lleva solicitudes nuevas hasta "Habilitar acceso" hasta que haya LIMITE_CURSOS cursos en ejecución.
+    Se aceptan con inicio dentro de 30 días, así quedan esperando en "Preparar curso"."""
+    actuales = len(cursos_en_ejecucion())
+    print("Cursos en ejecución: {}".format(actuales))
+    for numero in range(actuales + 1, LIMITE_CURSOS + 1):
+        print("Curso {} de {}".format(numero, LIMITE_CURSOS))
+        instancia = iniciar_solicitud(empresa="{} {}".format(EMPRESA_LIMITE, numero))
+        registrar_propuesta(instancia)
+        aceptar(instancia, 30 * 24 * 3600)
+        curso = esperar(lambda: variable(instancia, "cursoId"), ESPERA_TAREA, "Habilitar acceso", instancia)
+        paso("curso {} creado".format(curso))
+    print("Cursos en ejecución: {}. Ahora una solicitud más:".format(len(cursos_en_ejecucion())))
+
+
+def escenario_limite(instancia, _recursos):
+    # Evaluar Viabilidad corre apenas inicia la solicitud: con 5 cursos va directo a "Notificar Decisión".
+    paso("esperando la decisión de viabilidad...")
+
+
+def limpiar_limite():
+    canceladas = 0
+    for instancia in cursos_en_ejecucion():
+        if (variable(instancia["id"], "empresaNombre") or "").startswith(EMPRESA_LIMITE):
+            mensaje(instancia["id"], "msgCancelacion")
+            canceladas += 1
+    print("Cursos de «limite» cancelados: {}. Cursos en ejecución: {}".format(
+        canceladas, len(cursos_en_ejecucion())))
+
+
 ESCENARIOS = {
     "final": (escenario_final, None),
     "cancelar": (escenario_cancelar, None),
     "rechazo": (escenario_rechazo, None),
     "sin-respuesta": (escenario_sin_respuesta, "PT20S"),
+    "limite": (escenario_limite, None),
+    "limpiar-limite": (None, None),
 }
 
 
@@ -298,6 +349,14 @@ def main():
 
     ejecutar, plazo = ESCENARIOS[argumentos.escenario]
     print("Escenario «{}»".format(argumentos.escenario))
+    try:
+        if argumentos.escenario == "limpiar-limite":
+            limpiar_limite()
+            return
+        if argumentos.escenario == "limite":
+            completar_cupos()
+    except Trabado as problema:
+        sys.exit("\nATENCIÓN: " + str(problema))
     instancia = iniciar_solicitud(plazo)
     try:
         ejecutar(instancia, recursos)

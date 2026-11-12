@@ -49,7 +49,7 @@ seed:
 import:
 	mvn -q compile exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
 
-# Recorrer el proceso de punta a punta por la API: make recorrido ESCENARIO=final|cancelar|rechazo|sin-respuesta
+# Recorrer el proceso de punta a punta por la API: make recorrido ESCENARIO=final|cancelar|rechazo|sin-respuesta|limite|limpiar-limite
 # Opcional: RECURSOS=fisica,virtual,equipamiento. Usa FLOWABLE_USER y FLOWABLE_PASSWORD.
 ESCENARIO ?= final
 RECURSOS ?= fisica,virtual,equipamiento
