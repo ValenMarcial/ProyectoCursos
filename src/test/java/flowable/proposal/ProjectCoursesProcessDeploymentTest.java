@@ -39,6 +39,8 @@ import org.flowable.task.api.Task;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class ProjectCoursesProcessDeploymentTest {
     private static final String PREPARAR_CURSO = "sid-9DE766AD-6C6B-4DA4-A60E-24BECC4FC4DF";
@@ -487,6 +489,39 @@ class ProjectCoursesProcessDeploymentTest {
         assertHistoricActivity(instancia, LIBERAR_AULA);
         assertNoHistoricActivity(instancia, LIBERAR_AULA_VIRTUAL);
         assertNoHistoricActivity(instancia, LIBERAR_EQUIPAMIENTO);
+    }
+
+    @ParameterizedTest(name = "física={0}, virtual={1}, equipamiento={2}")
+    @CsvSource({
+            "false, true, false",
+            "false, false, true",
+            "true, true, false",
+            "true, false, true",
+            "false, true, true"
+    })
+    void cancelaCompensaLosRecursosReservadosEnCombinacionesParciales(
+            boolean aulaFisica, boolean aulaVirtual, boolean equipamiento) {
+        String instancia = iniciarPreparacion();
+        completarTarea(instancia, EVALUAR_RECURSOS, Map.of(
+                "aulaFisica", aulaFisica,
+                "aulaVirtual", aulaVirtual,
+                "equipamiento", equipamiento));
+        if (aulaFisica) {
+            assertEquals("Aula 1", engine.getRuntimeService().getVariable(instancia, "aulaAsignada"));
+        }
+        if (aulaVirtual) {
+            completarTarea(instancia, AULA_VIRTUAL, Map.of());
+        }
+        if (equipamiento) {
+            completarTarea(instancia, EQUIPAMIENTO, Map.of());
+        }
+
+        enviarCancelacion(instancia);
+
+        assertCierreCancelado(instancia);
+        assertHistoricActivityCount(instancia, LIBERAR_AULA, aulaFisica ? 1 : 0);
+        assertHistoricActivityCount(instancia, LIBERAR_AULA_VIRTUAL, aulaVirtual ? 1 : 0);
+        assertHistoricActivityCount(instancia, LIBERAR_EQUIPAMIENTO, equipamiento ? 1 : 0);
     }
 
     @Test
