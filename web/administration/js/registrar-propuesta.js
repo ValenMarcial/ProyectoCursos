@@ -9,9 +9,11 @@
  * porque vienen de un formulario público: nunca se interpretan como HTML.
  */
 
-import { completarTarea, ErrorApi, listarTareas, obtenerVariables } from './api.js';
+import { completarTarea, obtenerVariables } from './api.js';
 import { tareas, variables } from './contrato.js';
+import { buscarTarea, mostrarDatos } from './pantalla-tarea.js';
 import { armarPdfPropuesta } from './pdf-propuesta.js';
+import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /** Variables de la solicitud que se muestran, con su etiqueta. */
 const camposSolicitud = [
@@ -27,8 +29,6 @@ const camposSolicitud = [
 
 /** Nombres de los campos que se validan, en el orden en que aparecen en el formulario. */
 const camposValidados = ['programa', 'presupuesto', 'fecha-inicio', 'fecha-fin'];
-
-const mensajeGenerico = 'Ocurrió un error inesperado. Intentá de nuevo más tarde.';
 
 const aviso = document.getElementById('aviso');
 const bloqueSolicitud = document.getElementById('bloque-solicitud');
@@ -46,69 +46,6 @@ const botonDescargar = document.getElementById('boton-descargar');
 // Se completan en iniciar() y los usa el envío del formulario.
 let tareaActual = null;
 let variablesSolicitud = {};
-
-/**
- * Muestra un aviso y lo trae a la vista.
- * Recibe: texto y tipo ('error', 'exito' o 'neutro'). No devuelve nada.
- */
-function mostrarAviso(texto, tipo) {
-  aviso.textContent = texto;
-  aviso.className = `aviso aviso-${tipo}`;
-  aviso.hidden = false;
-  aviso.scrollIntoView({ block: 'nearest' });
-}
-
-/**
- * Muestra un error atrapado, sin exponer texto técnico al usuario.
- * Recibe: el error. No devuelve nada.
- */
-function mostrarError(error) {
-  // Solo el message de un ErrorApi es apto para el usuario; el resto va a la consola.
-  console.error(error, error?.detalle ?? '');
-  mostrarAviso(error instanceof ErrorApi ? error.message : mensajeGenerico, 'error');
-}
-
-/**
- * Busca la tarea a mostrar.
- * Usa el parámetro ?tarea=<id> de la URL o, si no viene, la primera disponible.
- * No recibe nada.
- * Devuelve: promesa de { tarea } con la tarea normalizada o, si no se encontró,
- * de { tarea: null, texto, tipo } con el aviso que corresponde mostrar.
- */
-async function buscarTarea() {
-  const idPedido = new URLSearchParams(window.location.search).get('tarea');
-  // Sin filtro porque todavía no hay login: quién es el usuario lo resuelve la sesión.
-  const lista = await listarTareas();
-  const deEstaPantalla = lista.filter((tarea) => tarea.claveTarea === tareas.registrarPropuesta);
-
-  if (idPedido) {
-    const pedida = deEstaPantalla.find((tarea) => tarea.id === idPedido);
-    // Un id que no aparece es un error, aunque haya otras tareas pendientes.
-    return pedida
-      ? { tarea: pedida }
-      : { tarea: null, texto: 'Esa tarea no existe o ya fue completada.', tipo: 'error' };
-  }
-
-  return deEstaPantalla.length > 0
-    ? { tarea: deEstaPantalla[0] }
-    : { tarea: null, texto: 'No hay ninguna tarea pendiente de registrar propuesta.', tipo: 'neutro' };
-}
-
-/**
- * Dibuja los datos de la solicitud.
- * Recibe: objeto { nombreVariable: valor }. No devuelve nada.
- */
-function mostrarSolicitud(valores) {
-  datosSolicitud.replaceChildren(...camposSolicitud.flatMap(([nombre, etiqueta]) => {
-    const termino = document.createElement('dt');
-    termino.textContent = etiqueta;
-    const definicion = document.createElement('dd');
-    // Con ?? y no con ||, para que un 0 se muestre como dato.
-    const valor = valores[nombre] ?? '';
-    definicion.textContent = valor === '' ? 'No informado' : String(valor);
-    return [termino, definicion];
-  }));
-}
 
 /**
  * Lee el formulario.
@@ -230,7 +167,7 @@ function descargarPdf(pdf) {
     pdf.descargar();
   } catch (error) {
     console.error(error);
-    mostrarAviso('La propuesta quedó registrada, pero no se pudo descargar el PDF. Probá de nuevo con el botón.', 'error');
+    mostrarAviso(aviso, 'La propuesta quedó registrada, pero no se pudo descargar el PDF. Probá de nuevo con el botón.', 'error');
   }
 }
 
@@ -265,7 +202,7 @@ async function alEnviar(evento) {
   if (errores.length > 0) {
     // En este orden: enfocar desplaza la página y el aviso tiene que quedar a la vista.
     enfocarPrimerError(errores);
-    mostrarAviso(errores.map((error) => error.mensaje).join('\n'), 'error');
+    mostrarAviso(aviso, errores.map((error) => error.mensaje).join('\n'), 'error');
     return;
   }
 
@@ -286,7 +223,7 @@ async function alEnviar(evento) {
     });
   } catch (error) {
     console.error(error);
-    mostrarAviso('No se pudo preparar el PDF. La propuesta no se registró.', 'error');
+    mostrarAviso(aviso, 'No se pudo preparar el PDF. La propuesta no se registró.', 'error');
     return;
   }
 
@@ -304,7 +241,7 @@ async function alEnviar(evento) {
     // no se va a mostrar y cada reintento arma uno nuevo, así que se libera.
     pdf.liberar();
     botonCompletar.disabled = false;
-    mostrarError(error);
+    mostrarError(aviso, error);
     return;
   }
 
@@ -313,7 +250,7 @@ async function alEnviar(evento) {
   mostrarVistaPrevia(pdf);
   // El botón pulsado desapareció con el formulario: el foco pasa al título del PDF.
   tituloResultado.focus();
-  mostrarAviso('La propuesta quedó registrada. Revisá el PDF y descargalo antes de salir: no queda guardado.', 'exito');
+  mostrarAviso(aviso, 'La propuesta quedó registrada. Revisá el PDF y descargalo antes de salir: no queda guardado.', 'exito');
 }
 
 /**
@@ -322,19 +259,22 @@ async function alEnviar(evento) {
  */
 async function iniciar() {
   try {
-    const busqueda = await buscarTarea();
+    const busqueda = await buscarTarea({
+      clave: tareas.registrarPropuesta,
+      textoSinTareas: 'No hay ninguna tarea pendiente de registrar propuesta.',
+    });
     if (!busqueda.tarea) {
-      mostrarAviso(busqueda.texto, busqueda.tipo);
+      mostrarAviso(aviso, busqueda.texto, busqueda.tipo);
       return;
     }
     tareaActual = busqueda.tarea;
     variablesSolicitud = await obtenerVariables(tareaActual.instanciaId);
   } catch (error) {
-    mostrarError(error);
+    mostrarError(aviso, error);
     return;
   }
 
-  mostrarSolicitud(variablesSolicitud);
+  mostrarDatos(datosSolicitud, camposSolicitud, variablesSolicitud);
   bloqueSolicitud.hidden = false;
   bloquePropuesta.hidden = false;
 }
