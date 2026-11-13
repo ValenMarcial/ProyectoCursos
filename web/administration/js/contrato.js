@@ -14,18 +14,16 @@
  * 'mock': usa los datos simulados de mock.js.
  * 'real': llama al backend con fetch.
  *
- * Se puede cambiar por pestaña sin tocar este archivo: ?api=real (o ?api=mock)
- * en la URL de cualquier pantalla. La elección queda guardada en la pestaña
- * (sessionStorage), así no se pierde al ir del menú a una pantalla; se borra al
- * cerrar la pestaña. El modo real solo anda con la web servida por el backend
+ * Por defecto es 'real': las pantallas del personal usan el backend y piden
+ * iniciar sesión. El modo real solo anda con la web servida por el backend
  * (mismo origen que /api), no con python3 -m http.server.
  *
- * Cuándo pasar el default a 'real': cuando exista la pantalla de login (rutaLogin
- * distinto de null) y las PR de tareas del backend estén en master. Hasta
- * entonces queda en 'mock' para que se pueda trabajar en las pantallas sin
- * backend ni sesión. Ese cambio va en una PR aparte.
+ * Para trabajar sin backend, con datos simulados, se agrega ?api=mock a la URL
+ * de cualquier pantalla (y ?api=real para volver). La elección queda guardada en
+ * la pestaña (sessionStorage), así no se pierde al navegar entre pantallas; se
+ * borra al cerrar la pestaña.
  */
-export const modoApi = 'mock';
+export const modoApi = 'real';
 
 /** Parámetro de la URL que cambia el modo de la pestaña (?api=real o ?api=mock). */
 export const parametroModoApi = 'api';
