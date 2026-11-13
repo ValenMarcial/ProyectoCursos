@@ -9,6 +9,7 @@
  */
 
 import { tareas } from '../../administration/js/contrato.js';
+import { tareasDocentes } from '../../teachers/js/contrato-docentes.js';
 
 /**
  * Pantalla de cada tarea, con ruta absoluta desde la raíz del sitio.
@@ -22,6 +23,11 @@ export const pantallasPorTarea = {
   [tareas.evaluarRecursos]: '/administration/evaluar-recursos.html',
   [tareas.confeccionarLista]: '/administration/lista-definitiva.html',
   [tareas.enviarInforme]: null,
+  [tareasDocentes.definirDocente]: '/teachers/definir-docente.html',
+  [tareasDocentes.desarrollarCurso]: '/teachers/desarrollar-curso.html',
+  // El jefe del equipo docente la hace desde Flowable, adjuntando el informe en PDF
+  // (el sitio es opcional para esta tarea, enunciado 4.1.3).
+  [tareasDocentes.elaborarInforme]: null,
 };
 
 /** Parámetro con el que las pantallas reciben la tarea a abrir (?tarea=<id>). */
