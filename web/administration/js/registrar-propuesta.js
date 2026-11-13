@@ -313,7 +313,7 @@ async function alEnviar(evento) {
   mostrarVistaPrevia(pdf);
   // El botón pulsado desapareció con el formulario: el foco pasa al título del PDF.
   tituloResultado.focus();
-  mostrarAviso('La propuesta quedó registrada. Revisá el PDF y descargalo con el botón.', 'exito');
+  mostrarAviso('La propuesta quedó registrada. Revisá el PDF y descargalo antes de salir: no queda guardado.', 'exito');
 }
 
 /**
