@@ -37,6 +37,11 @@ También existen `MOTOR_DB_USER` y `MOTOR_DB_PASSWORD`.
 - **Login con Flowable** (`IdentityService.checkPassword` del mismo motor de procesos), no hay cuentas aparte.
 - **Cómo encuentra la tarea:** por su id en el BPMN (`taskDefinitionKey`, constante `CLAVE_TAREA`), así un renombre en el editor no la hace desaparecer. Si algún día se vuelve a dibujar la tarea y cambia el id, también la encuentra por el nombre "Prepara/Preparar materiales".
 - **Reclamar** exige que la tarea no tenga responsable y que el usuario pertenezca a un grupo candidato; **completar** exige que la tarea sea del usuario.
+- **`kie-api` en las dependencias:** el BPMN real tiene una tarea de reglas ("Evaluar Viabilidad", Drools). Para leer variables, reclamar o completar, el motor carga la definición del proceso y necesita las interfaces de KIE, aunque la app nunca ejecute esa tarea. Sin ellas falla con `NoClassDefFoundError: org/kie/api/runtime/rule/AgendaFilter`. La prueba `funcionaConUnProcesoQueTieneTareaDeReglas` lo verifica.
+
+## Probado contra Flowable real
+
+El 12/11/2026, con el BPMN de master desplegado y Postgres en Docker: se llevó una solicitud hasta "Preparar curso" (aceptación y nómina enviadas con el simulador), se completaron las otras ramas y "Preparar materiales" quedó como la última. Desde esta app, `empleadoAdministrativo` la vio con su empresa y temática, la reclamó y la completó; `jefeAdministrativo` dejó de verla y no pudo completarla. Flowable UI siguió el proceso solo hasta "Definir Docente" (unión asíncrona). Escenario 11 cumplido.
 
 ## Requisito en el BPMN: unión asíncrona
 
