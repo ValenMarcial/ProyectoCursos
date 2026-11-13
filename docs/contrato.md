@@ -493,6 +493,8 @@ El umbral está fijado en las reglas Drools. Para cambiarlo hay que modificar `v
 
 5. Llevar esas 5 hasta "Habilitar acceso de la empresa" (completar la propuesta y enviar `msgAceptacion` con `fechaInicio` desde el simulador). La siguiente solicitud debe tomar el camino **No** y terminar en `Notificar Decisión`.
 
+Los pasos 3 a 5 los hace `make recorrido ESCENARIO=limite`: completa hasta 5 cursos en ejecución con solicitudes aceptadas (inicio dentro de 30 días) y muestra que la siguiente termina en `Notificar Decisión` con `resultado = no_viable`. `make recorrido ESCENARIO=limpiar-limite` cancela después esos cursos.
+
 Para inspeccionar la decisión se puede consultar la variable `isViable` de la instancia desde Flowable UI o la API. La colección intermedia se sobrescribe al terminar la tarea, así que el valor observable es el booleano final.
 
 ## 9. Estado actual
