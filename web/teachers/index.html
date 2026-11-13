@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Equipo docente</title>
+  <link rel="stylesheet" href="css/docentes.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Equipo docente</h1>
+    <p>Mis tareas</p>
+    <p id="sesion" class="sesion" hidden></p>
+  </header>
+
+  <main class="contenedor">
+
+    <p id="modo-simulado" class="modo-simulado" hidden></p>
+
+    <!-- Aviso de errores, o de que no hay tareas -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- En modo simulado: cambiar de integrante para probar las vistas del jefe y de un docente -->
+    <section id="bloque-usuario-simulado" class="bloque" hidden>
+      <div class="tarjeta">
+        <form id="formulario-usuario" class="formulario">
+          <div class="campo">
+            <label for="usuario-simulado">Ver como</label>
+            <select id="usuario-simulado"></select>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- Tareas asignadas al usuario: las del jefe y las de "Desarrollar curso" -->
+    <section id="bloque-tareas" class="bloque" aria-labelledby="titulo-tareas" hidden>
+      <h2 id="titulo-tareas">Tareas pendientes</h2>
+      <ul id="lista-tareas" class="bandeja"></ul>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/index.js"></script>
+
+</body>
+</html>

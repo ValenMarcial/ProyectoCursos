@@ -66,6 +66,17 @@ Cada docente puede consultar y completar las tareas *Desarrollar curso* que teng
 
 Carpeta: `teachers/`
 
+Pantallas:
+
+- `index.html`: bandeja con las tareas docentes asignadas al usuario. Todas llegan asignadas (al jefe por el BPMN, o al docente elegido), así que no se reclaman.
+- `definir-docente.html`: el jefe elige uno de los tres integrantes (`jefeDeEquipo`, `docente1`, `docente2`) y completa la tarea con `docenteSeleccionado`. Está pensada para el celular: el enunciado (1.4) pide hacerla "mediante la aplicación móvil".
+- `desarrollar-curso.html`: el docente ve el curso y registra la finalización del dictado, con confirmación en la misma pantalla.
+- *Elaborar informe de resultados* se hace desde Flowable (el sitio es opcional para esta tarea, 4.1.3): la bandeja la muestra con esa aclaración.
+
+Reutiliza el adaptador de Administración (`crearApi` de `administration/js/api.js`) y sus estilos. Lo propio está en `teachers/js/`: ids de tareas e integrantes (`contrato-docentes.js`), un mock con usuarios del grupo Docentes (`mock-docentes.js`) y funciones comunes de las pantallas (`pantalla-docentes.js`).
+
+Para probar en modo simulado: `cd web && python3 -m http.server 8000` y abrir `http://localhost:8000/teachers/index.html`. El selector "Ver como" (o `?usuario=docente1`) cambia de integrante. Con `?api=real` usa el backend.
+
 ## Cómo abrir el sitio
 
 Los archivos estáticos los sirve el backend (Spring Boot). Con `make dev-up`,
