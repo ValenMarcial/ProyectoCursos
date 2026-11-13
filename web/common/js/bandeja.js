@@ -10,12 +10,12 @@
  */
 
 import {
-  cerrarSesion, isoAFecha, listarTareas, reclamarTarea, usuarioActual,
+  cerrarSesion, isoAFecha, listarTareas, reclamarTarea,
 } from '../../administration/js/api.js';
 import { alcances, rutaLogin } from '../../administration/js/contrato.js';
 import { mostrarAviso, mostrarError, ocultarAviso } from './avisos.js';
-import { urlLogin } from './navegacion.js';
 import { enlaceDeTarea } from './pantallas.js';
+import { exigirSesion } from './sesion.js';
 
 /** Etiqueta de una tarea que todavía no tiene pantalla en el sitio. */
 const textoSinPantalla = 'Sin pantalla en el sitio: se completa desde Flowable';
@@ -184,11 +184,8 @@ function mostrarSesion(usuario) {
 async function iniciar() {
   botonCerrarSesion.addEventListener('click', salir);
   try {
-    const usuario = await usuarioActual();
-    if (!usuario) {
-      window.location.replace(urlLogin(window.location.pathname + window.location.search));
-      return;
-    }
+    const usuario = await exigirSesion();
+    if (!usuario) return;
     mostrarSesion(usuario);
   } catch (error) {
     mostrarError(aviso, error);
