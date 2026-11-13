@@ -168,6 +168,24 @@ button.boton:disabled {
   cursor: not-allowed;
 }
 
+/* Vista previa del PDF: ocupa el ancho del bloque, así no hay scroll horizontal en el celular. */
+.vista-previa-pdf {
+  display: block;
+  width: 100%;
+  height: min(75vh, 48rem);
+  min-height: 20rem;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  background: var(--superficie);
+}
+
+/* Botones de descargar y abrir: pasan a otra línea si no entran. */
+.acciones-pdf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 /*
  * Tarjeta del menú cuya pantalla todavía no existe. No lleva enlace y lo dice con
  * texto (.estado-tarjeta); el borde punteado y el fondo de la página la separan de
