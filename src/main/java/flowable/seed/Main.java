@@ -45,11 +45,13 @@ public class Main {
         // 1. Crear la configuración para conectarse al motor de identidad de Flowable.
         IdmEngineConfiguration config = IdmEngineConfiguration.createStandaloneIdmEngineConfiguration();
 
-        // 2. Indicar la conexión y las credenciales de la base Institucion.
-        config.setJdbcUrl("jdbc:postgresql://localhost:5432/Institucion");
+        // 2. Indicar la conexión y las credenciales de la base Institucion. Se pueden cambiar con
+        // MOTOR_DB_URL, MOTOR_DB_USER y MOTOR_DB_PASSWORD (los mismos nombres que la app de materiales),
+        // por ejemplo si Postgres está en otro puerto.
+        config.setJdbcUrl(System.getenv().getOrDefault("MOTOR_DB_URL", "jdbc:postgresql://localhost:5432/Institucion"));
         config.setJdbcDriver("org.postgresql.Driver");
-        config.setJdbcUsername("UserPostgres");
-        config.setJdbcPassword("Password");
+        config.setJdbcUsername(System.getenv().getOrDefault("MOTOR_DB_USER", "UserPostgres"));
+        config.setJdbcPassword(System.getenv().getOrDefault("MOTOR_DB_PASSWORD", "Password"));
 
         config.setDatabaseSchemaUpdate(IdmEngineConfiguration.DB_SCHEMA_UPDATE_TRUE);
 
