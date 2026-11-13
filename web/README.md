@@ -73,6 +73,8 @@ el sitio queda en `http://localhost:8081`.
 
 Cada cambio en `web/` requiere volver a correr `make dev-up`.
 
+Las pantallas del personal usan la API real y piden iniciar sesión. Para probarlas sin backend, con datos simulados: `cd web && python3 -m http.server 8000` y abrir `http://localhost:8000/common/bandeja.html?api=mock`. La elección queda en la pestaña hasta cerrarla; `?api=real` vuelve a la API real.
+
 Para editar más rápido se puede servir `web/` con un servidor estático en el
 puerto 3000 y abrirlo como `http://localhost:3000`. En ese caso las llamadas
 al backend necesitan URL absoluta y CORS habilitado en el controller.
