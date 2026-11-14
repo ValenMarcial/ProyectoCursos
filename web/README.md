@@ -73,9 +73,9 @@ Pantallas:
 - `desarrollar-curso.html`: el docente ve el curso y registra la finalización del dictado, con confirmación en la misma pantalla.
 - *Elaborar informe de resultados* se hace desde Flowable (el sitio es opcional para esta tarea, 4.1.3): la bandeja la muestra con esa aclaración.
 
-Reutiliza el adaptador de Administración (`crearApi` de `administration/js/api.js`) y sus estilos. Lo propio está en `teachers/js/`: ids de tareas e integrantes (`contrato-docentes.js`), un mock con usuarios del grupo Docentes (`mock-docentes.js`) y funciones comunes de las pantallas (`pantalla-docentes.js`).
+Reutiliza el adaptador de Administración (`crearApi` de `administration/js/api.js`), sus estilos y la capa común del personal: el login con `?volver=` (`common/js/sesion.js` y `navegacion.js`) y los avisos (`common/js/avisos.js`). Lo propio está en `teachers/js/`: ids de tareas e integrantes (`contrato-docentes.js`), un mock con usuarios del grupo Docentes (`mock-docentes.js`) y funciones comunes de las pantallas (`pantalla-docentes.js`).
 
-Para probar en modo simulado: `cd web && python3 -m http.server 8000` y abrir `http://localhost:8000/teachers/index.html`. El selector "Ver como" (o `?usuario=docente1`) cambia de integrante. Con `?api=real` usa el backend.
+Por defecto usa la API real: sin sesión, la bandeja manda al login común y vuelve después de ingresar. Para probar en modo simulado: `cd web && python3 -m http.server 8000` y abrir `http://localhost:8000/teachers/index.html?api=mock`. El selector "Ver como" (o `?usuario=docente1`) cambia de integrante. `?api=real` vuelve al backend.
 
 ## Cómo abrir el sitio
 

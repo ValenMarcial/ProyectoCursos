@@ -7,12 +7,12 @@
  * backend. Lo único propio es el transporte simulado, con usuarios del grupo Docentes.
  *
  * El modo se elige igual que en Administración: ?api=real o ?api=mock en la URL,
- * recordado en la pestaña, y si no, el default de contrato.js (hoy 'mock', hasta
- * que exista el login).
+ * recordado en la pestaña, y si no, el default de contrato.js ('real').
  */
 
 import { crearApi, enviarReal, ErrorApi } from '../../administration/js/api.js';
-import { claveModoApi, modoApi, parametroModoApi, rutaLogin } from '../../administration/js/contrato.js';
+import { claveModoApi, modoApi, parametroModoApi } from '../../administration/js/contrato.js';
+import { urlLogin } from '../../common/js/navegacion.js';
 import { enviarSimuladoDocentes } from './mock-docentes.js';
 
 export { ErrorApi };
@@ -44,13 +44,12 @@ function elegirModo() {
 export const modoActual = elegirModo();
 
 /**
- * Manda al login con ?volver=, como en Administración. Mientras rutaLogin sea
- * null no hace nada y la pantalla muestra el aviso de sesión vencida.
+ * Si la sesión vence en medio de una operación, manda al login común con
+ * ?volver= de la pantalla actual (urlLogin de common/js/navegacion.js).
  */
 function redirigirALogin() {
-  if (rutaLogin === null || typeof window === 'undefined') return;
-  const volver = window.location.pathname + window.location.search;
-  window.location.assign(`${rutaLogin}?${new URLSearchParams({ volver })}`);
+  if (typeof window === 'undefined') return;
+  window.location.assign(urlLogin(window.location.pathname + window.location.search));
 }
 
 export const {

@@ -9,6 +9,7 @@
  * que no se reclaman: cada tarjeta lleva directo a su pantalla.
  */
 
+import { exigirSesion } from '../../common/js/sesion.js';
 import { listarTareas, modoActual, obtenerVariables, usuarioActual } from './api-docentes.js';
 import { integrantesDocentes, parametroUsuarioSimulado, tareasDocentes } from './contrato-docentes.js';
 import {
@@ -92,16 +93,15 @@ function mostrarSelectorUsuario(usuario) {
 
 /**
  * Carga la bandeja: quién tiene la sesión y sus tareas docentes, con los datos del curso.
+ * Sin sesión va al login común con ?volver= de esta pantalla (exigirSesion).
  * No recibe nada. Devuelve: promesa sin valor.
  */
 async function iniciar() {
   marcarModoSimulado(document.getElementById('modo-simulado'));
   try {
-    const usuario = await usuarioActual();
-    if (!usuario) {
-      mostrarAviso(aviso, 'No iniciaste sesión. Ingresá con tu usuario de Flowable.', 'error');
-      return;
-    }
+    // usuarioActual de docentes: en modo simulado devuelve un integrante del grupo Docentes.
+    const usuario = await exigirSesion({ consultarUsuario: usuarioActual });
+    if (!usuario) return;
     sesion.textContent = `${usuario.nombre} (${usuario.usuario})`;
     sesion.hidden = false;
     if (modoActual === 'mock') mostrarSelectorUsuario(usuario.usuario);
