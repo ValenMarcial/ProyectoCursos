@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 
 import org.flowable.common.engine.api.FlowableException;
@@ -52,12 +54,15 @@ class ValidateCourseEndDateTest {
     void rechazaFinalizarAntesDeLaFechaDeFin() {
         String instancia = iniciar();
         Task tarea = tarea(instancia);
+        LocalDate fechaFin = LocalDate.now(ZoneOffset.UTC).plusDays(1);
 
         FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                 () -> taskService.complete(tarea.getId(), Map.of(
-                        "fechaFinPropuesta", fecha(LocalDate.now(ZoneOffset.UTC).plusDays(1)))));
+                        "fechaFinPropuesta", fecha(fechaFin))));
 
-        assertEquals("El curso no puede finalizarse antes de la fecha de fin programada.", error.getMessage());
+        assertEquals("El curso no puede finalizarse antes del "
+                + fechaFin.format(DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ROOT))
+                + " (fecha de fin programada).", error.getMessage());
         assertEquals(1, taskService.createTaskQuery().taskId(tarea.getId()).count());
     }
 

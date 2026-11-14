@@ -2,7 +2,9 @@ package flowable.course;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.Locale;
 
 import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
@@ -15,6 +17,8 @@ import org.flowable.task.service.delegate.DelegateTask;
  */
 public class ValidateCourseEndDate implements TaskListener {
     private static final long serialVersionUID = 1L;
+    private static final DateTimeFormatter FORMATO_FECHA =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ROOT);
 
     @Override
     public void notify(DelegateTask task) {
@@ -30,7 +34,8 @@ public class ValidateCourseEndDate implements TaskListener {
         LocalDate hoy = LocalDate.now(ZoneOffset.UTC);
         if (hoy.isBefore(fechaFin)) {
             throw new FlowableIllegalArgumentException(
-                    "El curso no puede finalizarse antes de la fecha de fin programada.");
+                    "El curso no puede finalizarse antes del "
+                            + fechaFin.format(FORMATO_FECHA) + " (fecha de fin programada).");
         }
     }
 }

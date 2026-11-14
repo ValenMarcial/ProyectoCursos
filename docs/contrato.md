@@ -185,7 +185,7 @@ Una vez completada, el proceso espera el timer `Fecha programada` y asigna `Desa
 La tarea `Desarrollar curso` no tiene formulario ni variables propias. Al completarla, el listener `flowable.course.ValidateCourseEndDate` exige que la fecha actual (UTC) sea igual o posterior a `fechaFinPropuesta`. Si todavía no llegó la fecha de fin, la tarea queda pendiente y Flowable devuelve un 400 con el mensaje:
 
 ```text
-El curso no puede finalizarse antes de la fecha de fin programada.
+El curso no puede finalizarse antes del 15/11/2026 (fecha de fin programada).
 ```
 
 La comparación es por día y en UTC, igual que las fechas guardadas en `cursos.fecha_fin`. Si falta `fechaFinPropuesta`, se trata como un error interno del proceso.
