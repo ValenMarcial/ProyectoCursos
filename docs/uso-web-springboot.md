@@ -204,6 +204,42 @@ curl -i -u jefeAdministrativo:JefeA \
 
 Si las tres opciones son falsas o no se envían, el listener rechaza la finalización y la tarea queda pendiente. Si la tarea no aparece, verificá que la solicitud haya sido viable, que se haya completado la propuesta y que el simulador haya enviado la aceptación a esa misma instancia.
 
+### Enviar el informe de resultados por API
+
+La tarea **Elaborar informe de resultados** se puede completar sin abrir el sitio. La instancia tiene que estar en esa tarea; si venís de los pasos anteriores, completá **Definir Docente** y esperá el timer **Fecha programada**. Para no esperar, en la propuesta usá una `fechaFinPropuesta` anterior a hoy y en la aceptación una `fechaInicio` anterior a hoy.
+
+Definí el prefijo de Flowable y el ID de la instancia:
+
+```bash
+FLOWABLE=http://127.0.0.1:8080/flowable-ui/process-api
+PROCESS_INSTANCE_ID=ID_DE_LA_INSTANCIA
+```
+
+Buscá el ID de la tarea de informe y completala con `informeResultados` y `rutaInforme`:
+
+```bash
+TASK_ID=$(curl -sS -u jefeDeEquipo:JefeD123 \
+  "$FLOWABLE/runtime/tasks?processInstanceId=$PROCESS_INSTANCE_ID&taskDefinitionKey=sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" \
+  | jq -r '.data[0].id')
+
+curl -i -u jefeDeEquipo:JefeD123 \
+  -H 'Content-Type: application/json' \
+  -X POST "$FLOWABLE/runtime/tasks/$TASK_ID" \
+  -d '{
+    "action": "complete",
+    "variables": [
+      {"name": "informeResultados", "type": "string", "value": "El curso se dictó con normalidad."},
+      {"name": "rutaInforme", "type": "string", "value": "cursos/'"$PROCESS_INSTANCE_ID"'/informe.pdf"}
+    ]
+  }'
+```
+
+La respuesta correcta es `200 OK`. `rutaInforme` debe tener la forma `cursos/<PROCESS_INSTANCE_ID>/<archivo>.pdf`; no puede salir de esa carpeta, no puede tener subcarpetas ni otra extensión, y no puede superar los 255 caracteres. El listener no verifica que el archivo exista: solo valida la ruta y la guarda en `cursos.resultados`.
+
+Si `informeResultados` falta, está vacío o solo tiene espacios, Flowable responde `400` y la tarea sigue pendiente. Si falta `rutaInforme` o la ruta no corresponde a la instancia, tiene `..`, subcarpetas, otra extensión o es demasiado larga, responde `500` y la tarea también sigue pendiente. Después de un rechazo, corregí el cuerpo y volvé a ejecutar el `POST` con el mismo `TASK_ID`.
+
+> Si no tenés `jq`, consultá la tarea con el `curl` de arriba y copiá manualmente el `id` del primer resultado.
+
 ## Consideraciones
 
 - La empresa se identifica por nombre, pero esto no autentica a quien envía la solicitud.
