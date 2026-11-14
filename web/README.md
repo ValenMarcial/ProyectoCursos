@@ -60,9 +60,9 @@ El jefe del equipo docente ingresa con sus credenciales de Flowable y puede:
 
 - Consultar sus tareas de *Definir docente para desarrollar el curso*.
 - Seleccionar uno de los tres docentes (incluido él mismo) y asignarlo a *Desarrollar curso*.
-- Elaborar el informe de resultados (opcional desde el sitio; también se puede desde la interfaz de Flowable).
+- Elaborar el informe de resultados desde el sitio: adjunta el PDF, la web extrae el texto, completa el formulario y la ruta del archivo se genera automáticamente.
 
-Cada docente puede consultar y completar las tareas *Desarrollar curso* que tenga asignadas.
+Cada docente puede consultar y completar las tareas *Desarrollar curso* que tenga asignadas. La tarea solo se puede completar desde la fecha de fin acordada.
 
 Carpeta: `teachers/`
 
@@ -71,7 +71,7 @@ Pantallas:
 - `index.html`: bandeja con las tareas docentes asignadas al usuario. Todas llegan asignadas (al jefe por el BPMN, o al docente elegido), así que no se reclaman.
 - `definir-docente.html`: el jefe elige uno de los tres integrantes (`jefeDeEquipo`, `docente1`, `docente2`) y completa la tarea con `docenteSeleccionado`. Está pensada para el celular: el enunciado (1.4) pide hacerla "mediante la aplicación móvil".
 - `desarrollar-curso.html`: el docente ve el curso y registra la finalización del dictado, con confirmación en la misma pantalla.
-- *Elaborar informe de resultados* se hace desde Flowable (el sitio es opcional para esta tarea, 4.1.3): la bandeja la muestra con esa aclaración.
+- *Elaborar informe de resultados* se completa desde el sitio: se adjunta el PDF y el backend devuelve la ruta que se envía como `rutaInforme`.
 
 Reutiliza el adaptador de Administración (`crearApi` de `administration/js/api.js`) y sus estilos. Lo propio está en `teachers/js/`: ids de tareas e integrantes (`contrato-docentes.js`), un mock con usuarios del grupo Docentes (`mock-docentes.js`) y funciones comunes de las pantallas (`pantalla-docentes.js`).
 
