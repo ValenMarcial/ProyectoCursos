@@ -260,7 +260,7 @@ La relación entre `solicitudes` e instancias de Flowable es **1:1**: cada formu
 
 La solicitud no tiene un estado de curso: su integración con Flowable se controla por separado. Los estados de `cursos` corresponden al ciclo de vida de los cursos existentes.
 
-> **Sobre `resultados`:** es un `VARCHAR(255)` y en la seed ya contiene una ruta de ejemplo. La idea es que guarde la **ruta donde se va a guardar el PDF** con el informe de resultados del curso, no el contenido del informe en sí. Podriamos mover los PDFs a un storage externo por ejemplo MinIO, ahi conviene reemplazar esa ruta por la clave o URL del objeto y agregar una columna para el **hash** que permita verificar que el archivo no se corrompió.
+> **Sobre `resultados`:** es un `VARCHAR(255)` y en la seed ya contiene una ruta de ejemplo. Guarda la **ruta relativa del PDF** con el informe de resultados, no el contenido del informe en sí. El backend usa `INFORMES_DIR=/data/informes` y `docker-compose.yml` monta `./data/informes:/data/informes`; la ruta guardada tiene la forma `cursos/<instanciaFlowableId>/<uuid>.pdf`. El texto del informe queda en la instancia de Flowable (`informeResultados`), no en la base. Si más adelante mueven los PDFs a un storage externo como MinIO, conviene reemplazar esa ruta por la clave o URL del objeto y agregar una columna para el **hash** que permita verificar que el archivo no se corrompió.
 
 ---
 
