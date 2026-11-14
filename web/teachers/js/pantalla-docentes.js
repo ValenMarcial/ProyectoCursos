@@ -1,15 +1,16 @@
 /**
  * Módulo pantalla-docentes.js
  *
- * Funciones que comparten las pantallas del equipo docente: avisos, datos del
- * curso, búsqueda de la tarea y la marca de modo simulado. Los datos se muestran
- * siempre con textContent: nunca se interpretan como HTML.
+ * Funciones que comparten las pantallas del equipo docente: datos del curso,
+ * búsqueda de la tarea y la marca de modo simulado. Los avisos son los comunes
+ * del personal (common/js/avisos.js) y se reexportan desde acá. Los datos se
+ * muestran siempre con textContent: nunca se interpretan como HTML.
  */
 
-import { ErrorApi, listarTareas, modoActual } from './api-docentes.js';
+import { listarTareas, modoActual } from './api-docentes.js';
 import { integrantesDocentes, variables } from './contrato-docentes.js';
 
-const mensajeGenerico = 'Ocurrió un error inesperado. Intentá de nuevo más tarde.';
+export { mostrarAviso, mostrarError, ocultarAviso } from '../../common/js/avisos.js';
 
 /**
  * Datos del curso que ven el jefe y el docente: variable, etiqueta y formato opcional.
@@ -58,27 +59,6 @@ function recursos(valores) {
  */
 export function nombreDocente(usuario) {
   return integrantesDocentes.find((integrante) => integrante.usuario === usuario)?.nombre ?? usuario;
-}
-
-/**
- * Muestra un aviso y lo trae a la vista.
- * Recibe: el elemento del aviso, el texto y el tipo ('error', 'exito' o 'neutro').
- */
-export function mostrarAviso(aviso, texto, tipo) {
-  aviso.textContent = texto;
-  aviso.className = `aviso aviso-${tipo}`;
-  aviso.hidden = false;
-  aviso.scrollIntoView({ block: 'nearest' });
-}
-
-/**
- * Muestra un error atrapado sin exponer texto técnico: solo el message de un
- * ErrorApi es apto para el usuario; el resto va a la consola.
- * Recibe: el elemento del aviso y el error.
- */
-export function mostrarError(aviso, error) {
-  console.error(error, error?.detalle ?? '');
-  mostrarAviso(aviso, error instanceof ErrorApi ? error.message : mensajeGenerico, 'error');
 }
 
 /**
