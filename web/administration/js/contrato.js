@@ -141,7 +141,9 @@ export const variables = {
   aulaVirtual: 'aulaVirtual',
   equipamiento: 'equipamiento',
   listaDefinitiva: 'listaDefinitiva', // PENDIENTE: nombre a acordar
-  informeResultados: 'informeResultados', // PENDIENTE: nombre a acordar
+  informeResultados: 'informeResultados',
+  // La genera la web al subir el PDF; no la escribe la persona que elabora el informe.
+  rutaInforme: 'rutaInforme',
   // Id de usuario de Flowable del docente que elige el jefe en "Definir Docente".
   docenteSeleccionado: 'docenteSeleccionado',
 };
@@ -161,6 +163,7 @@ export const tiposVariables = {
   [variables.equipamiento]: 'boolean',
   [variables.listaDefinitiva]: 'string',
   [variables.informeResultados]: 'string',
+  [variables.rutaInforme]: 'string',
   [variables.docenteSeleccionado]: 'string',
 };
 

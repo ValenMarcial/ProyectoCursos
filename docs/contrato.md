@@ -152,13 +152,15 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | `programa` | string | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa |
 | `presupuesto` | long | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa y validación no negativa |
 | `fechaInicioPosible` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa y validación de fechas |
-| `fechaFinPropuesta` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa |
+| `fechaFinPropuesta` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa, `cursos.fecha_fin` y validación de fin del dictado |
 | `plazoRecordatorio` | String (duración ISO-8601) | "Enviar propuesta" (`P5D`, si no existe) | Timer "5 días" |
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
 | `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `docenteSeleccionado` | String (ID de usuario del grupo `Docentes`) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
+| `informeResultados` | String | Formulario de "Elaborar informe de resultados"; la web lo llena con el texto extraído del PDF | Validación del informe |
+| `rutaInforme` | String (ruta relativa) | La web al subir el PDF; no la escribe la persona | `SaveReport` la guarda en `cursos.resultados` |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | `RecordProcessResult` (ver "Resultado del proceso") |
 
@@ -177,6 +179,43 @@ taskService.complete(taskId, Map.of("docenteSeleccionado", "docente2"));
 Si el ID falta, está vacío, no es un string, no existe o no pertenece a `Docentes`, se informa un error y la tarea permanece pendiente. El jefe debe corregir el valor antes de completarla. La pertenencia se verifica al completar la definición; no se vuelve a verificar si cambia el grupo del usuario después.
 
 Una vez completada, el proceso espera el timer `Fecha programada` y asigna `Desarrollar curso` al usuario guardado en `docenteSeleccionado`.
+
+## Finalización del dictado
+
+La tarea `Desarrollar curso` no tiene formulario ni variables propias. Al completarla, el listener `flowable.course.ValidateCourseEndDate` exige que la fecha actual (UTC) sea igual o posterior a `fechaFinPropuesta`. Si todavía no llegó la fecha de fin, la tarea queda pendiente y Flowable devuelve un 400 con el mensaje:
+
+```text
+El curso no puede finalizarse antes del 15/11/2026 (fecha de fin programada).
+```
+
+La comparación es por día y en UTC, igual que las fechas guardadas en `cursos.fecha_fin`. Si falta `fechaFinPropuesta`, se trata como un error interno del proceso.
+
+## Elaborar informe de resultados
+
+La tarea `Elaborar informe de resultados` tiene un solo campo visible y obligatorio:
+
+| Campo | Tipo | Quién lo llena |
+|---|---|---|
+| `informeResultados` | string | La web, con todo el texto extraído del PDF |
+
+El formulario no muestra la ruta del archivo. La ruta la genera la web/backend al subir el PDF y viaja como variable de proceso `rutaInforme`; la persona que elabora el informe no la escribe.
+
+**Flujo para la web:**
+
+1. Subir el PDF al backend.
+2. El backend lo guarda en `./data/informes/cursos/<instanciaFlowableId>/<uuid>.pdf`.
+3. El backend devuelve la ruta relativa `cursos/<instanciaFlowableId>/<uuid>.pdf`.
+4. La web extrae el texto del PDF y completa `informeResultados`.
+5. La web completa la tarea enviando `informeResultados` y `rutaInforme`.
+
+**Validación y persistencia:**
+
+- `flowable.report.ValidateReport` exige que `informeResultados` no esté vacío.
+- `flowable.report.SaveReport` exige que `rutaInforme` tenga la forma `cursos/<instanciaFlowableId>/<archivo>.pdf`, sin `..`, sin subcarpetas, con extensión `.pdf` y hasta 255 caracteres; después la guarda en `cursos.resultados` con la conexión del motor, en la misma transacción de la tarea.
+- El texto del informe queda en la instancia de Flowable; no se guarda en la base institucional.
+- La tarea está pensada para completarse desde la web. Si se completa desde Flowable UI sin subir el PDF, falta `rutaInforme` y la tarea no se completa.
+
+`cursos.resultados` sigue siendo `VARCHAR(255)`: la ruta relativa entra sin cambios de schema. El backend configura `INFORMES_DIR=/data/informes` y el `docker-compose.yml` monta `./data/informes:/data/informes`.
 
 
 ## Asignaciones directas de tareas
@@ -279,6 +318,10 @@ Cuando una clase rechaza un dato por una regla de negocio, lanza `FlowableIllega
 | `flowable.resources.ValidateResourceSelection` | Al menos un recurso elegido |
 | `flowable.proposal.CreateCourseOnAcceptance` | `fechaInicio` acordada no posterior a `fechaFinPropuesta` |
 | `flowable.assignment.ValidateSelectedTeacher` | `docenteSeleccionado` obligatorio y del grupo `Docentes` |
+| `flowable.course.ValidateCourseEndDate` | El dictado no puede finalizarse antes de `fechaFinPropuesta` |
+| `flowable.report.ValidateReport` | `informeResultados` obligatorio |
+
+`flowable.report.SaveReport` lanza `FlowableException` (500) si falta `rutaInforme`, si la ruta no corresponde a la instancia o si no tiene la forma esperada: son errores de integración de la web, no datos que la persona pueda corregir.
 
 Una clase nueva con validaciones de negocio debe seguir la misma regla. El backend reenvía el status que recibe de Flowable.
 

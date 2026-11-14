@@ -7,5 +7,6 @@
 .settings/
 .DS_Store
 /flowable-lib/
+/data/informes/
 __pycache__/
 ProyectoCursos_*.pdf

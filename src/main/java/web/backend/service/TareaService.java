@@ -47,8 +47,8 @@ public class TareaService {
             "aulaFisica", "aulaVirtual", "equipamiento",
             // Lista de participantes.
             "participantes", "listaDefinitiva",
-            // Próximas pantallas (informeResultados: nombre pendiente de acordar).
-            "observaciones", "resultado", "informeResultados",
+            // Informe: el texto lo completa la web desde el PDF y la ruta la genera la web.
+            "observaciones", "resultado", "informeResultados", "rutaInforme",
             // Cierre: código del error que cerró el curso (hoy SIN_AULAS), para mostrar el motivo.
             "motivoCierre");
 
@@ -69,21 +69,22 @@ public class TareaService {
      * Limitación: es una sola lista para todo el proceso, no por tarea; una tarea podría recibir
      * una variable que es de otra. El motor sigue validando cada formulario con sus listeners.
      */
-    static final Map<String, String> VARIABLES_ESCRITURA = Map.of(
+    static final Map<String, String> VARIABLES_ESCRITURA = Map.ofEntries(
             // Propuesta.
-            "programa", TIPO_TEXTO,
-            "presupuesto", TIPO_ENTERO_LARGO,
-            "fechaInicioPosible", TIPO_FECHA,
-            "fechaFinPropuesta", TIPO_FECHA,
+            Map.entry("programa", TIPO_TEXTO),
+            Map.entry("presupuesto", TIPO_ENTERO_LARGO),
+            Map.entry("fechaInicioPosible", TIPO_FECHA),
+            Map.entry("fechaFinPropuesta", TIPO_FECHA),
             // Recursos.
-            "aulaFisica", TIPO_BOOLEANO,
-            "aulaVirtual", TIPO_BOOLEANO,
-            "equipamiento", TIPO_BOOLEANO,
-            // Lista definitiva e informe (nombres pendientes de acordar).
-            "listaDefinitiva", TIPO_TEXTO,
-            "informeResultados", TIPO_TEXTO,
+            Map.entry("aulaFisica", TIPO_BOOLEANO),
+            Map.entry("aulaVirtual", TIPO_BOOLEANO),
+            Map.entry("equipamiento", TIPO_BOOLEANO),
+            // Lista definitiva e informe. rutaInforme la genera la web al subir el PDF.
+            Map.entry("listaDefinitiva", TIPO_TEXTO),
+            Map.entry("informeResultados", TIPO_TEXTO),
+            Map.entry("rutaInforme", TIPO_TEXTO),
             // Definir Docente: id de usuario del docente elegido.
-            "docenteSeleccionado", TIPO_TEXTO);
+            Map.entry("docenteSeleccionado", TIPO_TEXTO));
 
     private final FlowableTareaClient flowable;
 

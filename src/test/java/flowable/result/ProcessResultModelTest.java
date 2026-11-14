@@ -2,6 +2,8 @@ package flowable.result;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -15,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.ManagementService;
 import org.flowable.engine.ProcessEngine;
@@ -71,7 +75,7 @@ class ProcessResultModelTest {
         managementService = engine.getManagementService();
 
         // Mismas tablas que usa RecordProcessResult, en la base del motor como en Flowable UI.
-        sql("CREATE TABLE cursos (id BIGINT PRIMARY KEY, estado VARCHAR(40) NOT NULL)");
+        sql("CREATE TABLE cursos (id BIGINT PRIMARY KEY, estado VARCHAR(40) NOT NULL, resultados VARCHAR(255))");
         sql("CREATE TABLE solicitudes (id BIGINT PRIMARY KEY, resultado VARCHAR(40), curso_id BIGINT)");
 
         IdentityService identityService = engine.getIdentityService();
@@ -152,10 +156,63 @@ class ProcessResultModelTest {
         assertEquals("en_desarrollo", consultar("SELECT estado FROM cursos WHERE id = 50"));
         completar(instancia, DESARROLLAR_CURSO, Map.of());
         assertEquals("en_elaboracion_informe", consultar("SELECT estado FROM cursos WHERE id = 50"));
-        completar(instancia, ELABORAR_INFORME, Map.of());
+        completarInforme(instancia);
+        assertEquals("cursos/" + instancia + "/informe.pdf",
+                consultar("SELECT resultados FROM cursos WHERE id = 50"));
         completar(instancia, ENVIAR_INFORME, Map.of());
 
         assertTerminadaCon(instancia, "finalizado", 5L, 50L);
+    }
+
+    @Test
+    void noCompletaInformeAusenteVacioEnBlancoONoTexto() throws SQLException {
+        String instancia = llegarAElaborarInforme(8L, 80L);
+        String ruta = rutaInforme(instancia);
+        List<Map<String, Object>> invalidos = List.of(
+                Map.of("rutaInforme", ruta),
+                Map.of("informeResultados", "", "rutaInforme", ruta),
+                Map.of("informeResultados", "   ", "rutaInforme", ruta),
+                Map.of("informeResultados", 123, "rutaInforme", ruta),
+                Map.of("informeResultados", true, "rutaInforme", ruta));
+
+        for (Map<String, Object> variables : invalidos) {
+            FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
+                    () -> completar(instancia, ELABORAR_INFORME, variables));
+            assertEquals("El informe de resultados es obligatorio.", error.getMessage());
+            assertEquals(1, taskService.createTaskQuery().processInstanceId(instancia)
+                    .taskDefinitionKey(ELABORAR_INFORME).count());
+            assertNull(consultar("SELECT resultados FROM cursos WHERE id = 80"));
+        }
+    }
+
+    @Test
+    void noCompletaInformeSinRutaOConRutaInvalida() throws SQLException {
+        String instancia = llegarAElaborarInforme(9L, 90L);
+        List<String> rutas = List.of(
+                "",
+                "   ",
+                "cursos/otra-instancia/informe.pdf",
+                "cursos/" + instancia + "/../informe.pdf",
+                "cursos/" + instancia + "/sub/informe.pdf",
+                "cursos/" + instancia + "\\informe.pdf",
+                "cursos/" + instancia + "/informe.txt",
+                "cursos/" + instancia + "/" + "a".repeat(250) + ".pdf");
+
+        FlowableException sinRuta = assertThrows(FlowableException.class,
+                () -> completar(instancia, ELABORAR_INFORME, Map.of(
+                        "informeResultados", "El curso se dictó con normalidad.")));
+        assertTrue(sinRuta.getMessage().contains("ruta del PDF"));
+
+        for (String ruta : rutas) {
+            FlowableException error = assertThrows(FlowableException.class,
+                    () -> completar(instancia, ELABORAR_INFORME, Map.of(
+                            "informeResultados", "El curso se dictó con normalidad.",
+                            "rutaInforme", ruta)), "Debería rechazar la ruta: " + ruta);
+            assertTrue(error.getMessage().contains("ruta del PDF"), error.getMessage());
+            assertEquals(1, taskService.createTaskQuery().processInstanceId(instancia)
+                    .taskDefinitionKey(ELABORAR_INFORME).count());
+            assertNull(consultar("SELECT resultados FROM cursos WHERE id = 90"));
+        }
     }
 
     @Test
@@ -176,7 +233,7 @@ class ProcessResultModelTest {
         completar(instancia, DEFINIR_DOCENTE, Map.of("docenteSeleccionado", "docente1"));
         dispararTimer(instancia);
         completar(instancia, DESARROLLAR_CURSO, Map.of());
-        completar(instancia, ELABORAR_INFORME, Map.of());
+        completarInforme(instancia);
         for (String compensacion : List.of(LIBERAR_AULA, LIBERAR_AULA_VIRTUAL, LIBERAR_EQUIPAMIENTO)) {
             assertEquals(0, engine.getHistoryService().createHistoricActivityInstanceQuery()
                     .processInstanceId(instancia)
@@ -226,6 +283,8 @@ class ProcessResultModelTest {
         sql("INSERT INTO cursos (id, estado) VALUES (" + cursoId + ", 'en_preparacion')");
         runtimeService.setVariable(instancia, "cursoId", cursoId);
         runtimeService.setVariable(instancia, "fechaInicio", "2026-01-15T09:00:00");
+        // La fecha de fin ya pasó: "Desarrollar curso" puede completarse.
+        runtimeService.setVariable(instancia, "fechaFinPropuesta", new Date(0L));
         List<String> actuales = runtimeService.createExecutionQuery().processInstanceId(instancia).list().stream()
                 .map(Execution::getActivityId)
                 .filter(Objects::nonNull)
@@ -237,12 +296,41 @@ class ProcessResultModelTest {
         return instancia;
     }
 
+    /** Deja la instancia en "Elaborar informe de resultados", con el curso ya en ese estado. */
+    private String llegarAElaborarInforme(long solicitudId, long cursoId) {
+        String instancia = llegarAPrepararCurso(solicitudId, cursoId);
+        completar(instancia, PREPARAR_MATERIALES, Map.of());
+        runtimeService.trigger(ejecucion(instancia, RECIBIR_NOMINA), Map.of(
+                "participantes", "Ana Pérez, Juan Gómez"));
+        completar(instancia, LISTA_DEFINITIVA, Map.of());
+        completar(instancia, EVALUAR_RECURSOS, Map.of(
+                "aulaFisica", false,
+                "aulaVirtual", true,
+                "equipamiento", false));
+        completar(instancia, AULA_VIRTUAL, Map.of());
+        ejecutarJobs(instancia);
+        completar(instancia, DEFINIR_DOCENTE, Map.of("docenteSeleccionado", "docente1"));
+        dispararTimer(instancia);
+        completar(instancia, DESARROLLAR_CURSO, Map.of());
+        return instancia;
+    }
+
     private String tarea(String instancia, String clave) {
         return taskService.createTaskQuery().processInstanceId(instancia).taskDefinitionKey(clave).singleResult().getId();
     }
 
     private void completar(String instancia, String clave, Map<String, Object> variables) {
         taskService.complete(tarea(instancia, clave), variables);
+    }
+
+    private void completarInforme(String instancia) {
+        completar(instancia, ELABORAR_INFORME, Map.of(
+                "informeResultados", "El curso se dictó con normalidad.",
+                "rutaInforme", rutaInforme(instancia)));
+    }
+
+    private static String rutaInforme(String instancia) {
+        return "cursos/" + instancia + "/informe.pdf";
     }
 
     private String ejecucion(String instancia, String actividad) {

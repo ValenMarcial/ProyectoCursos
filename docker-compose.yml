@@ -74,7 +74,11 @@ services:
       FLOWABLE_REST_URL: http://flowable:8080/flowable-ui/process-api
       FLOWABLE_USER: ${FLOWABLE_USER:-admin}
       FLOWABLE_PASSWORD: ${FLOWABLE_PASSWORD:-test}
+      INFORMES_DIR: /data/informes
       TZ: UTC
+    volumes:
+      # PDFs de los informes; la ruta relativa se guarda en cursos.resultados.
+      - ./data/informes:/data/informes
     ports:
       - "127.0.0.1:8081:8081"
     networks:

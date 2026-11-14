@@ -292,6 +292,18 @@ class TareaServiceTest {
     }
 
     @Test
+    void completarInformeMandaElTextoYLaRutaAutomatica() {
+        List<CompletarTareaRequest.Variable> variables = List.of(
+                new CompletarTareaRequest.Variable("informeResultados", "string", "El curso se dictó con normalidad."),
+                new CompletarTareaRequest.Variable("rutaInforme", "string", "cursos/7420/informe.pdf"));
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeDeEquipo")));
+
+        service.completar(JEFE_DE_EQUIPO, "7501", variables);
+
+        verify(flowable).completarTarea("7501", variables);
+    }
+
+    @Test
     void completarSinVariablesMandaUnaListaVacia() {
         when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("jefeAdministrativo")));
 
@@ -335,6 +347,9 @@ class TareaServiceTest {
                 {"presupuesto", "long", 10.5},                 // long no acepta decimales
                 {"aulaFisica", "boolean", "true"},             // booleano como texto
                 {"fechaInicioPosible", "date", 20270301},      // fecha que no es texto
+                {"rutaInforme", "string", 42},                 // la ruta va como texto
+                {"rutaInforme", "integer", "cursos/1/informe.pdf"}, // tipo distinto del esperado
+                {"informeResultados", "string", null},         // valor nulo
                 {"programa", "string", null},                  // valor nulo
                 {null, "string", "x"}};                        // sin nombre
         for (Object[] datos : invalidas) {
