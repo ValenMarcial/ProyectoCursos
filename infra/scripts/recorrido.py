@@ -175,7 +175,7 @@ def iniciar_solicitud(plazo=None, empresa=None):
     return respuesta["processInstanceId"]
 
 
-def registrar_propuesta(instancia):
+def registrar_propuesta(instancia, dias_hasta_fin=30):
     try:
         tarea(instancia, REGISTRAR_PROPUESTA, 10)
     except Trabado:
@@ -186,7 +186,7 @@ def registrar_propuesta(instancia):
         "programa": "Modelado de procesos con BPMN",
         "presupuesto": 150000,
         "fechaInicioPosible": fecha(0),
-        "fechaFinPropuesta": fecha(30),
+        "fechaFinPropuesta": fecha(dias_hasta_fin),
     })
 
 
@@ -218,13 +218,17 @@ def preparar(instancia, recursos, completar_recursos=True):
 
 
 def escenario_final(instancia, recursos):
-    registrar_propuesta(instancia)
+    # La fecha de fin es hoy para que "Desarrollar curso" pueda completarse en la demo.
+    registrar_propuesta(instancia, dias_hasta_fin=0)
     aceptar(instancia, 60)
     preparar(instancia, recursos)
     completar(instancia, DEFINIR_DOCENTE, {"docenteSeleccionado": "docente1"})
     paso("esperando la fecha de inicio (timer «Fecha programada»)...")
     completar(instancia, DESARROLLAR_CURSO, segundos=ESPERA_TIMER)
-    completar(instancia, ELABORAR_INFORME)
+    completar(instancia, ELABORAR_INFORME, {
+        "informeResultados": "El curso se dictó con normalidad.",
+        "rutaInforme": "cursos/{}/informe.pdf".format(instancia),
+    })
     completar(instancia, ENVIAR_INFORME)
 
 
