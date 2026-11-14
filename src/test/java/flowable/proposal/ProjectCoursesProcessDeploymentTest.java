@@ -183,6 +183,34 @@ class ProjectCoursesProcessDeploymentTest {
         assertTrue(task.getFormProperties().get(0).isRequired());
     }
 
+    @Test
+    void elModeloRealDefineElInformeConUnFormularioYValidacion() {
+        UserTask task = (UserTask) getProcessModel().getMainProcess()
+                .getFlowElement("sid-8EE040F3-0293-488C-AE3F-3BD79DB56897");
+
+        assertEquals(1, task.getFormProperties().size());
+        assertEquals("informeResultados", task.getFormProperties().get(0).getId());
+        assertEquals("string", task.getFormProperties().get(0).getType());
+        assertTrue(task.getFormProperties().get(0).isRequired());
+        assertEquals(2, task.getTaskListeners().size());
+        assertEquals("complete", task.getTaskListeners().get(0).getEvent());
+        assertEquals("flowable.report.ValidateReport", task.getTaskListeners().get(0).getImplementation());
+        assertEquals("complete", task.getTaskListeners().get(1).getEvent());
+        assertEquals("flowable.report.SaveReport", task.getTaskListeners().get(1).getImplementation());
+    }
+
+    @Test
+    void elModeloRealValidaLaFechaDeFinAlDesarrollarElCurso() {
+        UserTask task = (UserTask) getProcessModel().getMainProcess()
+                .getFlowElement("sid-378C089F-415C-4EC6-B426-E2D989460B8C");
+
+        assertTrue(task.getFormProperties().isEmpty());
+        assertEquals(1, task.getTaskListeners().size());
+        assertEquals("complete", task.getTaskListeners().get(0).getEvent());
+        assertEquals("flowable.course.ValidateCourseEndDate",
+                task.getTaskListeners().get(0).getImplementation());
+    }
+
         @Test
         void revisarPropuestaTieneElMismoFormularioYValidacionQueRegistrar() {
                 BpmnModel model = getProcessModel();

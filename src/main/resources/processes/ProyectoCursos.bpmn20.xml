@@ -322,6 +322,7 @@
     </intermediateCatchEvent>
     <userTask id="sid-378C089F-415C-4EC6-B426-E2D989460B8C" name="Desarrollar curso" flowable:assignee="${docenteSeleccionado}" flowable:formFieldValidation="true">
       <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.course.ValidateCourseEndDate"></flowable:taskListener>
         <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">
           <flowable:field name="estado">
             <flowable:string><![CDATA[en_desarrollo]]></flowable:string>
@@ -332,6 +333,9 @@
     </userTask>
     <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true">
       <extensionElements>
+        <flowable:formProperty id="informeResultados" name="Informe de resultados" type="string" required="true"></flowable:formProperty>
+        <flowable:taskListener event="complete" class="flowable.report.ValidateReport"></flowable:taskListener>
+        <flowable:taskListener event="complete" class="flowable.report.SaveReport"></flowable:taskListener>
         <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">
           <flowable:field name="estado">
             <flowable:string><![CDATA[en_elaboracion_informe]]></flowable:string>
