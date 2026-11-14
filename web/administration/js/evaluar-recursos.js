@@ -13,8 +13,10 @@
  * nunca se interpretan como HTML.
  */
 
-import { completarTarea, ErrorApi, listarTareas, obtenerVariables, reclamarTarea } from './api.js';
+import { completarTarea, ErrorApi, obtenerVariables, reclamarTarea } from './api.js';
 import { mensajeSinRecursos, tareas, variables } from './contrato.js';
+import { buscarTarea, formatearPresupuesto, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /** Datos de la propuesta que se muestran: variable, etiqueta y formato opcional. */
 const camposPropuesta = [
@@ -42,8 +44,6 @@ const casillasRecursos = [
  */
 const erroresDefinitivosAlReclamar = new Set(['conflicto', 'noEncontrado', 'sinPermiso']);
 
-const mensajeGenerico = 'Ocurrió un error inesperado. Intentá de nuevo más tarde.';
-
 const descripcionBase = 'ayuda-recursos';
 const descripcionConError = 'ayuda-recursos aviso';
 
@@ -62,14 +62,6 @@ const casillas = casillasRecursos.map(([id]) => document.getElementById(id));
 let tareaActual = null;
 
 /**
- * Formatea un presupuesto para mostrarlo.
- * Recibe: número entero. Devuelve: texto, por ejemplo "$ 150.000".
- */
-function formatearPresupuesto(presupuesto) {
-  return `$ ${new Intl.NumberFormat('es-AR').format(presupuesto)}`;
-}
-
-/**
  * Formatea la fecha que acordó la empresa.
  * Recibe: texto ISO-8601, como 2027-03-08T09:00:00.
  * Devuelve: texto dd/MM/yyyy, o el valor original si no tiene ese formato.
@@ -78,84 +70,6 @@ function formatearFechaAcordada(fecha) {
   // Se toma el texto tal cual: convertirlo a Date podría correr el día por la zona horaria.
   const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha));
   return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha);
-}
-
-/**
- * Muestra un aviso y lo trae a la vista.
- * Recibe: texto y tipo ('error', 'exito' o 'neutro'). No devuelve nada.
- */
-function mostrarAviso(texto, tipo) {
-  aviso.textContent = texto;
-  aviso.className = `aviso aviso-${tipo}`;
-  aviso.hidden = false;
-  aviso.scrollIntoView({ block: 'nearest' });
-}
-
-/**
- * Muestra un error atrapado, sin exponer texto técnico al usuario.
- * Recibe: el error. No devuelve nada.
- */
-function mostrarError(error) {
-  // Solo el message de un ErrorApi es apto para el usuario; el resto va a la consola.
-  console.error(error, error?.detalle ?? '');
-  mostrarAviso(error instanceof ErrorApi ? error.message : mensajeGenerico, 'error');
-}
-
-/**
- * Busca la tarea a mostrar.
- * Usa el parámetro ?tarea=<id> de la URL o, si no viene, prefiere una sin reclamar.
- * No recibe nada.
- * Devuelve: promesa de { tarea } con la tarea normalizada o, si no se encontró,
- * de { tarea: null, texto, tipo } con el aviso que corresponde mostrar.
- */
-async function buscarTarea() {
-  const idPedido = new URLSearchParams(window.location.search).get('tarea');
-  // Sin filtro porque todavía no hay login: quién es el usuario lo resuelve la sesión.
-  const lista = await listarTareas();
-  const deEstaPantalla = lista.filter((tarea) => tarea.claveTarea === tareas.evaluarRecursos);
-
-  if (idPedido) {
-    const pedida = deEstaPantalla.find((tarea) => tarea.id === idPedido);
-    // Un id que no aparece es un error, aunque haya otras tareas pendientes.
-    return pedida
-      ? { tarea: pedida }
-      : { tarea: null, texto: 'Esa tarea no existe o ya fue completada.', tipo: 'error' };
-  }
-
-  const elegida = deEstaPantalla.find((tarea) => !tarea.asignado) ?? deEstaPantalla[0];
-  return elegida
-    ? { tarea: elegida }
-    : { tarea: null, texto: 'No hay ninguna tarea pendiente de evaluar recursos.', tipo: 'neutro' };
-}
-
-/**
- * Dibuja los datos de la propuesta.
- * Recibe: objeto { nombreVariable: valor }. No devuelve nada.
- */
-function mostrarPropuesta(valores) {
-  datosPropuesta.replaceChildren(...camposPropuesta.flatMap(([nombre, etiqueta, formatear]) => {
-    const termino = document.createElement('dt');
-    termino.textContent = etiqueta;
-    const definicion = document.createElement('dd');
-    // Con ?? y no con ||, para que un 0 se muestre como dato.
-    const valor = valores[nombre] ?? '';
-    if (valor === '') {
-      definicion.textContent = 'No informado';
-    } else {
-      definicion.textContent = formatear ? formatear(valor) : String(valor);
-    }
-    return [termino, definicion];
-  }));
-}
-
-/**
- * Deja guardada la tarea en la URL, para que al recargar se abra la misma.
- * Recibe: id de la tarea. No devuelve nada.
- */
-function recordarTareaEnUrl(id) {
-  const url = new URL(window.location.href);
-  url.searchParams.set('tarea', id);
-  window.history.replaceState(null, '', url);
 }
 
 /**
@@ -181,7 +95,7 @@ async function alTomar() {
   try {
     await reclamarTarea(tareaActual.id);
   } catch (error) {
-    mostrarError(error);
+    mostrarError(aviso, error);
     if (error instanceof ErrorApi && erroresDefinitivosAlReclamar.has(error.tipo)) {
       bloqueReclamo.hidden = true;
     } else {
@@ -243,7 +157,7 @@ async function alEnviar(evento) {
     marcarGrupo(true);
     // En este orden: enfocar desplaza la página y el aviso tiene que quedar a la vista.
     casillas[0].focus();
-    mostrarAviso(mensajeSinRecursos, 'error');
+    mostrarAviso(aviso, mensajeSinRecursos, 'error');
     return;
   }
   marcarGrupo(false);
@@ -255,12 +169,12 @@ async function alEnviar(evento) {
   } catch (error) {
     // Si falla, la tarea sigue activa: se conservan las casillas para reintentar.
     botonConfirmar.disabled = false;
-    mostrarError(error);
+    mostrarError(aviso, error);
     return;
   }
 
   bloqueRecursos.hidden = true;
-  mostrarAviso('Los recursos quedaron registrados.', 'exito');
+  mostrarAviso(aviso, 'Los recursos quedaron registrados.', 'exito');
 }
 
 /**
@@ -291,19 +205,24 @@ function alPresionarTecla(evento) {
 async function iniciar() {
   let valores;
   try {
-    const busqueda = await buscarTarea();
+    const busqueda = await buscarTarea({
+      clave: tareas.evaluarRecursos,
+      textoSinTareas: 'No hay ninguna tarea pendiente de evaluar recursos.',
+      // Sin ?tarea se prefiere una sin reclamar: es la que todavía nadie está trabajando.
+      preferir: (tarea) => !tarea.asignado,
+    });
     if (!busqueda.tarea) {
-      mostrarAviso(busqueda.texto, busqueda.tipo);
+      mostrarAviso(aviso, busqueda.texto, busqueda.tipo);
       return;
     }
     tareaActual = busqueda.tarea;
     valores = await obtenerVariables(tareaActual.instanciaId);
   } catch (error) {
-    mostrarError(error);
+    mostrarError(aviso, error);
     return;
   }
 
-  mostrarPropuesta(valores);
+  mostrarDatos(datosPropuesta, camposPropuesta, valores);
   bloquePropuesta.hidden = false;
   // listarTareas solo trae las propias y las sin asignar del grupo: con asignado, es suya.
   // Si se pasa a obtenerTarea (también trae las de compañeros), comparar con usuarioActual().
