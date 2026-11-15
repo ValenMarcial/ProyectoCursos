@@ -9,6 +9,13 @@ server:
         same-site: lax
 
 spring:
+  servlet:
+    multipart:
+      # Informes en PDF: el tope se repite en InformeService.MAXIMO_MB.
+      max-file-size: 10MB
+      max-request-size: 11MB
+      # Sin esto Spring lee el archivo antes de llegar al controller y el 413 sale como un 500 sin mensaje.
+      resolve-lazily: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/institucion}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -19,3 +26,7 @@ flowable:
     base-url: ${FLOWABLE_REST_URL:http://localhost:8080/flowable-ui/process-api}
     username: ${FLOWABLE_USER:admin}
     password: ${FLOWABLE_PASSWORD:test}
+
+# Carpeta donde se guardan los PDF de los informes (en Docker: el volumen ./data/informes).
+informes:
+  dir: ${INFORMES_DIR:./data/informes}

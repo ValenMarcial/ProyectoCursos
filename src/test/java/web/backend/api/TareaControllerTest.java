@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -25,6 +26,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,6 +34,7 @@ import web.backend.api.dto.CompletarTareaRequest;
 import web.backend.api.dto.PaginaResponse;
 import web.backend.api.dto.TareaResponse;
 import web.backend.flowable.FlowableRespuestaException;
+import web.backend.service.InformeService;
 import web.backend.service.TareaException;
 import web.backend.service.TareaException.Motivo;
 import web.backend.service.TareaService;
@@ -52,6 +55,9 @@ class TareaControllerTest {
 
     @MockBean
     private TareaService tareas;
+
+    @MockBean
+    private InformeService informes;
 
     // BackendApplication declara el RestTemplate de Flowable; acá no se usa y se reemplaza.
     @MockBean
@@ -262,5 +268,48 @@ class TareaControllerTest {
 
     static String mensaje(Motivo motivo) {
         return "{\"message\":\"" + motivo.getMensaje().replace("\"", "\\\"") + "\"}";
+    }
+
+    @Test
+    void subirInformeGuardaElPdfYDevuelveLaRuta() throws Exception {
+        byte[] pdf = "%PDF-1.7".getBytes(StandardCharsets.US_ASCII);
+        when(informes.guardar(JEFE, "7501", pdf)).thenReturn("cursos/7420/abc.pdf");
+
+        mvc.perform(multipart(TareaController.RUTA + "/7501/informe")
+                        .file(new MockMultipartFile("archivo", "informe.pdf", "application/pdf", pdf))
+                        .session(sesion))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"rutaInforme\":\"cursos/7420/abc.pdf\"}", true));
+    }
+
+    @Test
+    void subirInformeSinArchivoResponde400() throws Exception {
+        mvc.perform(multipart(TareaController.RUTA + "/7501/informe").session(sesion))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().json("{\"message\":\"" + Motivo.INFORME_INVALIDO.getMensaje()
+                        .replace("\"", "\\\"") + "\"}", true));
+        verifyNoInteractions(informes);
+    }
+
+    @Test
+    void subirInformeConErrorDelServicioUsaElEstadoDelMotivo() throws Exception {
+        when(informes.guardar(eq(JEFE), eq("7501"), any()))
+                .thenThrow(new TareaException(Motivo.INFORME_MUY_GRANDE))
+                .thenThrow(new TareaException(Motivo.NO_ASIGNADA))
+                .thenThrow(new TareaException(Motivo.INFORME_NO_GUARDADO));
+        MockMultipartFile archivo = new MockMultipartFile("archivo", "informe.pdf", "application/pdf", new byte[] {1});
+
+        for (int estado : new int[] {413, 403, 500}) {
+            mvc.perform(multipart(TareaController.RUTA + "/7501/informe").file(archivo).session(sesion))
+                    .andExpect(status().is(estado));
+        }
+    }
+
+    @Test
+    void subirInformeSinSesionResponde401() throws Exception {
+        mvc.perform(multipart(TareaController.RUTA + "/7501/informe")
+                        .file(new MockMultipartFile("archivo", "informe.pdf", "application/pdf", new byte[] {1})))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(informes);
     }
 }

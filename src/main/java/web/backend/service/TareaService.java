@@ -167,14 +167,30 @@ public class TareaService {
         String yo = usuarioValido(usuario);
         List<CompletarTareaRequest.Variable> validas = validarEscritura(variables);
         conFlowable(() -> {
-            TareaResponse tarea = buscar(tareaId);
-            if (!yo.equals(tarea.getAssignee())) {
-                // Solo en el caso de error se consultan los candidatos, para elegir el mensaje.
-                throw new TareaException(esDeSuGrupo(usuario, tareaId) ? Motivo.NO_ASIGNADA : Motivo.NO_AUTORIZADA);
-            }
+            exigirAsignada(usuario, yo, tareaId);
             flowable.completarTarea(tareaId, validas);
             return null;
         });
+    }
+
+    /**
+     * Devuelve la tarea solo si está asignada al usuario de la sesión: la misma regla que completar,
+     * para los pasos previos a completarla (por ejemplo, subir el informe).
+     * Lanza TareaException: USUARIO_INVALIDO, TAREA_NO_ENCONTRADA, NO_AUTORIZADA o NO_ASIGNADA.
+     */
+    public TareaResponse tareaAsignada(UsuarioSesion usuario, String tareaId) {
+        String yo = usuarioValido(usuario);
+        return conFlowable(() -> exigirAsignada(usuario, yo, tareaId));
+    }
+
+    /** Busca la tarea y exige que sea de "yo"; si no, elige entre NO_ASIGNADA y NO_AUTORIZADA. */
+    private TareaResponse exigirAsignada(UsuarioSesion usuario, String yo, String tareaId) {
+        TareaResponse tarea = buscar(tareaId);
+        if (!yo.equals(tarea.getAssignee())) {
+            // Solo en el caso de error se consultan los candidatos, para elegir el mensaje.
+            throw new TareaException(esDeSuGrupo(usuario, tareaId) ? Motivo.NO_ASIGNADA : Motivo.NO_AUTORIZADA);
+        }
+        return tarea;
     }
 
     /**
