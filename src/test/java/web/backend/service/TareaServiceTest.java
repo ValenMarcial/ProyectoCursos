@@ -324,6 +324,16 @@ class TareaServiceTest {
     }
 
     @Test
+    void tareaAsignadaDevuelveLaTareaPropiaYRechazaLaAjena() {
+        TareaResponse propia = tarea("jefeAdministrativo");
+        when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(propia));
+
+        assertSame(propia, service.tareaAsignada(JEFE, "7501"));
+        assertEquals(Motivo.NO_AUTORIZADA,
+                assertThrows(TareaException.class, () -> service.tareaAsignada(SIN_GRUPOS, "7501")).getMotivo());
+    }
+
+    @Test
     void completarUnaTareaAjenaDa403() {
         when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(tarea("docente1")));
         when(flowable.gruposCandidatos("7501")).thenReturn(List.of("Docentes"));

@@ -202,9 +202,9 @@ El formulario no muestra la ruta del archivo. La ruta la genera la web/backend a
 
 **Flujo para la web:**
 
-1. Subir el PDF al backend.
+1. Reclamar la tarea y subir el PDF con `POST /api/tareas/{id}/informe` (multipart, campo `archivo`).
 2. El backend lo guarda en `./data/informes/cursos/<instanciaFlowableId>/<uuid>.pdf`.
-3. El backend devuelve la ruta relativa `cursos/<instanciaFlowableId>/<uuid>.pdf`.
+3. El backend devuelve `{"rutaInforme": "cursos/<instanciaFlowableId>/<uuid>.pdf"}`.
 4. La web extrae el texto del PDF y completa `informeResultados`.
 5. La web completa la tarea enviando `informeResultados` y `rutaInforme`.
 
@@ -214,6 +214,8 @@ El formulario no muestra la ruta del archivo. La ruta la genera la web/backend a
 - `flowable.report.SaveReport` exige que `rutaInforme` tenga la forma `cursos/<instanciaFlowableId>/<archivo>.pdf`, sin `..`, sin subcarpetas, con extensión `.pdf` y hasta 255 caracteres; después la guarda en `cursos.resultados` con la conexión del motor, en la misma transacción de la tarea.
 - El texto del informe queda en la instancia de Flowable; no se guarda en la base institucional.
 - La tarea está pensada para completarse desde la web. Si se completa desde Flowable UI sin subir el PDF, falta `rutaInforme` y la tarea no se completa.
+
+**Subida del PDF (`POST /api/tareas/{id}/informe`):** exige sesión del personal y que la tarea sea *Elaborar informe de resultados* y esté asignada a quien sube. Acepta solo PDF (empieza con `%PDF-`), no vacío, de hasta 10 MB. Errores, siempre `{"message"}`: `400` (tarea que no es la del informe, archivo faltante, vacío o que no es PDF), `403`/`404` (tarea ajena o inexistente, igual que al completar), `413` (más de 10 MB) y `500` (no se pudo escribir en `INFORMES_DIR`). Cada subida genera un archivo nuevo; vale la ruta que la web manda al completar. Si el PDF se sube y la tarea no se completa, el archivo queda sin referencia.
 
 `cursos.resultados` sigue siendo `VARCHAR(255)`: la ruta relativa entra sin cambios de schema. El backend configura `INFORMES_DIR=/data/informes` y el `docker-compose.yml` monta `./data/informes:/data/informes`.
 

@@ -31,6 +31,7 @@ import web.backend.service.EmpresaException;
 import web.backend.service.EmpresaException.Motivo;
 import web.backend.service.EmpresaService;
 import web.backend.service.EmpresaSesion;
+import web.backend.service.InformeService;
 import web.backend.service.TareaService;
 import web.backend.service.UsuarioSesion;
 
@@ -48,6 +49,9 @@ class EmpresaControllerTest {
 
     @MockBean
     private TareaService tareas;
+
+    @MockBean
+    private InformeService informes;
 
     @MockBean
     private RestTemplate restTemplate;
