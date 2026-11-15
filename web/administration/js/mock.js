@@ -117,6 +117,9 @@ function crearDatosIniciales() {
       // Evaluar Recursos ya reclamada por la sesión: la pantalla muestra el formulario
       // sin pedir que se tome. Va última para no cambiar la tarea que se abre por defecto.
       tarea('tarea-evaluar-propia', 'Evaluar Recursos', tareas.evaluarRecursos, 'instancia-9', usuarioSimulado, administracion, 9),
+      // Archivar solicitud por falta de respuesta (la de tarea-archivar es por rechazo). Va
+      // última para que la pantalla siga abriendo por defecto la de rechazo.
+      tarea('tarea-archivar-sin-respuesta', 'Archivar solicitud', tareas.archivarSolicitud, 'instancia-10', usuarioSimulado, [], 10),
     ],
     instancias: {
       'instancia-1': [...solicitud],
@@ -128,6 +131,7 @@ function crearDatosIniciales() {
       'instancia-7': [...solicitud, ...propuesta, variable(nombres.informeResultados, 'string', 'El curso se dictó con normalidad.')],
       'instancia-8': [...solicitud, ...propuesta, variable('participantes', 'string', 'Lucía Fernández, Pedro Ruiz')],
       'instancia-9': [...solicitud, ...propuesta, aceptacion],
+      'instancia-10': [...solicitud, ...propuesta, variable('resultado', 'string', 'cerrado_por_falta_de_respuesta')],
     },
   };
 }
