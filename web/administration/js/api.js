@@ -384,9 +384,10 @@ export function crearApi(enviar, { alPerderSesion = () => {} } = {}) {
     /**
      * Completa una tarea asignada al usuario de la sesión.
      * Recibe: id y objeto { nombreVariable: valor }, con fechas en dd/MM/yyyy.
+     * El objeto es opcional: sin él, la tarea se completa sin variables.
      * Devuelve: nada.
      */
-    async completarTarea(id, valores) {
+    async completarTarea(id, valores = {}) {
       await pedir('POST', rutasApi.completar(id), { variables: armarVariables(valores) });
     },
 
