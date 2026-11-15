@@ -15,6 +15,7 @@
  * jsPDF se carga antes con un script clásico en el HTML y queda en window.jspdf.
  */
 
+import { formatearPresupuesto } from './pantalla-tarea.js';
 import { quitarAcentos } from './texto.js';
 
 /** Margen de la hoja, en milímetros. */
@@ -25,14 +26,6 @@ const milimetrosPorPunto = 0.3528;
 
 /** Interlineado, como múltiplo del tamaño de letra. */
 const interlineado = 1.35;
-
-/**
- * Formatea un presupuesto para mostrarlo.
- * Recibe: número entero. Devuelve: texto, por ejemplo "$ 150.000".
- */
-function formatearPresupuesto(presupuesto) {
-  return `$ ${new Intl.NumberFormat('es-AR').format(presupuesto)}`;
-}
 
 /**
  * Arma el nombre del archivo a partir de la empresa y la versión.

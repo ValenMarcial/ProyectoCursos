@@ -10,7 +10,8 @@
  */
 
 import { completarTarea, obtenerVariables } from './api.js';
-import { tareas, variables } from './contrato.js';
+import { tareas } from './contrato.js';
+import { convertirPropuesta, crearFormularioPropuesta, variablesPropuesta } from './formulario-propuesta.js';
 import { buscarTarea, mostrarDatos } from './pantalla-tarea.js';
 import { armarPdfPropuesta } from './pdf-propuesta.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
@@ -27,9 +28,6 @@ const camposSolicitud = [
   ['fechasPreferidas', 'Fechas preferidas'],
 ];
 
-/** Nombres de los campos que se validan, en el orden en que aparecen en el formulario. */
-const camposValidados = ['programa', 'presupuesto', 'fecha-inicio', 'fecha-fin'];
-
 const aviso = document.getElementById('aviso');
 const bloqueSolicitud = document.getElementById('bloque-solicitud');
 const datosSolicitud = document.getElementById('datos-solicitud');
@@ -43,120 +41,12 @@ const sinVisor = document.getElementById('sin-visor');
 const enlaceAbrir = document.getElementById('abrir-pdf');
 const botonDescargar = document.getElementById('boton-descargar');
 
+// Lectura, validación y marcas de error de los campos (también desmarca al corregir).
+const campos = crearFormularioPropuesta(formulario);
+
 // Se completan en iniciar() y los usa el envío del formulario.
 let tareaActual = null;
 let variablesSolicitud = {};
-
-/**
- * Lee el formulario.
- * No recibe nada.
- * Devuelve: { programa, presupuesto, inicio, fin }, todos texto y con las fechas
- * como las entrega el input (yyyy-MM-dd, o vacío si está incompleta).
- */
-function leerFormulario() {
-  return {
-    programa: formulario.elements.programa.value.trim(),
-    presupuesto: formulario.elements.presupuesto.value.trim(),
-    inicio: formulario.elements['fecha-inicio'].value,
-    fin: formulario.elements['fecha-fin'].value,
-  };
-}
-
-/**
- * Aplica las validaciones del cliente, que anticipan las del listener.
- * Recibe: el resultado de leerFormulario.
- * Devuelve: lista de { campos, mensaje }, donde campos son los nombres de los
- * campos afectados; vacía si está todo bien.
- */
-function validarPropuesta({ programa, presupuesto, inicio, fin }) {
-  const errores = [];
-
-  if (programa === '') errores.push({ campos: ['programa'], mensaje: 'Completá el programa del curso.' });
-
-  const numero = Number(presupuesto);
-  if (presupuesto === '') {
-    errores.push({ campos: ['presupuesto'], mensaje: 'Completá el presupuesto.' });
-  } else if (!Number.isSafeInteger(numero)) {
-    errores.push({ campos: ['presupuesto'], mensaje: 'El presupuesto debe ser un número entero.' });
-  } else if (numero < 0) {
-    errores.push({ campos: ['presupuesto'], mensaje: 'El presupuesto debe ser mayor o igual a 0.' });
-  }
-
-  // Un solo mensaje para las dos fechas, pero se marca solo la que falta.
-  const fechasVacias = [];
-  if (inicio === '') fechasVacias.push('fecha-inicio');
-  if (fin === '') fechasVacias.push('fecha-fin');
-
-  if (fechasVacias.length > 0) {
-    errores.push({ campos: fechasVacias, mensaje: 'Completá las fechas de inicio y de finalización.' });
-  } else if (fin < inicio) {
-    // En formato yyyy-MM-dd, el orden alfabético coincide con el cronológico.
-    errores.push({
-      campos: ['fecha-fin'],
-      mensaje: 'La fecha de finalización debe ser posterior o igual a la fecha de inicio.',
-    });
-  }
-
-  return errores;
-}
-
-/**
- * Junta los campos afectados por una lista de errores.
- * Recibe: el resultado de validarPropuesta.
- * Devuelve: Set con los nombres de esos campos.
- */
-function camposConError(errores) {
-  return new Set(errores.flatMap((error) => error.campos));
-}
-
-/**
- * Deja aria-invalid="true" solo en los campos con error.
- * Recibe: el resultado de validarPropuesta. No devuelve nada.
- */
-function marcarCampos(errores) {
-  const conError = camposConError(errores);
-  for (const nombre of camposValidados) {
-    const campo = formulario.elements[nombre];
-    if (conError.has(nombre)) {
-      campo.setAttribute('aria-invalid', 'true');
-    } else {
-      campo.removeAttribute('aria-invalid');
-    }
-  }
-}
-
-/**
- * Saca aria-invalid de los campos que ya están bien, sin marcar ninguno nuevo:
- * mientras se escribe no hay que señalar un campo que todavía no se envió.
- * Valida todo el formulario porque corregir la fecha de inicio también puede
- * resolver el error marcado en la de finalización.
- * No recibe ni devuelve nada.
- */
-function desmarcarCorregidos() {
-  const conError = camposConError(validarPropuesta(leerFormulario()));
-  for (const nombre of camposValidados) {
-    if (!conError.has(nombre)) formulario.elements[nombre].removeAttribute('aria-invalid');
-  }
-}
-
-/**
- * Lleva el foco al primer campo con error, en el orden del formulario.
- * Recibe: el resultado de validarPropuesta. No devuelve nada.
- */
-function enfocarPrimerError(errores) {
-  const conError = camposConError(errores);
-  const primero = camposValidados.find((nombre) => conError.has(nombre));
-  formulario.elements[primero].focus();
-}
-
-/**
- * Pasa una fecha del input al formato que recibe api.js.
- * Recibe: texto yyyy-MM-dd. Devuelve: texto dd/MM/yyyy.
- */
-function aFormatoFormulario(fecha) {
-  const [anio, mes, dia] = fecha.split('-');
-  return `${dia}/${mes}/${anio}`;
-}
 
 /**
  * Descarga el PDF sin perder la pantalla si falla: la tarea ya está completada.
@@ -196,19 +86,15 @@ async function alEnviar(evento) {
   evento.preventDefault();
   aviso.hidden = true;
 
-  const datos = leerFormulario();
-  const errores = validarPropuesta(datos);
-  marcarCampos(errores);
+  const datos = campos.leer();
+  // validar marca los campos y enfoca el primer error: el aviso va después, para que quede a la vista.
+  const errores = campos.validar(datos);
   if (errores.length > 0) {
-    // En este orden: enfocar desplaza la página y el aviso tiene que quedar a la vista.
-    enfocarPrimerError(errores);
     mostrarAviso(aviso, errores.map((error) => error.mensaje).join('\n'), 'error');
     return;
   }
 
-  const fechaInicio = aFormatoFormulario(datos.inicio);
-  const fechaFin = aFormatoFormulario(datos.fin);
-  const presupuesto = Number(datos.presupuesto);
+  const propuesta = convertirPropuesta(datos);
 
   // El PDF se arma antes de completar: si falla, la tarea sigue pendiente.
   let pdf;
@@ -216,10 +102,7 @@ async function alEnviar(evento) {
     pdf = armarPdfPropuesta({
       empresa: variablesSolicitud.empresaNombre,
       tematica: variablesSolicitud.tematica,
-      programa: datos.programa,
-      presupuesto,
-      fechaInicio,
-      fechaFin,
+      ...propuesta,
     });
   } catch (error) {
     console.error(error);
@@ -230,12 +113,7 @@ async function alEnviar(evento) {
   // Con el botón deshabilitado tampoco se puede reenviar con Enter.
   botonCompletar.disabled = true;
   try {
-    await completarTarea(tareaActual.id, {
-      [variables.programa]: datos.programa,
-      [variables.presupuesto]: presupuesto,
-      [variables.fechaInicioPosible]: fechaInicio,
-      [variables.fechaFinPropuesta]: fechaFin,
-    });
+    await completarTarea(tareaActual.id, variablesPropuesta(propuesta));
   } catch (error) {
     // Tras un rechazo la tarea sigue activa: se deja corregir y reintentar. El PDF
     // no se va a mostrar y cada reintento arma uno nuevo, así que se libera.
@@ -280,5 +158,4 @@ async function iniciar() {
 }
 
 formulario.addEventListener('submit', alEnviar);
-formulario.addEventListener('input', desmarcarCorregidos);
 iniciar();
