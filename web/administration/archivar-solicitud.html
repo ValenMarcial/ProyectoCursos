@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archivar solicitud</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Archivar solicitud</h1>
+    <p>Administración</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Sección con el motivo por el que se cierra la solicitud (variable resultado) -->
+    <section id="bloque-motivo" class="bloque" hidden>
+      <h2>Motivo del cierre</h2>
+      <div class="tarjeta">
+        <dl id="datos-motivo" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección con los datos de la solicitud, solo para consulta -->
+    <section id="bloque-solicitud" class="bloque" hidden>
+      <h2>Solicitud</h2>
+      <div class="tarjeta">
+        <dl id="datos-solicitud" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección para archivar: completa la tarea sin enviar variables -->
+    <section id="bloque-archivar" class="bloque" hidden>
+      <p id="ayuda-archivar">Al archivar, la solicitud queda cerrada y no se puede deshacer.</p>
+      <button id="boton-archivar" class="boton" type="button" aria-describedby="ayuda-archivar">Archivar solicitud</button>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/archivar-solicitud.js"></script>
+
+</body>
+</html>
