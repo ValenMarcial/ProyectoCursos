@@ -73,17 +73,32 @@ function aFormatoFormulario(fecha) {
 }
 
 /**
+ * Pasa una fecha de api.js al formato del input: la inversa de aFormatoFormulario.
+ * Recibe: texto dd/MM/yyyy (como lo devuelve obtenerVariables), o un valor ausente.
+ * Devuelve: texto yyyy-MM-dd, o vacío si el valor no tiene esa forma (el campo
+ * queda vacío y la validación normal lo reclama).
+ */
+function aFormatoInput(fecha) {
+  const partes = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(fecha ?? ''));
+  if (!partes) return '';
+  const [, dia, mes, anio] = partes;
+  return `${anio}-${mes}-${dia}`;
+}
+
+/**
  * Prepara el formulario de la propuesta de una pantalla.
  * Además deja escuchando el evento input del formulario: al corregir un campo se
  * le saca la marca de error (ver desmarcarCorregidos).
  * Recibe: el elemento form.
- * Devuelve: { leer, validar }:
+ * Devuelve: { leer, validar, precargar }:
  * - leer(): { programa, presupuesto, inicio, fin }, todos texto y con las fechas
  *   como las entrega el input (yyyy-MM-dd, o vacío si está incompleta);
  * - validar(datos): recibe el resultado de leer, deja aria-invalid solo en los
  *   campos con error, lleva el foco al primero y devuelve la lista de
  *   { campos, mensaje } (vacía si está todo bien). El aviso lo muestra la pantalla,
- *   después de llamarla: enfocar desplaza la página y el aviso tiene que quedar a la vista.
+ *   después de llamarla: enfocar desplaza la página y el aviso tiene que quedar a la vista;
+ * - precargar(valores): llena los campos con la propuesta guardada en la instancia
+ *   (lo usa "Revisar propuesta"). Ver precargar() más abajo.
  */
 export function crearFormularioPropuesta(formulario) {
   /** Lee el formulario. Ver leer() en la descripción de crearFormularioPropuesta. */
@@ -144,8 +159,24 @@ export function crearFormularioPropuesta(formulario) {
     return errores;
   }
 
+  /**
+   * Llena el formulario con una propuesta ya guardada, para editarla.
+   * Recibe: objeto { nombreVariable: valor } como lo devuelve obtenerVariables
+   * (nombres de contrato.js: programa, presupuesto, fechaInicioPosible y
+   * fechaFinPropuesta, con las fechas en dd/MM/yyyy). Una variable ausente deja el
+   * campo vacío. No marca errores: se marcan recién al enviar.
+   * No devuelve nada.
+   */
+  function precargar(valores) {
+    // Con ?? y no con ||, para que un presupuesto 0 se precargue.
+    formulario.elements.programa.value = valores[variables.programa] ?? '';
+    formulario.elements.presupuesto.value = String(valores[variables.presupuesto] ?? '');
+    formulario.elements['fecha-inicio'].value = aFormatoInput(valores[variables.fechaInicioPosible]);
+    formulario.elements['fecha-fin'].value = aFormatoInput(valores[variables.fechaFinPropuesta]);
+  }
+
   formulario.addEventListener('input', desmarcarCorregidos);
-  return { leer, validar };
+  return { leer, validar, precargar };
 }
 
 /**
