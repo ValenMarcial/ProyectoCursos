@@ -1,4 +1,4 @@
-import { cerrarSesion, exigirSesion, listarCursos } from "./enterprise-api.js";
+import { cerrarSesion, exigirSesion, listarCursos, obtenerCurso } from "./enterprise-api.js";
 
 const nombreEmpresa = document.getElementById("empresa-nombre");
 const botonCerrarSesion = document.getElementById("cerrar-sesion");
@@ -43,7 +43,74 @@ function formatearFecha(iso) {
     return `${dia}/${mes}/${anio}`;
 }
 
-// 
+
+// Tipo de Flowable -> texto. Son los tipos que el backend deja pasar (TIPOS_VISIBLES).
+const TIPOS_ACTIVIDAD = {
+    userTask: "En ejecución",
+    serviceTask: "En ejecución",
+    scriptTask: "En ejecución",
+    receiveTask: "En espera",
+    intermediateCatchEvent: "En espera",
+};
+
+function textoTipo(tipo) {
+    return TIPOS_ACTIVIDAD[tipo] || tipo;
+}
+
+
+function formatearFechaHora(iso) {
+    const fecha = new Date(iso);
+    if (!iso || Number.isNaN(fecha.getTime())) return "—";
+    return fecha.toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function mensajeDeActividades(error) {
+    if (error.codigo === 404) return "Este curso ya no está disponible.";
+    if (error.codigo === 502) return "No pudimos consultar las actividades ahora. Intente de nuevo.";
+    return "No se pudieron cargar las actividades. Intente de nuevo.";
+}
+
+function crearListaActividades(actividades) {
+    if (actividades.length === 0) {
+        return crear("p", "ayuda", "No hay actividades en curso en este momento.");
+    }
+    const lista = crear("ul", "lista-actividades");
+    for (const actividad of actividades) {
+        const fila = crear("li");
+        fila.append(
+            crear("span", "actividad-nombre", actividad.nombre),
+            crear("span", "actividad-estado", textoTipo(actividad.tipo)),
+            crear("span", "actividad-desde", "Desde " + formatearFechaHora(actividad.desde))
+        );
+        lista.append(fila);
+    }
+    return lista;
+}
+
+// Desplegable que consulta las actividades recién cuando se abre.
+function crearDesplegable(cursoId) {
+    const detalle = crear("details", "actividades");
+    detalle.append(crear("summary", "", "Actividades en curso"));
+    const cuerpo = crear("div", "actividades-cuerpo");
+    detalle.append(cuerpo);
+
+    detalle.addEventListener("toggle", async () => {
+        if (!detalle.open) return; // al cerrarlo no hay nada que pedir
+        cuerpo.replaceChildren(crear("p", "ayuda", "Consultando actividades…"));
+        try {
+            const curso = await obtenerCurso(cursoId);
+            cuerpo.replaceChildren(crearListaActividades(curso.actividades));
+        } catch (error) {
+            if (error.codigo === 401) {
+                location.replace("login.html");
+                return;
+            }
+            cuerpo.replaceChildren(crear("p", "ayuda", mensajeDeActividades(error)));
+        }
+    });
+    return detalle;
+}
+
 function crearTarjeta(curso) {
     const tarjeta = crear("article", "curso");
 
@@ -63,6 +130,9 @@ function crearTarjeta(curso) {
     );
 
     tarjeta.append(cabecera, datos);
+    if (curso.estado !== "finalizado" && curso.estado !== "cancelado") {
+        tarjeta.append(crearDesplegable(curso.id));
+    }
     return tarjeta;
 }
 
