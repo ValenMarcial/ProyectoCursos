@@ -10,6 +10,8 @@
  * - El usuario de la sesión es un integrante del grupo Docentes y se puede cambiar
  *   (?usuario=docente1), para probar las pantallas del jefe y las de un docente.
  * - Simula ValidateSelectedTeacher al completar "Definir Docente".
+ * - Simula la subida del PDF del informe (POST /api/tareas/{id}/informe) y, al
+ *   completar "Elaborar informe", ValidateReport y la exigencia de rutaInforme de SaveReport.
  *
  * Como el de Administración, no simula el avance del proceso: al completar, la
  * tarea solo desaparece. En el proceso real, "Desarrollar curso" aparece recién
@@ -18,7 +20,7 @@
 
 import { baseApi, tiposVariables } from '../../administration/js/contrato.js';
 import {
-  claveUsuarioSimulado, grupoDocentes, integrantesDocentes, jefeDocente, mensajesSeleccion,
+  claveUsuarioSimulado, grupoDocentes, informe, integrantesDocentes, jefeDocente, mensajesSeleccion,
   parametroUsuarioSimulado, tareasDocentes, variables as nombres,
 } from './contrato-docentes.js';
 
@@ -216,6 +218,45 @@ function validarSeleccion(nuevas) {
   return usuariosSimulados.includes(elegido) ? null : errorNegocio(mensajesSeleccion.fueraDelGrupo);
 }
 
+/**
+ * Busca el rechazo que darían ValidateReport y SaveReport al completar el informe.
+ * Recibe: variables nuevas. Devuelve: la respuesta de error, o null si el informe es válido.
+ */
+function validarInforme(nuevas) {
+  const valor = (nombre) => nuevas.find((item) => item.name === nombre)?.value;
+  const texto = valor(nombres.informeResultados);
+  const sinTexto = typeof texto !== 'string' || texto.trim() === '';
+  if (sinTexto && valor(nombres.informeAdjunto) !== true) return errorNegocio(informe.sinTexto);
+  // SaveReport lanza FlowableException (500): es un error de la web, no de la persona.
+  if (typeof valor(nombres.rutaInforme) !== 'string') {
+    return responder(500, { message: 'Internal server error', exception: 'Falta rutaInforme' });
+  }
+  return null;
+}
+
+/** Cantidad de PDF simulados subidos, para que cada ruta sea distinta como en el backend. */
+let subidas = 0;
+
+/**
+ * Simula POST /api/tareas/{id}/informe en el orden de InformeService: tarea
+ * asignada, que sea la del informe, y archivo PDF no vacío y de hasta 10 MB.
+ * Recibe: la tarea y el FormData del pedido. Devuelve: promesa de la respuesta.
+ */
+async function subirInformeSimulado(item, formulario) {
+  if (!item) return errorBackend(404, mensajes.tareaNoEncontrada);
+  if (!esSuya(item)) return errorBackend(403, mensajes.noAutorizada);
+  if (item.taskDefinitionKey !== tareasDocentes.elaborarInforme) return errorBackend(400, informe.tareaSinInforme);
+
+  const archivo = formulario instanceof FormData ? formulario.get('archivo') : null;
+  if (!(archivo instanceof Blob)) return errorBackend(400, informe.noEsPdf);
+  const cabecera = new TextDecoder().decode(await archivo.slice(0, 5).arrayBuffer());
+  if (archivo.size === 0 || cabecera !== '%PDF-') return errorBackend(400, informe.noEsPdf);
+  if (archivo.size > informe.maximoMb * 1024 * 1024) return errorBackend(413, informe.muyGrande);
+
+  subidas += 1;
+  return responder(200, { rutaInforme: `cursos/${item.processInstanceId}/simulado-${subidas}.pdf` });
+}
+
 /** Simula GET /api/tareas?alcance=mias|grupo&start&size. */
 function listar(parametros) {
   const alcance = parametros.get('alcance');
@@ -268,6 +309,10 @@ function completar(id, item, nuevas = []) {
   if (item.taskDefinitionKey === tareasDocentes.definirDocente) {
     // Tras un rechazo no cambia nada, como en la transacción real.
     const rechazo = validarSeleccion(nuevas);
+    if (rechazo) return rechazo;
+  }
+  if (item.taskDefinitionKey === tareasDocentes.elaborarInforme) {
+    const rechazo = validarInforme(nuevas);
     if (rechazo) return rechazo;
   }
 
@@ -333,6 +378,9 @@ export async function enviarSimuladoDocentes(metodo, ruta, cuerpo) {
     }
     if (metodo === 'POST' && partes.length === 3 && accion === 'completar') {
       return completar(id, item, cuerpo?.variables ?? []);
+    }
+    if (metodo === 'POST' && partes.length === 3 && accion === 'informe') {
+      return subirInformeSimulado(item, cuerpo);
     }
   }
   if (recurso === 'instancias' && metodo === 'GET' && partes.length === 3 && accion === 'variables') {

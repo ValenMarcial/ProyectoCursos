@@ -7,7 +7,8 @@
     <userTask id="elaborarInforme" flowable:assignee="jefeDeEquipo"
               flowable:formFieldValidation="true">
       <extensionElements>
-        <flowable:formProperty id="informeResultados" type="string" required="true"/>
+        <flowable:formProperty id="informeResultados" type="string"/>
+        <flowable:formProperty id="informeAdjunto" type="boolean"/>
         <flowable:taskListener event="complete" class="flowable.report.ValidateReport"/>
       </extensionElements>
     </userTask>

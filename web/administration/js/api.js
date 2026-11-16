@@ -197,6 +197,9 @@ function traducirError(estado, cuerpo, { esLogin = false } = {}) {
     case 409:
       // El 409 viene del motor (cuerpo en inglés): se usa un texto propio.
       return new ErrorApi('Otra persona ya reclamó esta tarea.', { tipo: 'conflicto', estado, detalle });
+    case 413:
+      // Archivo más grande que el máximo del backend (por ejemplo, el PDF del informe).
+      return new ErrorApi(delBackend ?? 'El archivo es demasiado grande.', { tipo: 'entrada', estado, detalle });
     case 502:
     case 503:
     case 504:
@@ -233,7 +236,10 @@ export async function enviarReal(metodo, ruta, cuerpo) {
   // same-origin es el valor por defecto; va explícito porque la sesión depende de la
   // cookie: la web y la API se sirven desde el mismo backend.
   const opciones = { method: metodo, credentials: 'same-origin' };
-  if (cuerpo !== undefined) {
+  if (cuerpo instanceof FormData) {
+    // Archivo (multipart): sin Content-Type, así el navegador agrega el boundary.
+    opciones.body = cuerpo;
+  } else if (cuerpo !== undefined) {
     opciones.headers = { 'Content-Type': 'application/json' };
     opciones.body = JSON.stringify(cuerpo);
   }
@@ -388,6 +394,18 @@ export function crearApi(enviar, { alPerderSesion = () => {} } = {}) {
      */
     async completarTarea(id, valores) {
       await pedir('POST', rutasApi.completar(id), { variables: armarVariables(valores) });
+    },
+
+    /**
+     * Sube el PDF del informe de resultados de una tarea asignada al usuario.
+     * Recibe: id de la tarea y el archivo (File o Blob) con el PDF.
+     * Devuelve: la ruta relativa que el backend asignó, para mandarla como rutaInforme.
+     */
+    async subirInforme(id, archivo) {
+      const formulario = new FormData();
+      formulario.append('archivo', archivo, archivo.name ?? 'informe.pdf');
+      const respuesta = await pedir('POST', rutasApi.informe(id), formulario);
+      return respuesta.rutaInforme;
     },
 
     /**

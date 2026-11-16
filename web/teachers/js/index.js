@@ -9,6 +9,7 @@
  * que no se reclaman: cada tarjeta lleva directo a su pantalla.
  */
 
+import { enlaceDeTarea } from '../../common/js/pantallas.js';
 import { exigirSesion } from '../../common/js/sesion.js';
 import { listarTareas, modoActual, obtenerVariables, usuarioActual } from './api-docentes.js';
 import { integrantesDocentes, parametroUsuarioSimulado, tareasDocentes } from './contrato-docentes.js';
@@ -17,14 +18,13 @@ import {
 } from './pantalla-docentes.js';
 
 /**
- * Qué muestra la bandeja para cada tipo de tarea: la pantalla que la resuelve, o
- * null si todavía se completa desde Flowable.
+ * Texto del botón de cada tarea docente. La pantalla a la que lleva sale del mapa
+ * común (enlaceDeTarea de common/js/pantallas.js), el mismo que usa la bandeja común.
  */
-const pantallas = {
-  [tareasDocentes.definirDocente]: { pagina: 'definir-docente.html', accion: 'Elegir docente' },
-  [tareasDocentes.desarrollarCurso]: { pagina: 'desarrollar-curso.html', accion: 'Registrar fin del dictado' },
-  // El enunciado (4.1.3) permite hacerla desde Flowable; la pantalla del sitio es opcional.
-  [tareasDocentes.elaborarInforme]: null,
+const acciones = {
+  [tareasDocentes.definirDocente]: 'Elegir docente',
+  [tareasDocentes.desarrollarCurso]: 'Registrar fin del dictado',
+  [tareasDocentes.elaborarInforme]: 'Escribir o adjuntar el informe',
 };
 
 const aviso = document.getElementById('aviso');
@@ -56,17 +56,13 @@ function tarjetaTarea(tarea, valores) {
 
   item.append(titulo, curso, inicio);
 
-  const pantalla = pantallas[tarea.claveTarea];
-  if (pantalla) {
+  const destino = enlaceDeTarea(tarea);
+  if (destino) {
     const enlace = document.createElement('a');
     enlace.className = 'boton';
-    enlace.href = `${pantalla.pagina}?${new URLSearchParams({ tarea: tarea.id })}`;
-    enlace.textContent = pantalla.accion;
+    enlace.href = destino;
+    enlace.textContent = acciones[tarea.claveTarea];
     item.append(enlace);
-  } else {
-    const nota = document.createElement('p');
-    nota.textContent = 'Por ahora se completa desde Flowable, adjuntando el informe en PDF.';
-    item.append(nota);
   }
   return item;
 }
@@ -106,7 +102,7 @@ async function iniciar() {
     sesion.hidden = false;
     if (modoActual === 'mock') mostrarSelectorUsuario(usuario.usuario);
 
-    const claves = Object.keys(pantallas);
+    const claves = Object.keys(acciones);
     const tareas = (await listarTareas()).filter((tarea) => claves.includes(tarea.claveTarea));
     if (tareas.length === 0) {
       mostrarAviso(aviso, 'No tenés tareas pendientes.', 'neutro');

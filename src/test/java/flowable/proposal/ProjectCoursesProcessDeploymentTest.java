@@ -1,6 +1,7 @@
 package flowable.proposal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -188,10 +189,14 @@ class ProjectCoursesProcessDeploymentTest {
         UserTask task = (UserTask) getProcessModel().getMainProcess()
                 .getFlowElement("sid-8EE040F3-0293-488C-AE3F-3BD79DB56897");
 
-        assertEquals(1, task.getFormProperties().size());
+        // El texto es opcional: no hace falta si se adjunta un PDF (lo valida ValidateReport).
+        assertEquals(2, task.getFormProperties().size());
         assertEquals("informeResultados", task.getFormProperties().get(0).getId());
         assertEquals("string", task.getFormProperties().get(0).getType());
-        assertTrue(task.getFormProperties().get(0).isRequired());
+        assertFalse(task.getFormProperties().get(0).isRequired());
+        assertEquals("informeAdjunto", task.getFormProperties().get(1).getId());
+        assertEquals("boolean", task.getFormProperties().get(1).getType());
+        assertFalse(task.getFormProperties().get(1).isRequired());
         assertEquals(2, task.getTaskListeners().size());
         assertEquals("complete", task.getTaskListeners().get(0).getEvent());
         assertEquals("flowable.report.ValidateReport", task.getTaskListeners().get(0).getImplementation());

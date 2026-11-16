@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elaborar informe de resultados</title>
+  <link rel="stylesheet" href="css/docentes.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Elaborar informe de resultados</h1>
+    <p>Equipo docente</p>
+  </header>
+
+  <main class="contenedor">
+
+    <p id="modo-simulado" class="modo-simulado" hidden></p>
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Datos del curso, solo para consulta -->
+    <section id="bloque-curso" class="bloque" hidden>
+      <h2>Curso</h2>
+      <div class="tarjeta">
+        <dl id="datos-curso" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Informe: se escribe (la web arma el PDF) o se adjunta un PDF propio -->
+    <section id="bloque-informe" class="bloque" hidden>
+      <h2>Informe</h2>
+      <div class="tarjeta">
+        <!-- novalidate: los errores los muestra el módulo de la pantalla, en español -->
+        <form id="formulario-informe" class="formulario" novalidate>
+          <div class="campo">
+            <label for="texto-informe">Resultados del curso</label>
+            <p id="ayuda-texto" class="ayuda-campo">Al guardar, se genera un PDF con este texto y los datos del curso. Si adjuntás tu propio PDF, el texto es opcional.</p>
+            <textarea id="texto-informe" name="texto-informe" aria-describedby="ayuda-texto"></textarea>
+          </div>
+
+          <div class="campo">
+            <label for="archivo-informe">PDF propio (opcional)</label>
+            <p id="ayuda-archivo" class="ayuda-campo">Solo PDF, de hasta 10 MB. Si lo adjuntás, se sube ese archivo en lugar del generado.</p>
+            <input id="archivo-informe" name="archivo-informe" type="file" accept="application/pdf,.pdf" aria-describedby="ayuda-archivo">
+            <button id="boton-quitar" class="boton boton-secundario" type="button" hidden>Quitar el PDF adjunto</button>
+          </div>
+
+          <button id="boton-guardar" class="boton" type="submit">Guardar informe</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Aparece cuando la tarea ya se completó: el PDF que quedó guardado -->
+    <section id="bloque-resultado" class="bloque" hidden>
+      <h2 id="titulo-resultado" tabindex="-1">PDF del informe</h2>
+      <p class="acciones-pdf">
+        <a id="abrir-pdf" class="boton boton-secundario" target="_blank" rel="noopener">Abrir el PDF enviado</a>
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="index.html">Volver a mis tareas</a>
+  </footer>
+
+  <!-- jsPDF, la misma copia local que usa Administración (licencia MIT en administration/js/vendor). -->
+  <script src="../administration/js/vendor/jspdf.umd.min.js"></script>
+  <script type="module" src="js/elaborar-informe.js"></script>
+
+</body>
+</html>

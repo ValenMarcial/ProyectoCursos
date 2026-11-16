@@ -45,7 +45,7 @@ class ValidateReportTest {
                 Map.<String, Object>of("informeResultados", "   "))) {
             FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                     () -> taskService.complete(tarea.getId(), variables));
-            assertEquals("El informe de resultados es obligatorio.", error.getMessage());
+            assertEquals("El informe de resultados es obligatorio si no se adjunta un PDF.", error.getMessage());
             assertEquals(1, taskService.createTaskQuery().taskId(tarea.getId()).count());
         }
     }
@@ -58,7 +58,7 @@ class ValidateReportTest {
         for (Object valor : java.util.List.of(123, true, java.util.List.of("texto"))) {
             FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                     () -> taskService.complete(tarea.getId(), Map.of("informeResultados", valor)));
-            assertEquals("El informe de resultados es obligatorio.", error.getMessage());
+            assertEquals("El informe de resultados es obligatorio si no se adjunta un PDF.", error.getMessage());
             assertEquals(1, taskService.createTaskQuery().taskId(tarea.getId()).count());
         }
     }
@@ -72,6 +72,36 @@ class ValidateReportTest {
                 "informeResultados", "El curso se dictó con normalidad."));
 
         assertEquals(0, taskService.createTaskQuery().taskId(tarea.getId()).count());
+    }
+
+    @Test
+    void conPdfAdjuntoElTextoPuedeFaltarOEstarVacio() {
+        for (Map<String, Object> variables : java.util.List.of(
+                Map.<String, Object>of("informeAdjunto", true),
+                Map.<String, Object>of("informeAdjunto", true, "informeResultados", ""),
+                Map.<String, Object>of("informeAdjunto", true, "informeResultados", "   "))) {
+            Task tarea = tarea(iniciar());
+
+            taskService.complete(tarea.getId(), variables);
+
+            assertEquals(0, taskService.createTaskQuery().taskId(tarea.getId()).count());
+        }
+    }
+
+    @Test
+    void sinPdfAdjuntoElTextoSigueSiendoObligatorio() {
+        Task tarea = tarea(iniciar());
+
+        for (Map<String, Object> variables : java.util.List.of(
+                Map.<String, Object>of("informeAdjunto", false),
+                Map.<String, Object>of("informeAdjunto", false, "informeResultados", "  "),
+                // Solo el booleano true cuenta como adjunto: un texto "true" no alcanza.
+                Map.<String, Object>of("informeAdjunto", "true"))) {
+            FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
+                    () -> taskService.complete(tarea.getId(), variables));
+            assertEquals("El informe de resultados es obligatorio si no se adjunta un PDF.", error.getMessage());
+            assertEquals(1, taskService.createTaskQuery().taskId(tarea.getId()).count());
+        }
     }
 
     private String iniciar() {

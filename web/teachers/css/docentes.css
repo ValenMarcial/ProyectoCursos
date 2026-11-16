@@ -160,3 +160,19 @@
     text-align: center;
   }
 }
+
+/* Texto de ayuda debajo de la etiqueta de un campo (Elaborar informe). */
+.ayuda-campo {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 0.9rem;
+}
+
+/* El selector de archivo ocupa todo el ancho y se toca fácil en el celular. */
+.campo input[type="file"] {
+  min-height: 44px;
+}
+
+.campo .boton-secundario {
+  justify-self: start;
+}
