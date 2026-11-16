@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Enviar informe y archivar expediente</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Enviar informe y archivar expediente</h1>
+    <p>Administración</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Sección con el informe de resultados que elaboró el jefe del equipo docente -->
+    <section id="bloque-informe" class="bloque" hidden>
+      <h2>Informe de resultados</h2>
+      <div class="tarjeta">
+        <!-- Solo cuando el docente adjuntó su propio PDF y no escribió texto -->
+        <p id="aviso-adjunto" hidden>El docente adjuntó su propio PDF y no escribió un texto: el informe completo está en el PDF.</p>
+        <dl id="datos-informe" class="datos"></dl>
+        <!-- Descarga del PDF: queda oculta hasta que exista GET /api/tareas/{id}/informe -->
+        <p id="descarga-informe" hidden>
+          <a id="enlace-informe" class="boton boton-secundario" href="#" target="_blank" rel="noopener">Ver el PDF del informe</a>
+        </p>
+      </div>
+    </section>
+
+    <!-- Sección con los datos del curso, solo para consulta -->
+    <section id="bloque-curso" class="bloque" hidden>
+      <h2>Curso</h2>
+      <div class="tarjeta">
+        <dl id="datos-curso" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección con los datos de la solicitud, solo para consulta -->
+    <section id="bloque-solicitud" class="bloque" hidden>
+      <h2>Solicitud</h2>
+      <div class="tarjeta">
+        <dl id="datos-solicitud" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección para enviar y archivar: completa la tarea sin enviar variables -->
+    <section id="bloque-enviar" class="bloque" hidden>
+      <p id="ayuda-enviar">El envío del informe a la empresa se hace por fuera del sistema (por ejemplo, por correo). Este botón registra que ya se envió y archiva el expediente: el curso queda finalizado y no se puede deshacer.</p>
+      <button id="boton-enviar" class="boton" type="button" aria-describedby="ayuda-enviar">Enviar y archivar</button>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <script type="module" src="js/enviar-informe.js"></script>
+
+</body>
+</html>

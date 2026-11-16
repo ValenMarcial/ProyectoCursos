@@ -99,6 +99,8 @@ function crearDatosIniciales() {
   ];
   // Fecha que envía la empresa al aceptar (texto): existe desde "Preparar curso" en adelante.
   const aceptacion = variable('fechaInicio', 'string', '2027-03-08');
+  // Lista que confecciona Administración: existe desde "Confeccionar lista definitiva" en adelante.
+  const listaDefinitiva = variable(nombres.listaDefinitiva, 'string', 'Ana Pérez, Juan Gómez, Lucía Fernández');
   const administracion = [grupoAdministracion];
 
   return {
@@ -110,6 +112,11 @@ function crearDatosIniciales() {
       tarea('tarea-evaluar-tomada', 'Evaluar Recursos', tareas.evaluarRecursos, 'instancia-5', 'empleadoAdministrativo', administracion, 5),
       tarea('tarea-lista', 'Confeccionar lista definitiva', tareas.confeccionarLista, 'instancia-6', usuarioSimulado, administracion, 6),
       tarea('tarea-informe', 'Enviar informe a empresa y Archivar expediente', tareas.enviarInforme, 'instancia-7', usuarioSimulado, [], 7),
+      // Enviar informe: una con PDF propio y sin texto, y otra sin PDF (ruta ausente, caso
+      // de error de datos). Van después de tarea-informe para que la pantalla abra por defecto el
+      // informe escrito. Usan las instancias 13 y 14 (la 11 y la 12 son de Revisar propuesta).
+      tarea('tarea-informe-adjunto', 'Enviar informe a empresa y Archivar expediente', tareas.enviarInforme, 'instancia-13', usuarioSimulado, [], 13),
+      tarea('tarea-informe-sin-pdf', 'Enviar informe a empresa y Archivar expediente', tareas.enviarInforme, 'instancia-14', usuarioSimulado, [], 14),
       // Caso de respaldo del listener de asignación: sin integrantes en el grupo, la
       // tarea queda sin assignee y con Administracion como candidato. Va última para
       // que la pantalla siga abriendo por defecto la tarea asignada.
@@ -128,7 +135,25 @@ function crearDatosIniciales() {
       'instancia-4': [...solicitud, ...propuesta, aceptacion],
       'instancia-5': [...solicitud, ...propuesta, aceptacion],
       'instancia-6': [...solicitud, ...propuesta, variable('participantes', 'string', 'Ana Pérez, Juan Gómez')],
-      'instancia-7': [...solicitud, ...propuesta, variable(nombres.informeResultados, 'string', 'El curso se dictó con normalidad.')],
+      // Informe escrito: la web generó el PDF a partir del texto (informeAdjunto en false).
+      'instancia-7': [
+        ...solicitud, ...propuesta, aceptacion, listaDefinitiva,
+        variable(nombres.informeResultados, 'string', 'El curso se dictó con normalidad.\nAsistió el 90 % de los participantes.'),
+        variable(nombres.informeAdjunto, 'boolean', false),
+        variable(nombres.rutaInforme, 'string', 'informes/instancia-7.pdf'),
+      ],
+      // PDF propio adjunto: sin texto.
+      'instancia-13': [
+        ...solicitud, ...propuesta, aceptacion, listaDefinitiva,
+        variable(nombres.informeResultados, 'string', ''),
+        variable(nombres.informeAdjunto, 'boolean', true),
+        variable(nombres.rutaInforme, 'string', 'informes/instancia-13.pdf'),
+      ],
+      // Sin PDF: no debería pasar (SaveReport lo exige), la pantalla muestra "No informado".
+      'instancia-14': [
+        ...solicitud, ...propuesta, aceptacion, listaDefinitiva,
+        variable(nombres.informeResultados, 'string', 'Informe sin PDF asociado.'),
+      ],
       'instancia-8': [...solicitud, ...propuesta, variable('participantes', 'string', 'Lucía Fernández, Pedro Ruiz')],
       'instancia-9': [...solicitud, ...propuesta, aceptacion],
       'instancia-10': [...solicitud, ...propuesta, variable('resultado', 'string', 'cerrado_por_falta_de_respuesta')],
