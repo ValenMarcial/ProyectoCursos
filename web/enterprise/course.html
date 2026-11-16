@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mis cursos</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Mis cursos</h1>
+    <p>Consulte el estado de los cursos que contrató.</p>
+  </header>
+
+  <main class="contenedor">
+
+    <div class="barra-sesion">
+      <p>Empresa: <strong id="empresa-nombre"></strong></p>
+      <button type="button" id="cerrar-sesion" class="boton-de-accion boton-secundario">Cerrar sesión</button>
+    </div>
+
+    <!-- Lo completa el JavaScript: errores -->
+    <div id="notification" class="notification" aria-live="polite" hidden></div>
+
+    <p id="sin-cursos" class="ayuda" hidden>Todavía no tiene cursos registrados.</p>
+
+    <!-- El JavaScript agrega acá una tarjeta por cada curso -->
+    <section id="lista-cursos" class="cursos" aria-label="Lista de cursos"></section>
+
+  </main>
+
+  <footer class="pie">
+    <p><a href="../index.html">Volver al inicio</a></p>
+  </footer>
+
+  <script type="module" src="js/course.js"></script>
+</body>
+</html>
