@@ -15,7 +15,8 @@
 
 import { completarTarea, ErrorApi, obtenerVariables, reclamarTarea } from './api.js';
 import { mensajeSinRecursos, tareas, variables } from './contrato.js';
-import { buscarTarea, formatearPresupuesto, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { buscarTarea, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { formatearPresupuesto } from './texto.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /** Datos de la propuesta que se muestran: variable, etiqueta y formato opcional. */

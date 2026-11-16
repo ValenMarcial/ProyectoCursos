@@ -16,3 +16,11 @@
 export function quitarAcentos(texto) {
   return String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
+
+/**
+ * Formatea un presupuesto para mostrarlo.
+ * Recibe: número entero. Devuelve: texto, por ejemplo "$ 150.000".
+ */
+export function formatearPresupuesto(presupuesto) {
+  return `$ ${new Intl.NumberFormat('es-AR').format(presupuesto)}`;
+}

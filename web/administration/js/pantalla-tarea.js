@@ -2,8 +2,8 @@
  * Módulo pantalla-tarea.js
  *
  * Funciones que comparten las pantallas que resuelven una tarea del proceso:
- * buscar qué tarea abrir, recordarla en la URL, mostrar los datos de la
- * instancia y formatear el presupuesto.
+ * buscar qué tarea abrir, recordarla en la URL y mostrar los datos de la
+ * instancia. Para formatear el presupuesto está texto.js.
  *
  * No muestra avisos ni decide qué hacer con la tarea (tomarla, completarla):
  * eso queda en cada pantalla. Los datos se muestran con textContent: nunca se
@@ -81,12 +81,4 @@ export function mostrarDatos(lista, campos, valores) {
     }
     return [termino, definicion];
   }));
-}
-
-/**
- * Formatea un presupuesto para mostrarlo.
- * Recibe: número entero. Devuelve: texto, por ejemplo "$ 150.000".
- */
-export function formatearPresupuesto(presupuesto) {
-  return `$ ${new Intl.NumberFormat('es-AR').format(presupuesto)}`;
 }
