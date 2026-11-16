@@ -327,7 +327,7 @@ Cuando una clase rechaza un dato por una regla de negocio, lanza `FlowableIllega
 | `flowable.proposal.CreateCourseOnAcceptance` | `fechaInicio` acordada no posterior a `fechaFinPropuesta` |
 | `flowable.assignment.ValidateSelectedTeacher` | `docenteSeleccionado` obligatorio y del grupo `Docentes` |
 | `flowable.course.ValidateCourseEndDate` | El dictado no puede finalizarse antes de `fechaFinPropuesta` |
-| `flowable.report.ValidateReport` | `informeResultados` obligatorio |
+| `flowable.report.ValidateReport` | `informeResultados` obligatorio, salvo que `informeAdjunto` sea `true` (PDF adjunto) |
 
 `flowable.report.SaveReport` lanza `FlowableException` (500) si falta `rutaInforme`, si la ruta no corresponde a la instancia o si no tiene la forma esperada: son errores de integración de la web, no datos que la persona pueda corregir.
 
