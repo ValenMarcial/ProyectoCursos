@@ -52,3 +52,13 @@ export async function exigirSesion() {
         throw error;
     }
 }
+
+// GET /api/empresa/cursos -> lista de cursos de la empresa
+export function listarCursos() {
+    return pedir("/api/empresa/cursos");
+}
+
+// GET /api/empresa/cursos/{id} -> el curso con sus actividades en curso
+export function obtenerCurso(id) {
+    return pedir(`/api/empresa/cursos/${encodeURIComponent(id)}`);
+}
