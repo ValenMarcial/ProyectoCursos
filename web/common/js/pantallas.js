@@ -18,7 +18,7 @@ import { tareasDocentes } from '../../teachers/js/contrato-docentes.js';
  */
 export const pantallasPorTarea = {
   [tareas.registrarPropuesta]: '/administration/registrar-propuesta.html',
-  [tareas.revisarPropuesta]: null,
+  [tareas.revisarPropuesta]: '/administration/revisar-propuesta.html',
   [tareas.archivarSolicitud]: '/administration/archivar-solicitud.html',
   [tareas.evaluarRecursos]: '/administration/evaluar-recursos.html',
   [tareas.confeccionarLista]: '/administration/lista-definitiva.html',

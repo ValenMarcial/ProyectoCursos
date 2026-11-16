@@ -15,8 +15,7 @@
  * jsPDF se carga antes con un script clásico en el HTML y queda en window.jspdf.
  */
 
-import { formatearPresupuesto } from './pantalla-tarea.js';
-import { quitarAcentos } from './texto.js';
+import { formatearPresupuesto, quitarAcentos } from './texto.js';
 
 /** Margen de la hoja, en milímetros. */
 const margen = 20;

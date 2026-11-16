@@ -120,6 +120,11 @@ function crearDatosIniciales() {
       // Archivar solicitud por falta de respuesta (la de tarea-archivar es por rechazo). Va
       // última para que la pantalla siga abriendo por defecto la de rechazo.
       tarea('tarea-archivar-sin-respuesta', 'Archivar solicitud', tareas.archivarSolicitud, 'instancia-10', usuarioSimulado, [], 10),
+      // Revisar propuesta con la versión que contaría el motor (versionPropuesta) y sin
+      // observaciones. Van últimas para que la pantalla siga abriendo por defecto tarea-revisar
+      // (sin versionPropuesta: sale versión 2).
+      tarea('tarea-revisar-v3', 'Revisar propuesta', tareas.revisarPropuesta, 'instancia-11', usuarioSimulado, [], 11),
+      tarea('tarea-revisar-sin-observaciones', 'Revisar propuesta', tareas.revisarPropuesta, 'instancia-12', usuarioSimulado, [], 12),
     ],
     instancias: {
       'instancia-1': [...solicitud],
@@ -132,6 +137,12 @@ function crearDatosIniciales() {
       'instancia-8': [...solicitud, ...propuesta, variable('participantes', 'string', 'Lucía Fernández, Pedro Ruiz')],
       'instancia-9': [...solicitud, ...propuesta, aceptacion],
       'instancia-10': [...solicitud, ...propuesta, variable('resultado', 'string', 'cerrado_por_falta_de_respuesta')],
+      'instancia-11': [
+        ...solicitud, ...propuesta,
+        variable('observaciones', 'string', 'Agregar un módulo de simulación'),
+        variable('versionPropuesta', 'integer', 3),
+      ],
+      'instancia-12': [...solicitud, ...propuesta],
     },
   };
 }
@@ -334,10 +345,13 @@ function completar(id, item, nuevas = []) {
     return errorBackend(403, esDeSuGrupo(item) ? mensajes.noAsignada : mensajes.noAutorizada);
   }
 
-  // Registrar y Evaluar Recursos son las tareas de estas pantallas con validación en el BPMN.
+  // Registrar, Revisar y Evaluar Recursos son las tareas de estas pantallas con validación en
+  // el BPMN (Registrar y Revisar tienen el mismo listener, ValidateProposalDates).
   // ValidateSelectedTeacher (Definir Docente) no se simula: el mock no tiene tareas de Docentes.
   let rechazo = null;
-  if (item.taskDefinitionKey === tareas.registrarPropuesta) rechazo = validarPropuesta(nuevas);
+  if (item.taskDefinitionKey === tareas.registrarPropuesta || item.taskDefinitionKey === tareas.revisarPropuesta) {
+    rechazo = validarPropuesta(nuevas);
+  }
   if (item.taskDefinitionKey === tareas.evaluarRecursos) rechazo = validarRecursos(nuevas);
   // Se corta antes de escribir: tras un rechazo no cambia nada, como en la transacción real.
   if (rechazo) return rechazo;

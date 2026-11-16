@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Revisar propuesta</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Revisar propuesta</h1>
+    <p>Administración</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Sección con las modificaciones que pidió la empresa (variable observaciones) -->
+    <section id="bloque-observaciones" class="bloque" hidden>
+      <h2>Modificaciones pedidas por la empresa</h2>
+      <div class="tarjeta">
+        <dl id="datos-observaciones" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección con los datos de la solicitud, solo para consulta -->
+    <section id="bloque-solicitud" class="bloque" hidden>
+      <h2>Datos de la solicitud</h2>
+      <div class="tarjeta">
+        <dl id="datos-solicitud" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección con la propuesta enviada antes, solo para consulta: el formulario de abajo se edita -->
+    <section id="bloque-anterior" class="bloque" hidden>
+      <h2>Propuesta anterior</h2>
+      <div class="tarjeta">
+        <dl id="datos-anterior" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Sección con el formulario de la propuesta revisada (mismos campos que en registrar) -->
+    <section id="bloque-propuesta" class="bloque" hidden>
+      <h2>Propuesta revisada</h2>
+      <div class="tarjeta">
+        <!-- novalidate: los errores los muestra el módulo de la pantalla, en español y juntos -->
+        <form id="formulario-propuesta" class="formulario" novalidate>
+          <div class="campo">
+            <label for="programa">Programa del curso</label>
+            <textarea id="programa" name="programa" required></textarea>
+          </div>
+
+          <div class="campo">
+            <label for="presupuesto">Presupuesto ($)</label>
+            <input id="presupuesto" name="presupuesto" type="number" min="0" step="1" inputmode="numeric" required>
+          </div>
+
+          <div class="campos-en-fila">
+            <div class="campo">
+              <label for="fecha-inicio">Fecha de inicio posible</label>
+              <input id="fecha-inicio" name="fecha-inicio" type="date" max="9999-12-31" required>
+            </div>
+
+            <div class="campo">
+              <label for="fecha-fin">Fecha de finalización posible</label>
+              <input id="fecha-fin" name="fecha-fin" type="date" max="9999-12-31" required>
+            </div>
+          </div>
+
+          <button id="boton-completar" class="boton" type="submit">Enviar propuesta revisada y generar PDF</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Sección que aparece cuando la tarea ya se completó: vista previa y descarga del PDF -->
+    <section id="bloque-resultado" class="bloque" aria-labelledby="titulo-resultado" hidden>
+      <!-- tabindex="-1": recibe el foco cuando desaparece el formulario. El texto lo completa el módulo con la versión -->
+      <h2 id="titulo-resultado" tabindex="-1">PDF de la propuesta</h2>
+      <!-- Sin sandbox: Chrome bloquea su visor de PDF en un iframe con sandbox.
+           El src es una URL blob:; si se agrega una CSP, tiene que permitir frame-src blob:. -->
+      <iframe id="vista-previa-pdf" class="vista-previa-pdf" title="Vista previa del PDF de la propuesta"></iframe>
+      <p id="sin-visor" hidden>Este navegador no puede mostrar el PDF acá: abrilo en una pestaña nueva o descargalo.</p>
+      <p class="acciones-pdf">
+        <button id="boton-descargar" class="boton boton-secundario" type="button">Descargar PDF</button>
+        <a id="abrir-pdf" class="boton boton-secundario" target="_blank" rel="noopener">Abrir en pestaña nueva</a>
+      </p>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="../index.html">Volver a la portada</a>
+  </footer>
+
+  <!-- jsPDF 4.2.1, copia local (licencia MIT en js/vendor/jspdf.LICENSE). Script clásico: expone window.jspdf -->
+  <script src="js/vendor/jspdf.umd.min.js"></script>
+  <script type="module" src="js/revisar-propuesta.js"></script>
+
+</body>
+</html>
