@@ -127,9 +127,10 @@ function crearDatosIniciales() {
       // Archivar solicitud por falta de respuesta (la de tarea-archivar es por rechazo). Va
       // última para que la pantalla siga abriendo por defecto la de rechazo.
       tarea('tarea-archivar-sin-respuesta', 'Archivar solicitud', tareas.archivarSolicitud, 'instancia-10', usuarioSimulado, [], 10),
-      // Revisar propuesta con la versión que contaría el motor (versionPropuesta) y sin
-      // observaciones. Van últimas para que la pantalla siga abriendo por defecto tarea-revisar
-      // (sin versionPropuesta: sale versión 2).
+      // Revisar propuesta en versión 3 y sin observaciones. En el motor real, versionPropuesta
+      // la escribe el listener del evento Modificaciones (#95); acá se simula con la variable.
+      // Van últimas para que la pantalla siga abriendo por defecto tarea-revisar (sin
+      // versionPropuesta: sale versión 2, el respaldo de la pantalla).
       tarea('tarea-revisar-v3', 'Revisar propuesta', tareas.revisarPropuesta, 'instancia-11', usuarioSimulado, [], 11),
       tarea('tarea-revisar-sin-observaciones', 'Revisar propuesta', tareas.revisarPropuesta, 'instancia-12', usuarioSimulado, [], 12),
     ],

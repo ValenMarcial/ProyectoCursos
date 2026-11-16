@@ -22,7 +22,8 @@
 
 import { completarTarea, obtenerVariables } from './api.js';
 import { rutasApi, tareas, variables } from './contrato.js';
-import { buscarTarea, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { buscarTarea, camposSolicitud, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { formatearFechaAcordada } from './texto.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /**
@@ -31,16 +32,6 @@ import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
  * hoy esa ruta solo acepta POST (la subida del informe).
  */
 const descargaInformeDisponible = false;
-
-/** Datos de la solicitud que se muestran: variable y etiqueta. */
-const camposSolicitud = [
-  ['empresaNombre', 'Empresa'],
-  ['tematica', 'Temática'],
-  ['descripcion', 'Descripción'],
-  ['contactoNombre', 'Contacto'],
-  ['contactoEmail', 'Correo del contacto'],
-  ['contactoTelefono', 'Teléfono del contacto'],
-];
 
 /** Datos del curso que se muestran: variable y etiqueta. */
 const camposCurso = [
@@ -73,19 +64,6 @@ const botonEnviar = document.getElementById('boton-enviar');
 
 // Se completa en iniciar() y lo usa el botón de enviar.
 let tareaActual = null;
-
-/**
- * Formatea la fecha de inicio que mandó la empresa al aceptar.
- * Copia de la función de evaluar-recursos.js: se pasa a texto.js después de la
- * #93, que también toca evaluar-recursos.js y texto.js.
- * Recibe: texto ISO-8601, como 2027-03-08T09:00:00.
- * Devuelve: texto dd/MM/yyyy, o el valor original si no tiene ese formato.
- */
-function formatearFechaAcordada(fecha) {
-  // Se toma el texto tal cual: convertirlo a Date podría correr el día por la zona horaria.
-  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha));
-  return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha);
-}
 
 /**
  * Dice si el docente adjuntó su propio PDF sin escribir texto.

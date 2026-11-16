@@ -18,25 +18,10 @@
 import { completarTarea, obtenerVariables } from './api.js';
 import { tareas, variables } from './contrato.js';
 import { convertirPropuesta, crearFormularioPropuesta, variablesPropuesta } from './formulario-propuesta.js';
-import { buscarTarea, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { buscarTarea, camposSolicitud, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
 import { armarPdfPropuesta } from './pdf-propuesta.js';
 import { formatearPresupuesto } from './texto.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
-
-/**
- * Variables de la solicitud que se muestran, con su etiqueta.
- * Copia de la de registrar-propuesta.js: se unifica en pantalla-tarea.js después de la entrega.
- */
-const camposSolicitud = [
-  ['empresaNombre', 'Empresa'],
-  ['tematica', 'Temática'],
-  ['descripcion', 'Descripción'],
-  ['contactoNombre', 'Contacto'],
-  ['contactoEmail', 'Correo de contacto'],
-  ['contactoTelefono', 'Teléfono de contacto'],
-  ['participantesEstimados', 'Participantes estimados'],
-  ['fechasPreferidas', 'Fechas preferidas'],
-];
 
 /** Lo que pidió la empresa al mandar el mensaje msgModificaciones. Si no vino, "No informado". */
 const camposObservaciones = [
@@ -125,9 +110,8 @@ async function alEnviar(evento) {
   }
 
   const propuesta = convertirPropuesta(datos);
-  // PROVISORIO: la versión la va a contar el motor (versionPropuesta, con un listener en
-  // el evento "Modificaciones") y el backend todavía no la devuelve. Mientras tanto toda
-  // revisión sale como versión 2, aunque la empresa pida modificaciones más de una vez.
+  // La versión la escribe el motor en el evento "Modificaciones" (2, 3, ...). El 2 es solo
+  // un respaldo por si la variable no llega.
   const version = valores.versionPropuesta ?? 2;
 
   // El PDF se arma antes de completar: si falla, la tarea sigue pendiente.

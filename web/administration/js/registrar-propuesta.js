@@ -12,21 +12,9 @@
 import { completarTarea, obtenerVariables } from './api.js';
 import { tareas } from './contrato.js';
 import { convertirPropuesta, crearFormularioPropuesta, variablesPropuesta } from './formulario-propuesta.js';
-import { buscarTarea, mostrarDatos } from './pantalla-tarea.js';
+import { buscarTarea, camposSolicitud, mostrarDatos } from './pantalla-tarea.js';
 import { armarPdfPropuesta } from './pdf-propuesta.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
-
-/** Variables de la solicitud que se muestran, con su etiqueta. */
-const camposSolicitud = [
-  ['empresaNombre', 'Empresa'],
-  ['tematica', 'Temática'],
-  ['descripcion', 'Descripción'],
-  ['contactoNombre', 'Contacto'],
-  ['contactoEmail', 'Correo de contacto'],
-  ['contactoTelefono', 'Teléfono de contacto'],
-  ['participantesEstimados', 'Participantes estimados'],
-  ['fechasPreferidas', 'Fechas preferidas'],
-];
 
 const aviso = document.getElementById('aviso');
 const bloqueSolicitud = document.getElementById('bloque-solicitud');
