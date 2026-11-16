@@ -23,6 +23,8 @@ El listener `EvaluateViability` corre al iniciar "Evaluar Viabilidad" y le pasa 
 
 La cantidad la obtiene el motor; nunca se ingresa a mano.
 
+**Por qué Drools y no una tabla DMN.** El enunciado habla de una "decision task". La implementamos como `businessRuleTask` con reglas Drools (`viability.drl`: menos de 5 cursos en ejecución es viable, 5 o más no lo es), y se lo consultamos al profesor, que lo aceptó. El costo es sumar las librerías de Drools al motor (sección 1); la ventaja es que el límite queda en un archivo de reglas y no en el código del listener.
+
 ## 3. Asignación por menor carga
 
 "Confeccionar lista definitiva" tiene el Task Listener `AssignToLeastBusyAdministrative` en el evento `create`. Asigna la tarea al integrante del grupo `Administracion` con menos tareas de usuario asignadas en el motor.
@@ -84,7 +86,40 @@ El Execution Listener `RecordProcessResult`, configurado a nivel proceso, corre 
 
 **Transacción.** Los dos listeners escriben con la conexión del motor, porque Flowable y las tablas de la institución comparten la base. El cambio de estado se confirma o se deshace junto con el paso del proceso: si la instancia no logra avanzar, no queda ningún estado cambiado.
 
-## 7. Errores de negocio
+## 7. Fin del dictado e informe de resultados
+
+**Fin del dictado.** "Desarrollar curso" no tiene formulario ni variables propias. Al completarla, el listener `ValidateCourseEndDate` exige que la fecha actual (UTC, por día) sea igual o posterior a `fechaFinPropuesta`; si no, la tarea queda pendiente y Flowable responde 400 con "El curso no puede finalizarse antes del dd/MM/yyyy (fecha de fin programada)". El enunciado pide que el docente registre la finalización una vez alcanzada la fecha programada. El timer de la fecha de inicio ya controla cuándo aparece la tarea, y esta regla agrega que tampoco se pueda cerrar antes de la fecha de fin planeada. La comparación es por día y en UTC, igual que las fechas guardadas en `cursos.fecha_fin`. Para ensayar el escenario completo, la propuesta se registra con fin igual o anterior a hoy (lo hace `make recorrido ESCENARIO=final`).
+
+**Informe de resultados.** "Elaborar informe de resultados" se completa de dos formas. La persona escribe el texto y la web lo convierte a PDF al guardar, o adjunta un PDF propio. En los dos casos el archivo es obligatorio y queda guardado; lo que cambia es de dónde sale. Tres variables lo describen:
+
+| Variable | Qué es | Quién la escribe |
+|---|---|---|
+| `informeResultados` | Texto del informe | La persona; opcional si adjunta un PDF |
+| `informeAdjunto` | Verdadero cuando se adjuntó un PDF propio | La web, al subirlo |
+| `rutaInforme` | Ruta relativa del PDF, `cursos/<instancia>/<uuid>.pdf` | El backend, al subir el archivo |
+
+Dos listeners corren al completar la tarea:
+
+- `ValidateReport` exige el texto salvo que `informeAdjunto` sea el booleano `true`. Solo vale `true`: ausente, falso o de otro tipo cuenta como "sin PDF". Es un error de negocio (400) que la persona puede corregir.
+- `SaveReport` exige que `rutaInforme` sea `cursos/<esta instancia>/<archivo>.pdf` (sin `..`, sin subcarpetas, hasta 255 caracteres) y la guarda en `cursos.resultados`, con la conexión del motor y en la misma transacción que la tarea. Si falta o no corresponde es un error de integración de la web (500), no un dato corregible.
+
+La base guarda solo la ruta, no el contenido: `cursos.resultados` es `VARCHAR(255)` y el texto del informe queda en la instancia de Flowable. Es una decisión para no mezclar documentos con los datos institucionales, y deja la puerta abierta a mover los PDF a un storage externo y guardar una clave o URL en lugar de la ruta.
+
+**Backend de los PDF.** Dos endpoints bajo `/api/tareas/{id}/informe`, ambos con sesión del personal y una tarea asignada a quien los usa:
+
+| Ruta | Qué hace |
+|---|---|
+| `POST` (multipart, campo `archivo`) | Guarda el PDF en `INFORMES_DIR/cursos/<instancia>/<uuid>.pdf` y devuelve `{"rutaInforme"}`. Solo desde la tarea "Elaborar informe de resultados" |
+| `GET` | Devuelve el PDF de la instancia (`application/pdf`, `no-store`, en línea) para la pantalla "Enviar informe" |
+
+Decisiones de seguridad:
+
+- **Solo PDF y con tope.** El archivo tiene que empezar con `%PDF-`, no estar vacío y pesar hasta 10 MB (413 si lo supera). Sin sesión se corta con 401 antes de procesar el archivo, así que no se aceptan subidas anónimas.
+- **La ruta nunca viene de la web.** En la subida la genera el servidor con un UUID. En la descarga la lee el servidor de la variable `rutaInforme` de la instancia, y solo entrega el archivo si pertenece a esa instancia, queda dentro de `INFORMES_DIR` (también tras resolver enlaces simbólicos) y existe. Ruta ausente, ajena o archivo faltante dan el mismo 404, para no revelar rutas.
+- **Sin caché.** El informe es de una sola empresa, así que la respuesta lleva `Cache-Control: no-store`.
+- **Un archivo por subida.** Si se sube dos veces, queda un archivo por intento y vale el que se manda al completar; el que sobra queda sin referencia.
+
+## 8. Errores de negocio
 
 Las validaciones de negocio lanzan `FlowableIllegalArgumentException`. La API REST de Flowable la devuelve como 400 con el mensaje, y la web lo muestra tal cual. Cualquier otra excepción (un bug, la base caída) llega como 500 y la web muestra un mensaje genérico. Siguen esta regla:
 
@@ -92,14 +127,16 @@ Las validaciones de negocio lanzan `FlowableIllegalArgumentException`. La API RE
 - `ValidateResourceSelection`: al menos un recurso elegido.
 - `CreateCourseOnAcceptance`: fecha de inicio acordada.
 - `ValidateSelectedTeacher`: docente obligatorio y del grupo `Docentes`.
+- `ValidateCourseEndDate`: el dictado no se puede finalizar antes de la fecha de fin programada.
+- `ValidateReport`: texto del informe obligatorio si no se adjunta un PDF.
 
 En todos los casos la tarea no se completa y se puede corregir y reintentar.
 
-## 8. Unión asíncrona de "Preparar curso"
+## 9. Unión asíncrona de "Preparar curso"
 
 La unión de las ramas de "Preparar curso" es asíncrona (`flowable:async="true"`). Completar la última rama solo deja un job, y el resto del proceso lo ejecuta Flowable UI. Así la aplicación de materiales, que usa la API Java con su propio motor y sin las clases del proyecto, puede completar "Preparar materiales" aunque sea la última rama.
 
-## 9. Backend del acceso de las empresas
+## 10. Backend del acceso de las empresas
 
 El backend Spring Boot expone la API que usa la web de empresas:
 
@@ -116,8 +153,9 @@ Decisiones:
 - **Actividades pendientes.** Salen del historial de Flowable: las actividades de la instancia que todavía no terminaron. Así aparecen las ramas paralelas de la preparación, la espera de la nómina y la del inicio del curso. Se omiten compuertas, eventos de inicio y fin y el subproceso.
 - **Login sin pistas.** Un usuario inexistente se compara contra un hash fijo, para que la respuesta tarde lo mismo que con una clave incorrecta y no revele qué usuarios existen.
 
-## 10. Pruebas y demostración
+## 11. Pruebas y demostración
 
 - **Tests automáticos:** JUnit con motor H2 en memoria sobre el BPMN real. Recorren los cinco cierres, la viabilidad, la asignación, las aulas, la cuenta de empresa y los estados.
 - **`make recorrido`:** script que recorre el proceso de punta a punta por la API (final, cancelación, rechazo, falta de respuesta), completando tareas y mandando los mensajes de la empresa. Sirve para la demostración y para generar ejecuciones con cierres distintos para la minería.
+- **Informe y fin del dictado:** el escenario `final` registra la propuesta con fin igual a hoy y completa el informe con `informeResultados` y `rutaInforme`. Los endpoints de subida y descarga se probaron además contra el backend real: casos de error (sin sesión, archivo faltante, que no es PDF, de más de 10 MB, tarea ajena) y rutas manipuladas en el motor, que dan 404.
 - **Escenario 5:** `make recorrido ESCENARIO=limite` completa hasta 5 cursos en ejecución y muestra que la solicitud siguiente termina como no viable. `ESCENARIO=limpiar-limite` cancela después esos cursos.
