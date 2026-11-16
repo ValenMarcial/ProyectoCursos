@@ -43,6 +43,8 @@ public class TareaService {
             "contactoTelefono", "participantesEstimados", "fechasPreferidas",
             // Propuesta.
             "programa", "presupuesto", "fechaInicioPosible", "fechaFinPropuesta", "fechaInicio",
+            // Versión de la propuesta: la original es 1 y cada msgModificaciones la incrementa.
+            "versionPropuesta",
             // Recursos.
             "aulaFisica", "aulaVirtual", "equipamiento",
             // Lista de participantes.
