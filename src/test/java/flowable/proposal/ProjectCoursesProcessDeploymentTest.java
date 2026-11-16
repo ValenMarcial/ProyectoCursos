@@ -244,6 +244,31 @@ class ProjectCoursesProcessDeploymentTest {
         }
 
     @Test
+    void elEventoModificacionesIncrementaLaVersionDeLaPropuesta() {
+        FlowableListener listener = getProcessModel().getMainProcess()
+                .getFlowElement("sid-B1226B89-72C5-427D-85EF-783C6E99CC5D")
+                .getExecutionListeners().get(0);
+
+        assertEquals("end", listener.getEvent());
+        assertEquals("flowable.proposal.IncrementProposalVersion", listener.getImplementation());
+        assertEquals("class", listener.getImplementationType());
+    }
+
+    @Test
+    void cadaMsgModificacionesIncrementaLaVersionDeLaPropuesta() {
+        String instancia = iniciarPropuesta();
+
+        for (long version = 2; version <= 6; version++) {
+            enviarModificaciones(instancia);
+            assertEquals(version, ((Number) engine.getRuntimeService()
+                    .getVariable(instancia, "versionPropuesta")).longValue());
+            if (version < 6) {
+                completarTarea(instancia, "sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6", Map.of());
+            }
+        }
+    }
+
+    @Test
     void asignaAdministracionComoGrupoCandidatoDeLasTareasDePreparacion() {
         ProcessDefinition processDefinition = engine.getRepositoryService()
                 .createProcessDefinitionQuery()
@@ -669,6 +694,14 @@ class ProjectCoursesProcessDeploymentTest {
         String ejecucion = engine.getRuntimeService().createExecutionQuery().processInstanceId(instancia)
                 .messageEventSubscriptionName("msgCancelacion").singleResult().getId();
         engine.getRuntimeService().messageEventReceived("msgCancelacion", ejecucion);
+    }
+
+    private void enviarModificaciones(String instancia) {
+        String ejecucion = engine.getRuntimeService().createExecutionQuery()
+                .processInstanceId(instancia)
+                .messageEventSubscriptionName("msgModificaciones")
+                .singleResult().getId();
+        engine.getRuntimeService().messageEventReceived("msgModificaciones", ejecucion);
     }
 
     private void assertCierreCancelado(String instancia) {

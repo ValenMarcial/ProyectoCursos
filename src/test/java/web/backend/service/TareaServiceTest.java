@@ -162,12 +162,13 @@ class TareaServiceTest {
                 new VariableResponse("tematica", "string", "BPMN"),
                 new VariableResponse("solicitudId", "long", 7),
                 new VariableResponse("aulaFisica", "boolean", true),
+                new VariableResponse("versionPropuesta", "long", 2L),
                 new VariableResponse("cancelada", "boolean", false),
                 new VariableResponse("motivoCierre", "string", "SIN_AULAS")));
 
         List<VariableResponse> variables = service.variables(JEFE, "7420");
 
-        assertEquals(List.of("tematica", "aulaFisica", "motivoCierre"),
+        assertEquals(List.of("tematica", "aulaFisica", "versionPropuesta", "motivoCierre"),
                 variables.stream().map(VariableResponse::getName).collect(java.util.stream.Collectors.toList()));
     }
 
@@ -361,6 +362,7 @@ class TareaServiceTest {
         Object[][] invalidas = {
                 {"resultado", "string", "finalizado"},        // la setea el motor
                 {"aulaAsignada", "string", "Aula 1"},          // la setea ReserveClassroom
+                {"versionPropuesta", "long", 2L},              // la incrementa el listener de Modificaciones
                 {"docenteSeleccionado", "integer", 42},        // es el id de usuario: va como texto
                 {"docenteSeleccionado", "string", 42},         // valor que no es texto
                 {"docenteSeleccionado", "string", null},       // valor nulo
