@@ -98,6 +98,14 @@ export const rutasApi = {
   },
 
   /**
+   * Ruta para subir el PDF del informe de resultados (POST multipart, campo "archivo").
+   * Recibe: id de la tarea. Devuelve: la ruta. Responde { rutaInforme }.
+   */
+  informe(id) {
+    return `${rutasApi.tarea(id)}/informe`;
+  },
+
+  /**
    * Ruta para leer las variables de una instancia.
    * Recibe: id de la instancia. Devuelve: la ruta.
    */
