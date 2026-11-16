@@ -157,6 +157,7 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
 | `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
+| `versionPropuesta` | long | Listener de ejecución del evento "Modificaciones" (`flowable.proposal.IncrementProposalVersion`): 2 en la primera modificación y +1 en cada una | Pantalla "Revisar propuesta": número de versión que se muestra en el PDF |
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `docenteSeleccionado` | String (ID de usuario del grupo `Docentes`) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
 | `informeResultados` | String | Formulario de "Elaborar informe de resultados": el texto que escribe la persona; opcional si adjunta un PDF | Validación del informe |
