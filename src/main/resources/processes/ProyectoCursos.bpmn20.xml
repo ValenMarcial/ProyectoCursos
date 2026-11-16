@@ -128,6 +128,9 @@
       <messageEventDefinition messageRef="msgRechazo"></messageEventDefinition>
     </intermediateCatchEvent>
     <intermediateCatchEvent id="sid-B1226B89-72C5-427D-85EF-783C6E99CC5D" name="Modificaciones">
+      <extensionElements>
+        <flowable:executionListener event="end" class="flowable.proposal.IncrementProposalVersion"></flowable:executionListener>
+      </extensionElements>
       <messageEventDefinition messageRef="msgModificaciones"></messageEventDefinition>
     </intermediateCatchEvent>
     <userTask id="sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6" name="Revisar propuesta" flowable:assignee="jefeAdministrativo" flowable:formFieldValidation="true">
