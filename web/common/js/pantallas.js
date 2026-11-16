@@ -22,7 +22,7 @@ export const pantallasPorTarea = {
   [tareas.archivarSolicitud]: '/administration/archivar-solicitud.html',
   [tareas.evaluarRecursos]: '/administration/evaluar-recursos.html',
   [tareas.confeccionarLista]: '/administration/lista-definitiva.html',
-  [tareas.enviarInforme]: null,
+  [tareas.enviarInforme]: '/administration/enviar-informe.html',
   [tareasDocentes.definirDocente]: '/teachers/definir-docente.html',
   [tareasDocentes.desarrollarCurso]: '/teachers/desarrollar-curso.html',
   [tareasDocentes.elaborarInforme]: '/teachers/elaborar-informe.html',
