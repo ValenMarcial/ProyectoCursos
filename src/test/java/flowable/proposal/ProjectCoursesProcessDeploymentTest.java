@@ -258,14 +258,14 @@ class ProjectCoursesProcessDeploymentTest {
     void cadaMsgModificacionesIncrementaLaVersionDeLaPropuesta() {
         String instancia = iniciarPropuesta();
 
-        enviarModificaciones(instancia);
-        assertEquals(2L, ((Number) engine.getRuntimeService()
-                .getVariable(instancia, "versionPropuesta")).longValue());
-
-        completarTarea(instancia, "sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6", Map.of());
-        enviarModificaciones(instancia);
-        assertEquals(3L, ((Number) engine.getRuntimeService()
-                .getVariable(instancia, "versionPropuesta")).longValue());
+        for (long version = 2; version <= 6; version++) {
+            enviarModificaciones(instancia);
+            assertEquals(version, ((Number) engine.getRuntimeService()
+                    .getVariable(instancia, "versionPropuesta")).longValue());
+            if (version < 6) {
+                completarTarea(instancia, "sid-BE500ABC-83C7-4A8A-9C83-23183950A2F6", Map.of());
+            }
+        }
     }
 
     @Test

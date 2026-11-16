@@ -54,6 +54,7 @@ class InstanciaControllerTest {
                 new VariableResponse("tematica", "string", "BPMN"),
                 new VariableResponse("participantesEstimados", "integer", 12),
                 new VariableResponse("aulaFisica", "boolean", true),
+                new VariableResponse("versionPropuesta", "long", 3L),
                 new VariableResponse("observaciones", "string", null)));
 
         mvc.perform(get(RUTA).session(sesion))
@@ -62,6 +63,7 @@ class InstanciaControllerTest {
                         + "{\"name\":\"tematica\",\"type\":\"string\",\"value\":\"BPMN\"},"
                         + "{\"name\":\"participantesEstimados\",\"type\":\"integer\",\"value\":12},"
                         + "{\"name\":\"aulaFisica\",\"type\":\"boolean\",\"value\":true},"
+                        + "{\"name\":\"versionPropuesta\",\"type\":\"long\",\"value\":3},"
                         + "{\"name\":\"observaciones\",\"type\":\"string\",\"value\":null}]", true));
     }
 

@@ -362,6 +362,7 @@ class TareaServiceTest {
         Object[][] invalidas = {
                 {"resultado", "string", "finalizado"},        // la setea el motor
                 {"aulaAsignada", "string", "Aula 1"},          // la setea ReserveClassroom
+                {"versionPropuesta", "long", 2L},              // la incrementa el listener de Modificaciones
                 {"docenteSeleccionado", "integer", 42},        // es el id de usuario: va como texto
                 {"docenteSeleccionado", "string", 42},         // valor que no es texto
                 {"docenteSeleccionado", "string", null},       // valor nulo
