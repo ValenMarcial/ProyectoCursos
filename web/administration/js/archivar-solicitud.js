@@ -15,7 +15,7 @@
 
 import { completarTarea, obtenerVariables } from './api.js';
 import { tareas } from './contrato.js';
-import { buscarTarea, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
+import { buscarTarea, camposSolicitud, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /**
@@ -27,18 +27,6 @@ const motivosPorResultado = {
   rechazado: 'La empresa rechazó la propuesta.',
   cerrado_por_falta_de_respuesta: 'La empresa no respondió la propuesta después de dos recordatorios.',
 };
-
-/** Datos de la solicitud que se muestran: variable y etiqueta. */
-const camposSolicitud = [
-  ['empresaNombre', 'Empresa'],
-  ['tematica', 'Temática'],
-  ['descripcion', 'Descripción'],
-  ['contactoNombre', 'Contacto'],
-  ['contactoEmail', 'Correo del contacto'],
-  ['contactoTelefono', 'Teléfono del contacto'],
-  ['participantesEstimados', 'Participantes estimados'],
-  ['fechasPreferidas', 'Fechas preferidas'],
-];
 
 /** El motivo se muestra con mostrarDatos, como un dato más traducido a texto. */
 const camposMotivo = [

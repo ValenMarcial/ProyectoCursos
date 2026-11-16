@@ -16,7 +16,7 @@
 import { completarTarea, ErrorApi, obtenerVariables, reclamarTarea } from './api.js';
 import { mensajeSinRecursos, tareas, variables } from './contrato.js';
 import { buscarTarea, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
-import { formatearPresupuesto } from './texto.js';
+import { formatearFechaAcordada, formatearPresupuesto } from './texto.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /** Datos de la propuesta que se muestran: variable, etiqueta y formato opcional. */
@@ -61,17 +61,6 @@ const casillas = casillasRecursos.map(([id]) => document.getElementById(id));
 
 // Se completa en iniciar() y lo usan el reclamo y el envío del formulario.
 let tareaActual = null;
-
-/**
- * Formatea la fecha que acordó la empresa.
- * Recibe: texto ISO-8601, como 2027-03-08T09:00:00.
- * Devuelve: texto dd/MM/yyyy, o el valor original si no tiene ese formato.
- */
-function formatearFechaAcordada(fecha) {
-  // Se toma el texto tal cual: convertirlo a Date podría correr el día por la zona horaria.
-  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha));
-  return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha);
-}
 
 /**
  * Oculta el bloque de reclamo y muestra el formulario.

@@ -3,7 +3,8 @@
  *
  * Funciones que comparten las pantallas que resuelven una tarea del proceso:
  * buscar qué tarea abrir, recordarla en la URL y mostrar los datos de la
- * instancia. Para formatear el presupuesto está texto.js.
+ * instancia (con la lista común de datos de la solicitud). Para formatear
+ * presupuestos y fechas está texto.js.
  *
  * No muestra avisos ni decide qué hacer con la tarea (tomarla, completarla):
  * eso queda en cada pantalla. Los datos se muestran con textContent: nunca se
@@ -12,6 +13,21 @@
 
 import { listarTareas } from './api.js';
 import { parametroTarea } from '../../common/js/pantallas.js';
+
+/**
+ * Datos de la solicitud que muestran las pantallas, como [variable, etiqueta]
+ * para mostrarDatos. Son las variables que carga la empresa en el sitio público.
+ */
+export const camposSolicitud = [
+  ['empresaNombre', 'Empresa'],
+  ['tematica', 'Temática'],
+  ['descripcion', 'Descripción'],
+  ['contactoNombre', 'Contacto'],
+  ['contactoEmail', 'Correo de contacto'],
+  ['contactoTelefono', 'Teléfono de contacto'],
+  ['participantesEstimados', 'Participantes estimados'],
+  ['fechasPreferidas', 'Fechas preferidas'],
+];
 
 /**
  * Busca la tarea que tiene que abrir una pantalla.

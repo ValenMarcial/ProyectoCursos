@@ -24,3 +24,14 @@ export function quitarAcentos(texto) {
 export function formatearPresupuesto(presupuesto) {
   return `$ ${new Intl.NumberFormat('es-AR').format(presupuesto)}`;
 }
+
+/**
+ * Formatea la fecha que acordó la empresa (fechaInicio, la manda al aceptar).
+ * Recibe: texto ISO-8601, como 2027-03-08T09:00:00.
+ * Devuelve: texto dd/MM/yyyy, o el valor original si no tiene ese formato.
+ */
+export function formatearFechaAcordada(fecha) {
+  // Se toma el texto tal cual: convertirlo a Date podría correr el día por la zona horaria.
+  const coincidencia = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha));
+  return coincidencia ? `${coincidencia[3]}/${coincidencia[2]}/${coincidencia[1]}` : String(fecha);
+}
