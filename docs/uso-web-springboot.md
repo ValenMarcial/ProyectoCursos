@@ -236,7 +236,7 @@ curl -i -u jefeDeEquipo:JefeD123 \
 
 La respuesta correcta es `200 OK`. `rutaInforme` debe tener la forma `cursos/<PROCESS_INSTANCE_ID>/<archivo>.pdf`; no puede salir de esa carpeta, no puede tener subcarpetas ni otra extensión, y no puede superar los 255 caracteres. El listener no verifica que el archivo exista: solo valida la ruta y la guarda en `cursos.resultados`.
 
-Si `informeResultados` falta, está vacío o solo tiene espacios, Flowable responde `400` y la tarea sigue pendiente. Si falta `rutaInforme` o la ruta no corresponde a la instancia, tiene `..`, subcarpetas, otra extensión o es demasiado larga, responde `500` y la tarea también sigue pendiente. Después de un rechazo, corregí el cuerpo y volvé a ejecutar el `POST` con el mismo `TASK_ID`.
+Si `informeResultados` falta, está vacío o solo tiene espacios y no se envía `informeAdjunto` en `true`, Flowable responde `400` y la tarea sigue pendiente. Con un PDF adjunto se puede completar sin texto: mandá `{"name": "informeAdjunto", "type": "boolean", "value": true}` y `rutaInforme`. Si falta `rutaInforme` o la ruta no corresponde a la instancia, tiene `..`, subcarpetas, otra extensión o es demasiado larga, responde `500` y la tarea también sigue pendiente. Después de un rechazo, corregí el cuerpo y volvé a ejecutar el `POST` con el mismo `TASK_ID`.
 
 > Si no tenés `jq`, consultá la tarea con el `curl` de arriba y copiá manualmente el `id` del primer resultado.
 
