@@ -13,13 +13,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -309,6 +313,41 @@ class TareaControllerTest {
     void subirInformeSinSesionResponde401() throws Exception {
         mvc.perform(multipart(TareaController.RUTA + "/7501/informe")
                         .file(new MockMultipartFile("archivo", "informe.pdf", "application/pdf", new byte[] {1})))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(informes);
+    }
+
+    @Test
+    void verInformeDevuelveElPdfSinCache(@TempDir Path carpeta) throws Exception {
+        byte[] pdf = "%PDF-1.7 contenido".getBytes(StandardCharsets.US_ASCII);
+        Path archivo = Files.write(carpeta.resolve("informe.pdf"), pdf);
+        when(informes.ubicar(JEFE, "7501")).thenReturn(archivo);
+
+        mvc.perform(get(TareaController.RUTA + "/7501/informe").session(sesion))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"informe.pdf\""))
+                .andExpect(content().bytes(pdf));
+    }
+
+    @Test
+    void verInformeSinInformeODeTareaAjenaUsaElEstadoDelMotivo() throws Exception {
+        when(informes.ubicar(JEFE, "7501"))
+                .thenThrow(new TareaException(Motivo.INFORME_NO_ENCONTRADO))
+                .thenThrow(new TareaException(Motivo.NO_AUTORIZADA));
+
+        mvc.perform(get(TareaController.RUTA + "/7501/informe").session(sesion))
+                .andExpect(status().isNotFound())
+                .andExpect(content().json("{\"message\":\"" + Motivo.INFORME_NO_ENCONTRADO.getMensaje() + "\"}", true));
+        mvc.perform(get(TareaController.RUTA + "/7501/informe").session(sesion))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void verInformeSinSesionResponde401() throws Exception {
+        mvc.perform(get(TareaController.RUTA + "/7501/informe"))
                 .andExpect(status().isUnauthorized());
         verifyNoInteractions(informes);
     }

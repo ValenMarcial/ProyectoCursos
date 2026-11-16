@@ -337,6 +337,25 @@ class TareaServiceTest {
     }
 
     @Test
+    void textoDeInstanciaDevuelveSoloVariablesDeTexto() {
+        when(flowable.variablesDeInstancia("7420")).thenReturn(List.of(
+                new VariableResponse("rutaInforme", "string", "cursos/7420/informe.pdf"),
+                new VariableResponse("presupuesto", "long", 1000)));
+
+        assertEquals(Optional.of("cursos/7420/informe.pdf"), service.textoDeInstancia("7420", "rutaInforme"));
+        assertTrue(service.textoDeInstancia("7420", "presupuesto").isEmpty());
+        assertTrue(service.textoDeInstancia("7420", "noExiste").isEmpty());
+    }
+
+    @Test
+    void textoDeInstanciaSinRespuestaDelMotorDaFlowableNoResponde() {
+        when(flowable.variablesDeInstancia("7420")).thenThrow(new ResourceAccessException("sin conexión"));
+
+        assertEquals(Motivo.FLOWABLE_NO_RESPONDE,
+                assertThrows(TareaException.class, () -> service.textoDeInstancia("7420", "rutaInforme")).getMotivo());
+    }
+
+    @Test
     void tareaAsignadaDevuelveLaTareaPropiaYRechazaLaAjena() {
         TareaResponse propia = tarea("jefeAdministrativo");
         when(flowable.obtenerTarea("7501")).thenReturn(Optional.of(propia));

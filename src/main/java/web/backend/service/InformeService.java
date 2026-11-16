@@ -64,6 +64,37 @@ public class InformeService {
         return relativa;
     }
 
+    /**
+     * Ubica el PDF del informe de la instancia de una tarea del usuario, para descargarlo.
+     * La ruta sale SIEMPRE de la variable rutaInforme de la instancia, leída en el servidor: la web
+     * no manda ninguna ruta. Se exige que sea cursos/&lt;instancia de la tarea&gt;/&lt;archivo&gt;.pdf, que
+     * quede dentro de la carpeta de informes (también tras resolver enlaces simbólicos) y que
+     * sea un archivo común.
+     * Recibe el usuario de la sesión y el id de la tarea. Lanza TareaException: las de
+     * tareaAsignada, FLOWABLE_NO_RESPONDE o INFORME_NO_ENCONTRADO (sin ruta, ruta que no
+     * corresponde a la instancia o archivo ausente: no se distingue, para no revelar rutas).
+     */
+    public Path ubicar(UsuarioSesion usuario, String tareaId) {
+        TareaResponse tarea = tareas.tareaAsignada(usuario, tareaId);
+        String instancia = tarea.getProcessInstanceId();
+        String ruta = tareas.textoDeInstancia(instancia, "rutaInforme")
+                .orElseThrow(() -> new TareaException(Motivo.INFORME_NO_ENCONTRADO));
+        String prefijo = "cursos/" + instancia + "/";
+        Path base = carpeta.toAbsolutePath().normalize();
+        Path archivo = base.resolve(ruta).normalize();
+        try {
+            if (!ruta.startsWith(prefijo) || !ruta.endsWith(".pdf")
+                    || !archivo.startsWith(base.resolve("cursos").resolve(instancia))
+                    || !Files.isRegularFile(archivo)
+                    || !archivo.toRealPath().startsWith(base.toRealPath())) {
+                throw new TareaException(Motivo.INFORME_NO_ENCONTRADO);
+            }
+        } catch (IOException exception) {
+            throw new TareaException(Motivo.INFORME_NO_ENCONTRADO, exception);
+        }
+        return archivo;
+    }
+
     private static boolean esPdf(byte[] contenido) {
         return contenido.length >= CABECERA_PDF.length
                 && Arrays.equals(Arrays.copyOf(contenido, CABECERA_PDF.length), CABECERA_PDF);

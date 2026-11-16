@@ -2,6 +2,10 @@ package web.backend.api;
 
 import java.io.IOException;
 
+import org.springframework.core.io.PathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -106,5 +110,23 @@ public class TareaController {
         } catch (IOException exception) {
             throw new TareaException(Motivo.INFORME_NO_GUARDADO, exception);
         }
+    }
+
+    /**
+     * GET /api/tareas/{id}/informe: el PDF del informe de resultados de la instancia, para verlo
+     * en el navegador. Exige una tarea asignada al usuario de la sesión. La ruta del archivo
+     * sale del servidor (variable rutaInforme), no del pedido. Responde application/pdf sin
+     * caché (el informe es de una sola empresa) o 404 con {"message"} si no existe.
+     */
+    @GetMapping("/{id}/informe")
+    public ResponseEntity<Resource> verInforme(
+            @SessionAttribute(SesionController.ATRIBUTO_USUARIO) UsuarioSesion usuario,
+            @PathVariable String id) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .cacheControl(CacheControl.noStore())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"informe.pdf\"")
+                .header("X-Content-Type-Options", "nosniff")
+                .body(new PathResource(informes.ubicar(usuario, id)));
     }
 }
