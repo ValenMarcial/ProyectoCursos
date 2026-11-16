@@ -16,11 +16,9 @@
   <main class="contenedor">
 
     <div class="acceso">
+      
+      <div id="notification" class="notification" role="alert" hidden></div>
 
-      <!-- Lo completa el JavaScript: éxito o error -->
-      <div id="notification" class="notification" aria-live="polite" hidden></div>
-
-      <!-- Los nombres de los campos son provisorios hasta definir el contrato del login -->
       <form id="form-login" class="formulario">
 
         <fieldset>
@@ -30,17 +28,23 @@
             <label for="usuario">Usuario *</label>
             <input type="text" id="usuario" name="usuario" maxlength="320"
                    autocomplete="username" required>
+            <span class="ayuda">Normalmente es el correo electrónico de contacto de su solicitud.</span>
           </div>
 
           <div class="campo">
-            <label for="contrasena">Contraseña *</label>
-            <input type="password" id="contrasena" name="contrasena"
+            <label for="clave">Contraseña *</label>
+            <input type="password" id="clave" name="clave"
                    autocomplete="current-password" required>
           </div>
         </fieldset>
 
         <button type="submit" id="ingresar" class="boton-de-accion">Ingresar</button>
       </form>
+
+      <p class="ayuda">
+        ¿Todavía no tiene cuenta? Se crea cuando acepta una propuesta.
+        Puede <a href="../public/request.html">solicitar una capacitación</a>.
+      </p>
 
     </div>
 
@@ -50,5 +54,6 @@
     <p><a href="../index.html">Volver al inicio</a></p>
   </footer>
 
+  <script type="module" src="js/login.js"></script>
 </body>
 </html>
