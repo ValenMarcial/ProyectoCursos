@@ -88,6 +88,7 @@ public class TareaErrorHandler {
                 return HttpStatus.FORBIDDEN;
             case TAREA_NO_ENCONTRADA:
             case INSTANCIA_NO_ENCONTRADA:
+            case INFORME_NO_ENCONTRADO:
                 return HttpStatus.NOT_FOUND;
             case FLOWABLE_NO_RESPONDE:
                 return HttpStatus.BAD_GATEWAY;

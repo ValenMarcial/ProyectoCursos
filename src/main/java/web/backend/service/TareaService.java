@@ -222,6 +222,20 @@ public class TareaService {
         });
     }
 
+    /**
+     * Devuelve el valor de texto de una variable de la instancia, o vacío si no existe o no es
+     * texto. Es para uso del servidor (por ejemplo, ubicar el PDF del informe): NO aplica
+     * VARIABLES_LECTURA ni controla permisos, así que quien la llama tiene que haber validado
+     * antes que el usuario tiene una tarea de esa instancia (ver tareaAsignada).
+     * Lanza TareaException(FLOWABLE_NO_RESPONDE) si el motor no responde.
+     */
+    public Optional<String> textoDeInstancia(String instanciaId, String nombre) {
+        return conFlowable(() -> flowable.variablesDeInstancia(instanciaId).stream()
+                .filter(variable -> nombre.equals(variable.getName()) && variable.getValue() instanceof String)
+                .map(variable -> (String) variable.getValue())
+                .findFirst());
+    }
+
     /** Busca la tarea del proceso o lanza TAREA_NO_ENCONTRADA si no existe. */
     private TareaResponse buscar(String tareaId) {
         Optional<TareaResponse> tarea = flowable.obtenerTarea(tareaId);

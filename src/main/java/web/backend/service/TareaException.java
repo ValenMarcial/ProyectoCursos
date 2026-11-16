@@ -24,6 +24,7 @@ public class TareaException extends RuntimeException {
         TAREA_SIN_INFORME("La tarea no es la de elaborar el informe de resultados."),
         INFORME_INVALIDO("El informe tiene que ser un archivo PDF no vacío, enviado en el campo \"archivo\"."),
         INFORME_MUY_GRANDE("El informe supera el tamaño máximo de " + InformeService.MAXIMO_MB + " MB."),
+        INFORME_NO_ENCONTRADO("El informe no existe: todavía no se subió el PDF o el archivo no está en el servidor."),
         INFORME_NO_GUARDADO("No se pudo guardar el informe en el servidor."),
         FLOWABLE_NO_RESPONDE("No se pudo consultar las tareas porque Flowable no responde.");
 
