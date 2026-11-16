@@ -25,9 +25,7 @@ export const pantallasPorTarea = {
   [tareas.enviarInforme]: null,
   [tareasDocentes.definirDocente]: '/teachers/definir-docente.html',
   [tareasDocentes.desarrollarCurso]: '/teachers/desarrollar-curso.html',
-  // El jefe del equipo docente la hace desde Flowable, adjuntando el informe en PDF
-  // (el sitio es opcional para esta tarea, enunciado 4.1.3).
-  [tareasDocentes.elaborarInforme]: null,
+  [tareasDocentes.elaborarInforme]: '/teachers/elaborar-informe.html',
 };
 
 /** Parámetro con el que las pantallas reciben la tarea a abrir (?tarea=<id>). */

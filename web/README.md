@@ -71,7 +71,7 @@ Pantallas:
 - `index.html`: bandeja con las tareas docentes asignadas al usuario. Todas llegan asignadas (al jefe por el BPMN, o al docente elegido), así que no se reclaman.
 - `definir-docente.html`: el jefe elige uno de los tres integrantes (`jefeDeEquipo`, `docente1`, `docente2`) y completa la tarea con `docenteSeleccionado`. Está pensada para el celular: el enunciado (1.4) pide hacerla "mediante la aplicación móvil".
 - `desarrollar-curso.html`: el docente ve el curso y registra la finalización del dictado, con confirmación en la misma pantalla.
-- *Elaborar informe de resultados* se completa desde el sitio: se escribe el texto (la web lo convierte a PDF al guardar) o se adjunta un PDF propio, y el backend devuelve la ruta que se envía como `rutaInforme`. Con PDF adjunto se marca `informeAdjunto` y el texto es opcional.
+- `elaborar-informe.html`: *Elaborar informe de resultados*. Se escribe el texto (la web lo convierte a PDF al guardar) o se adjunta un PDF propio, y el backend devuelve la ruta que se envía como `rutaInforme`. Con PDF adjunto se marca `informeAdjunto` y el texto es opcional.
 
 Reutiliza el adaptador de Administración (`crearApi` de `administration/js/api.js`), sus estilos y la capa común del personal: el login con `?volver=` (`common/js/sesion.js` y `navegacion.js`) y los avisos (`common/js/avisos.js`). Lo propio está en `teachers/js/`: ids de tareas e integrantes (`contrato-docentes.js`), un mock con usuarios del grupo Docentes (`mock-docentes.js`) y funciones comunes de las pantallas (`pantalla-docentes.js`).
 
