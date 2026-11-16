@@ -333,7 +333,8 @@
     </userTask>
     <userTask id="sid-8EE040F3-0293-488C-AE3F-3BD79DB56897" name="Elaborar informe de resultados" flowable:assignee="jefeDeEquipo" flowable:formFieldValidation="true">
       <extensionElements>
-        <flowable:formProperty id="informeResultados" name="Informe de resultados" type="string" required="true"></flowable:formProperty>
+        <flowable:formProperty id="informeResultados" name="Informe de resultados" type="string"></flowable:formProperty>
+        <flowable:formProperty id="informeAdjunto" name="Se adjuntó un PDF (no hace falta completar el texto)" type="boolean"></flowable:formProperty>
         <flowable:taskListener event="complete" class="flowable.report.ValidateReport"></flowable:taskListener>
         <flowable:taskListener event="complete" class="flowable.report.SaveReport"></flowable:taskListener>
         <flowable:executionListener event="start" class="flowable.course.UpdateCourseState">

@@ -47,8 +47,9 @@ public class TareaService {
             "aulaFisica", "aulaVirtual", "equipamiento",
             // Lista de participantes.
             "participantes", "listaDefinitiva",
-            // Informe: el texto lo completa la web desde el PDF y la ruta la genera la web.
-            "observaciones", "resultado", "informeResultados", "rutaInforme",
+            // Informe: el texto lo escribe la persona (opcional si adjunta un PDF, lo que marca
+            // informeAdjunto) y la ruta la genera la web.
+            "observaciones", "resultado", "informeResultados", "informeAdjunto", "rutaInforme",
             // Cierre: código del error que cerró el curso (hoy SIN_AULAS), para mostrar el motivo.
             "motivoCierre");
 
@@ -82,6 +83,7 @@ public class TareaService {
             // Lista definitiva e informe. rutaInforme la genera la web al subir el PDF.
             Map.entry("listaDefinitiva", TIPO_TEXTO),
             Map.entry("informeResultados", TIPO_TEXTO),
+            Map.entry("informeAdjunto", TIPO_BOOLEANO),
             Map.entry("rutaInforme", TIPO_TEXTO),
             // Definir Docente: id de usuario del docente elegido.
             Map.entry("docenteSeleccionado", TIPO_TEXTO));

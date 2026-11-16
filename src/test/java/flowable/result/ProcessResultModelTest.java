@@ -178,11 +178,33 @@ class ProcessResultModelTest {
         for (Map<String, Object> variables : invalidos) {
             FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                     () -> completar(instancia, ELABORAR_INFORME, variables));
-            assertEquals("El informe de resultados es obligatorio.", error.getMessage());
+            assertEquals("El informe de resultados es obligatorio si no se adjunta un PDF.", error.getMessage());
             assertEquals(1, taskService.createTaskQuery().processInstanceId(instancia)
                     .taskDefinitionKey(ELABORAR_INFORME).count());
             assertNull(consultar("SELECT resultados FROM cursos WHERE id = 80"));
         }
+    }
+
+    @Test
+    void conPdfAdjuntoElInformeSeCompletaSinTextoYGuardaLaRuta() throws SQLException {
+        String instancia = llegarAElaborarInforme(10L, 100L);
+
+        completar(instancia, ELABORAR_INFORME, Map.of(
+                "informeAdjunto", true,
+                "rutaInforme", rutaInforme(instancia)));
+
+        assertEquals(rutaInforme(instancia), consultar("SELECT resultados FROM cursos WHERE id = 100"));
+    }
+
+    @Test
+    void conPdfAdjuntoSigueExigiendoLaRuta() throws SQLException {
+        String instancia = llegarAElaborarInforme(11L, 110L);
+
+        FlowableException error = assertThrows(FlowableException.class,
+                () -> completar(instancia, ELABORAR_INFORME, Map.of("informeAdjunto", true)));
+
+        assertTrue(error.getMessage().contains("ruta del PDF"));
+        assertNull(consultar("SELECT resultados FROM cursos WHERE id = 110"));
     }
 
     @Test

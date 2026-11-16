@@ -159,7 +159,8 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `docenteSeleccionado` | String (ID de usuario del grupo `Docentes`) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
-| `informeResultados` | String | Formulario de "Elaborar informe de resultados"; la web lo llena con el texto extraído del PDF | Validación del informe |
+| `informeResultados` | String | Formulario de "Elaborar informe de resultados": el texto que escribe la persona; opcional si adjunta un PDF | Validación del informe |
+| `informeAdjunto` | boolean | La web, al subir un PDF que adjuntó la persona; sin marcar, el texto es obligatorio | Validación del informe |
 | `rutaInforme` | String (ruta relativa) | La web al subir el PDF; no la escribe la persona | `SaveReport` la guarda en `cursos.resultados` |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | `RecordProcessResult` (ver "Resultado del proceso") |
@@ -192,27 +193,31 @@ La comparación es por día y en UTC, igual que las fechas guardadas en `cursos.
 
 ## Elaborar informe de resultados
 
-La tarea `Elaborar informe de resultados` tiene un solo campo visible y obligatorio:
+La tarea `Elaborar informe de resultados` tiene dos campos en el formulario del BPMN, ninguno obligatorio por sí solo:
 
 | Campo | Tipo | Quién lo llena |
 |---|---|---|
-| `informeResultados` | string | La web, con todo el texto extraído del PDF |
+| `informeResultados` | string | La persona, escribiendo el informe en la web. Es obligatorio salvo que adjunte un PDF |
+| `informeAdjunto` | boolean | La web: lo marca cuando la persona sube un PDF propio, y entonces el texto puede quedar vacío |
 
-El formulario no muestra la ruta del archivo. La ruta la genera la web/backend al subir el PDF y viaja como variable de proceso `rutaInforme`; la persona que elabora el informe no la escribe.
+El formulario no muestra la ruta del archivo. La ruta la genera el backend al subir el PDF y viaja como variable de proceso `rutaInforme`; la persona no la escribe. El PDF es siempre obligatorio (lo exige `SaveReport`): lo que cambia según el caso es de dónde sale.
 
-**Flujo para la web:**
+**Flujo para la web, dos caminos:**
 
-1. Reclamar la tarea y subir el PDF con `POST /api/tareas/{id}/informe` (multipart, campo `archivo`).
+- *Informe escrito:* la persona escribe el texto; al guardar, la web lo convierte a PDF, lo sube y completa la tarea con `informeResultados` y `rutaInforme` (sin `informeAdjunto`).
+- *PDF adjunto:* la persona adjunta el PDF; la web lo sube, marca `informeAdjunto` en verdadero y completa la tarea con `informeAdjunto` y `rutaInforme`. El texto no hace falta.
+
+En los dos casos la subida es la misma:
+
+1. Subir el PDF con `POST /api/tareas/{id}/informe` (multipart, campo `archivo`).
 2. El backend lo guarda en `./data/informes/cursos/<instanciaFlowableId>/<uuid>.pdf`.
 3. El backend devuelve `{"rutaInforme": "cursos/<instanciaFlowableId>/<uuid>.pdf"}`.
-4. La web extrae el texto del PDF y completa `informeResultados`.
-5. La web completa la tarea enviando `informeResultados` y `rutaInforme`.
 
 **Validación y persistencia:**
 
-- `flowable.report.ValidateReport` exige que `informeResultados` no esté vacío.
+- `flowable.report.ValidateReport` exige que `informeResultados` no esté vacío, salvo que `informeAdjunto` sea el booleano `true`. Solo vale `true`: ausente, falso o de otro tipo cuentan como "sin PDF adjunto". Si falta el texto responde `400` con "El informe de resultados es obligatorio si no se adjunta un PDF."
 - `flowable.report.SaveReport` exige que `rutaInforme` tenga la forma `cursos/<instanciaFlowableId>/<archivo>.pdf`, sin `..`, sin subcarpetas, con extensión `.pdf` y hasta 255 caracteres; después la guarda en `cursos.resultados` con la conexión del motor, en la misma transacción de la tarea.
-- El texto del informe queda en la instancia de Flowable; no se guarda en la base institucional.
+- El texto del informe, si lo hay, queda en la instancia de Flowable; no se guarda en la base institucional.
 - La tarea está pensada para completarse desde la web. Si se completa desde Flowable UI sin subir el PDF, falta `rutaInforme` y la tarea no se completa.
 
 **Subida del PDF (`POST /api/tareas/{id}/informe`):** exige sesión del personal y que la tarea sea *Elaborar informe de resultados* y esté asignada a quien sube. Acepta solo PDF (empieza con `%PDF-`), no vacío, de hasta 10 MB. Errores, siempre `{"message"}`: `400` (tarea que no es la del informe, archivo faltante, vacío o que no es PDF), `403`/`404` (tarea ajena o inexistente, igual que al completar), `413` (más de 10 MB) y `500` (no se pudo escribir en `INFORMES_DIR`). Cada subida genera un archivo nuevo; vale la ruta que la web manda al completar. Si el PDF se sube y la tarea no se completa, el archivo queda sin referencia.

@@ -142,6 +142,8 @@ export const variables = {
   equipamiento: 'equipamiento',
   listaDefinitiva: 'listaDefinitiva', // PENDIENTE: nombre a acordar
   informeResultados: 'informeResultados',
+  // Verdadero cuando se sube un PDF: entonces el texto del informe puede quedar vacío.
+  informeAdjunto: 'informeAdjunto',
   // La genera la web al subir el PDF; no la escribe la persona que elabora el informe.
   rutaInforme: 'rutaInforme',
   // Id de usuario de Flowable del docente que elige el jefe en "Definir Docente".
@@ -163,6 +165,7 @@ export const tiposVariables = {
   [variables.equipamiento]: 'boolean',
   [variables.listaDefinitiva]: 'string',
   [variables.informeResultados]: 'string',
+  [variables.informeAdjunto]: 'boolean',
   [variables.rutaInforme]: 'string',
   [variables.docenteSeleccionado]: 'string',
 };
