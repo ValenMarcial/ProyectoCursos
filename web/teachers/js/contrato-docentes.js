@@ -46,6 +46,21 @@ export const mensajesSeleccion = {
 };
 
 /**
+ * Informe de resultados. Los textos son los del backend y del motor, para que la
+ * pantalla avise lo mismo antes de enviar que si el pedido se rechaza:
+ * - sinTexto: flowable.report.ValidateReport (texto vacío y sin PDF adjunto).
+ * - noEsPdf, muyGrande: TareaException.Motivo (INFORME_INVALIDO, INFORME_MUY_GRANDE).
+ * maximoMb es InformeService.MAXIMO_MB.
+ */
+export const informe = {
+  maximoMb: 10,
+  sinTexto: 'El informe de resultados es obligatorio si no se adjunta un PDF.',
+  noEsPdf: 'El informe tiene que ser un archivo PDF no vacío, enviado en el campo "archivo".',
+  muyGrande: 'El informe supera el tamaño máximo de 10 MB.',
+  tareaSinInforme: 'La tarea no es la de elaborar el informe de resultados.',
+};
+
+/**
  * Parámetro de la URL que elige el usuario del modo simulado (?usuario=docente1).
  * Solo existe en modo mock: en modo real el usuario sale de la sesión del backend.
  */
