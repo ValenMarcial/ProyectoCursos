@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.util.Collections;
 import java.util.Map;
 
-import org.flowable.common.engine.api.FlowableException;
+import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.RuntimeService;
@@ -65,7 +65,8 @@ class SeleccionDocenteTest {
         String instanceId = iniciarProceso();
         Task task = definirDocente(instanceId);
 
-        assertThrows(FlowableException.class,
+        // Lo corta la validación de campo obligatorio del formulario de Flowable, antes del listener.
+        assertThrows(org.flowable.common.engine.api.FlowableException.class,
                 () -> engine.getFormService().submitTaskFormData(task.getId(), Collections.emptyMap()));
         assertEquals(1, taskService.createTaskQuery().taskId(task.getId()).count());
     }
@@ -85,7 +86,7 @@ class SeleccionDocenteTest {
         String instanceId = iniciarProceso();
         Task task = definirDocente(instanceId);
 
-        FlowableException error = assertThrows(FlowableException.class,
+        FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                 () -> engine.getFormService().submitTaskFormData(task.getId(),
                         Map.of("docenteSeleccionado", "administrativo")));
         assertEquals("El docente seleccionado debe pertenecer al grupo Docentes.", error.getMessage());
@@ -101,7 +102,7 @@ class SeleccionDocenteTest {
         String instanceId = iniciarProceso();
         Task task = definirDocente(instanceId);
 
-        FlowableException error = assertThrows(FlowableException.class,
+        FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                 () -> taskService.complete(task.getId(), Map.of("docenteSeleccionado", "inexistente")));
         assertEquals("El docente seleccionado debe pertenecer al grupo Docentes.", error.getMessage());
         assertEquals(1, taskService.createTaskQuery().taskId(task.getId()).count());
@@ -116,7 +117,7 @@ class SeleccionDocenteTest {
                 Collections.<String, Object>emptyMap(),
                 Map.<String, Object>of("docenteSeleccionado", "  "),
                 Map.<String, Object>of("docenteSeleccionado", 42))) {
-            FlowableException error = assertThrows(FlowableException.class,
+            FlowableIllegalArgumentException error = assertThrows(FlowableIllegalArgumentException.class,
                     () -> taskService.complete(task.getId(), variables));
             assertEquals("Debe indicar el ID del docente seleccionado.", error.getMessage());
             assertEquals(1, taskService.createTaskQuery().taskId(task.getId()).count());

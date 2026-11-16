@@ -10,43 +10,91 @@
  */
 
 /**
- * Único interruptor del adaptador.
+ * Modo por defecto del adaptador.
  * 'mock': usa los datos simulados de mock.js.
  * 'real': llama al backend con fetch.
+ *
+ * Por defecto es 'real': las pantallas del personal usan el backend y piden
+ * iniciar sesión. El modo real solo anda con la web servida por el backend
+ * (mismo origen que /api), no con python3 -m http.server.
+ *
+ * Para trabajar sin backend, con datos simulados, se agrega ?api=mock a la URL
+ * de cualquier pantalla (y ?api=real para volver). La elección queda guardada en
+ * la pestaña (sessionStorage), así no se pierde al navegar entre pantallas; se
+ * borra al cerrar la pestaña.
  */
-export const modoApi = 'mock';
+export const modoApi = 'real';
+
+/** Parámetro de la URL que cambia el modo de la pestaña (?api=real o ?api=mock). */
+export const parametroModoApi = 'api';
+
+/** Clave de sessionStorage donde queda el modo elegido en la pestaña. */
+export const claveModoApi = 'administracion.modoApi';
 
 /**
  * Prefijo de la API del backend.
  * El navegador nunca habla directo con Flowable (ver docs/contrato.md).
+ *
+ * En modo 'real' estas rutas tienen que ser siempre las del backend (/api/...),
+ * nunca las de Flowable: el adaptador reclama sin mandar assignee porque el
+ * backend lo toma de la sesión, y un claim sin assignee contra Flowable libera
+ * la tarea en lugar de tomarla.
  */
 export const baseApi = '/api';
 
 /**
- * Arma las rutas de la API.
- * PROVISORIAS: el backend todavía no tiene estos endpoints. Se propone que
- * repitan el formato de la API REST de Flowable, ya verificado en la Fase 0.
+ * Alcances de GET /api/tareas, en minúscula como los espera el backend.
+ * mias: asignadas al usuario de la sesión. grupo: sin asignar, de sus grupos.
+ */
+export const alcances = {
+  mias: 'mias',
+  grupo: 'grupo',
+};
+
+/** Tamaño de página que se pide al listar: es el máximo que acepta el backend. */
+export const tamanioPagina = 100;
+
+/**
+ * Arma las rutas de la API del backend (tareas: lectura en la #56, acciones en
+ * la #57). El usuario nunca va en la ruta ni en el cuerpo: el backend lo toma de
+ * la sesión.
  */
 export const rutasApi = {
+  /** Sesión del personal: POST inicia, GET consulta y DELETE cierra. */
+  sesion: `${baseApi}/sesion`,
+
   /**
    * Ruta para listar tareas.
-   * Recibe: filtros { usuario, grupo }, ambos opcionales.
+   * Recibe: { alcance, start, size }; alcance es obligatorio ('mias' o 'grupo').
    * Devuelve: la ruta con su query string.
    */
-  tareas({ usuario, grupo } = {}) {
-    const parametros = new URLSearchParams();
-    if (usuario) parametros.set('assignee', usuario);
-    if (grupo) parametros.set('candidateGroup', grupo);
-    const consulta = parametros.toString();
-    return `${baseApi}/tareas${consulta ? `?${consulta}` : ''}`;
+  tareas({ alcance, start = 0, size = tamanioPagina }) {
+    const parametros = new URLSearchParams({ alcance, start: String(start), size: String(size) });
+    return `${baseApi}/tareas?${parametros}`;
   },
 
   /**
-   * Ruta para actuar sobre una tarea (reclamar o completar).
+   * Ruta de una tarea (GET para leerla).
    * Recibe: id de la tarea. Devuelve: la ruta.
    */
   tarea(id) {
     return `${baseApi}/tareas/${encodeURIComponent(id)}`;
+  },
+
+  /**
+   * Ruta para reclamar una tarea (POST sin cuerpo).
+   * Recibe: id de la tarea. Devuelve: la ruta.
+   */
+  reclamar(id) {
+    return `${rutasApi.tarea(id)}/reclamar`;
+  },
+
+  /**
+   * Ruta para completar una tarea (POST con { variables }).
+   * Recibe: id de la tarea. Devuelve: la ruta.
+   */
+  completar(id) {
+    return `${rutasApi.tarea(id)}/completar`;
   },
 
   /**
@@ -57,6 +105,15 @@ export const rutasApi = {
     return `${baseApi}/instancias/${encodeURIComponent(instanciaId)}/variables`;
   },
 };
+
+/**
+ * Pantalla de login a la que se manda al usuario cuando el backend responde 401
+ * (sesión vencida o sin iniciar). Se le agrega ?volver=<pantalla actual>.
+ * Es la fuente única: la leen el adaptador de Administración, el de Docentes y
+ * web/common/js/navegacion.js. Va absoluta desde la raíz del sitio para que
+ * sirva desde cualquier carpeta. Con null, el 401 solo muestra el aviso.
+ */
+export const rutaLogin = '/common/login.html';
 
 /** Ids de las tareas de Administración, tal como están en el BPMN. */
 export const tareas = {
@@ -84,7 +141,11 @@ export const variables = {
   aulaVirtual: 'aulaVirtual',
   equipamiento: 'equipamiento',
   listaDefinitiva: 'listaDefinitiva', // PENDIENTE: nombre a acordar
-  informeResultados: 'informeResultados', // PENDIENTE: nombre a acordar
+  informeResultados: 'informeResultados',
+  // La genera la web al subir el PDF; no la escribe la persona que elabora el informe.
+  rutaInforme: 'rutaInforme',
+  // Id de usuario de Flowable del docente que elige el jefe en "Definir Docente".
+  docenteSeleccionado: 'docenteSeleccionado',
 };
 
 /**
@@ -102,24 +163,13 @@ export const tiposVariables = {
   [variables.equipamiento]: 'boolean',
   [variables.listaDefinitiva]: 'string',
   [variables.informeResultados]: 'string',
+  [variables.rutaInforme]: 'string',
+  [variables.docenteSeleccionado]: 'string',
 };
 
-/** Mensaje de flowable.resources.ValidateResourceSelection; la pantalla anticipa la misma regla. */
-export const mensajeSinRecursos = 'Debe seleccionar al menos un recurso.';
-
 /**
- * Mensajes de los listeners que se pueden mostrar tal cual al usuario.
- * Copiados de flowable.proposal.ValidateProposalDates y de
- * flowable.resources.ValidateResourceSelection.
- *
- * PROVISORIA: se reemplaza cuando el backend traduzca los errores. Hace falta
- * porque Flowable devuelve 500 tanto para validaciones de negocio como para
- * bugs, y el status no permite distinguirlos.
+ * Mismo texto que flowable.resources.ValidateResourceSelection. La pantalla de
+ * evaluar recursos lo usa para anticipar la regla antes de enviar, así el aviso
+ * es igual tanto si lo detecta el navegador como si lo rechaza el motor.
  */
-export const mensajesNegocio = new Set([
-  'El presupuesto es obligatorio y debe ser un número mayor o igual a 0.',
-  'El presupuesto debe ser mayor o igual a 0.',
-  'Las fechas posibles de inicio y finalización son obligatorias.',
-  'La fecha de finalización debe ser posterior o igual a la fecha de inicio.',
-  mensajeSinRecursos,
-]);
+export const mensajeSinRecursos = 'Debe seleccionar al menos un recurso.';

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-validacion-informe" isExecutable="true">
+    <startEvent id="inicio"/>
+    <userTask id="elaborarInforme" flowable:assignee="jefeDeEquipo"
+              flowable:formFieldValidation="true">
+      <extensionElements>
+        <flowable:formProperty id="informeResultados" type="string" required="true"/>
+        <flowable:taskListener event="complete" class="flowable.report.ValidateReport"/>
+      </extensionElements>
+    </userTask>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="elaborarInforme"/>
+    <sequenceFlow id="f2" sourceRef="elaborarInforme" targetRef="fin"/>
+  </process>
+</definitions>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Definir docente</title>
+  <link rel="stylesheet" href="css/docentes.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Definir docente</h1>
+    <p>Equipo docente</p>
+  </header>
+
+  <main class="contenedor">
+
+    <p id="modo-simulado" class="modo-simulado" hidden></p>
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Datos del curso, solo para consulta -->
+    <section id="bloque-curso" class="bloque" hidden>
+      <h2>Curso</h2>
+      <div class="tarjeta">
+        <dl id="datos-curso" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Elección del docente: la tarea ya está asignada al jefe, no hace falta reclamarla -->
+    <section id="bloque-eleccion" class="bloque" hidden>
+      <h2>¿Quién dicta el curso?</h2>
+      <div class="tarjeta">
+        <!-- novalidate: los errores los muestra el módulo de la pantalla, en español -->
+        <form id="formulario-docente" class="formulario" novalidate>
+          <fieldset id="opciones-docente" class="opciones-docente" aria-describedby="ayuda-docente">
+            <legend>Docente</legend>
+            <p id="ayuda-docente">Elegí uno de los tres integrantes del equipo. Podés elegirte a vos.</p>
+            <!-- Las opciones las arma el módulo con la lista de contrato-docentes.js -->
+          </fieldset>
+
+          <button id="boton-confirmar" class="boton" type="submit">Asignar docente</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="index.html">Volver a mis tareas</a>
+  </footer>
+
+  <script type="module" src="js/definir-docente.js"></script>
+
+</body>
+</html>

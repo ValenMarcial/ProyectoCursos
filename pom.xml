@@ -79,6 +79,13 @@
           <version>5.9.2</version>
           <scope>test</scope>
         </dependency>
+        <!-- Flowable UI provides Groovy scripting at runtime; include it to execute real BPMN script tasks in tests. -->
+        <dependency>
+          <groupId>org.apache.groovy</groupId>
+          <artifactId>groovy-jsr223</artifactId>
+          <version>4.0.3</version>
+          <scope>test</scope>
+        </dependency>
         <!-- Parser YAML requerido por la configuración que utiliza el motor. -->
         <dependency>
           <groupId>org.yaml</groupId>
@@ -164,7 +171,8 @@
           </resource>
         </resources>
         <plugins>
-          <!-- Este perfil compila solo el paquete web.backend y sus pruebas. -->
+          <!-- Este perfil compila solo el paquete web.backend y sus pruebas, más shared (lo que
+               comparte con el motor, como el hash de las claves de empresa). -->
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
@@ -172,6 +180,7 @@
             <configuration>
               <includes>
                 <include>**/web/backend/**/*.java</include>
+                <include>shared/**/*.java</include>
               </includes>
               <testIncludes>
                 <testInclude>**/web/backend/**/*.java</testInclude>

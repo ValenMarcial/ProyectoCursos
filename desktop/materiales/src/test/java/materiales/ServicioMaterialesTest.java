@@ -142,6 +142,23 @@ class ServicioMaterialesTest {
     }
 
     @Test
+    void funcionaConUnProcesoQueTieneTareaDeReglas() {
+        // El BPMN real tiene "Evaluar Viabilidad" (Drools). Sin kie-api en el classpath, desplegar o leer
+        // las variables de la tarea falla con NoClassDefFoundError al cargar la definición del proceso.
+        procesos.getRepositoryService().createDeployment()
+                .addClasspathResource("materiales-reglas-test.bpmn20.xml").deploy();
+        String instancia = procesos.getRuntimeService().startProcessInstanceByKey("materialesReglasTest",
+                Map.of("empresaNombre", "Reglas SA", "tematica", "Drools")).getId();
+        Usuario a1 = servicio.identificar("admin1", "clave1");
+        TareaMateriales tarea = servicio.consultar(a1).stream()
+                .filter(t -> t.empresa.equals("Reglas SA")).findFirst().orElseThrow();
+        servicio.reclamar(a1, tarea.id);
+        servicio.completar(a1, tarea.id);
+        assertEquals(1, procesos.getTaskService().createTaskQuery().processInstanceId(instancia)
+                .taskDefinitionKey("espera").count());
+    }
+
+    @Test
     void usuarioSinGruposNoVeNiReclama() {
         iniciar("Acme");
         Usuario sinGrupos = new Usuario("fantasma", List.of());

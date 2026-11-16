@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desarrollar curso</title>
+  <link rel="stylesheet" href="css/docentes.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Desarrollar curso</h1>
+    <p>Equipo docente</p>
+  </header>
+
+  <main class="contenedor">
+
+    <p id="modo-simulado" class="modo-simulado" hidden></p>
+
+    <!-- Aviso de errores y de resultado -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <!-- Datos del curso, solo para consulta -->
+    <section id="bloque-curso" class="bloque" hidden>
+      <h2>Curso</h2>
+      <div class="tarjeta">
+        <dl id="datos-curso" class="datos"></dl>
+      </div>
+    </section>
+
+    <!-- Registrar la finalización del dictado: la tarea ya está asignada al docente -->
+    <section id="bloque-finalizar" class="bloque" hidden>
+      <h2>Finalización del dictado</h2>
+      <div class="tarjeta">
+        <p>Cuando termines de dictar el curso, registralo acá. Después el jefe del equipo elabora el informe de resultados.</p>
+        <button id="boton-finalizar" class="boton" type="button">Registrar fin del dictado</button>
+
+        <!-- Confirmación en la misma pantalla: completar la tarea no se puede deshacer -->
+        <div id="confirmacion" class="confirmacion" hidden>
+          <p id="texto-confirmacion">¿Confirmás que terminó el dictado? No se puede deshacer.</p>
+          <div class="acciones">
+            <button id="boton-confirmar" class="boton" type="button" aria-describedby="texto-confirmacion">Sí, terminó</button>
+            <button id="boton-cancelar" class="boton boton-secundario" type="button">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="index.html">Volver a mis tareas</a>
+  </footer>
+
+  <script type="module" src="js/desarrollar-curso.js"></script>
+
+</body>
+</html>

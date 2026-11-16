@@ -59,9 +59,18 @@
       </div>
     </section>
 
-    <!-- Sección que aparece cuando la tarea ya se completó -->
-    <section id="bloque-resultado" class="bloque" hidden>
-      <button id="boton-descargar" class="boton boton-secundario" type="button">Descargar PDF</button>
+    <!-- Sección que aparece cuando la tarea ya se completó: vista previa y descarga del PDF -->
+    <section id="bloque-resultado" class="bloque" aria-labelledby="titulo-resultado" hidden>
+      <!-- tabindex="-1": recibe el foco cuando desaparece el formulario -->
+      <h2 id="titulo-resultado" tabindex="-1">PDF de la propuesta</h2>
+      <!-- Sin sandbox: Chrome bloquea su visor de PDF en un iframe con sandbox.
+           El src es una URL blob:; si se agrega una CSP, tiene que permitir frame-src blob:. -->
+      <iframe id="vista-previa-pdf" class="vista-previa-pdf" title="Vista previa del PDF de la propuesta"></iframe>
+      <p id="sin-visor" hidden>Este navegador no puede mostrar el PDF acá: abrilo en una pestaña nueva o descargalo.</p>
+      <p class="acciones-pdf">
+        <button id="boton-descargar" class="boton boton-secundario" type="button">Descargar PDF</button>
+        <a id="abrir-pdf" class="boton boton-secundario" target="_blank" rel="noopener">Abrir en pestaña nueva</a>
+      </p>
     </section>
 
   </main>

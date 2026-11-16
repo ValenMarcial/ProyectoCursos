@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://www.flowable.org/processdef">
+  <process id="test-validacion-fecha-curso" isExecutable="true">
+    <startEvent id="inicio"/>
+    <userTask id="desarrollarCurso" flowable:assignee="docente1">
+      <extensionElements>
+        <flowable:taskListener event="complete" class="flowable.course.ValidateCourseEndDate"/>
+      </extensionElements>
+    </userTask>
+    <endEvent id="fin"/>
+    <sequenceFlow id="f1" sourceRef="inicio" targetRef="desarrollarCurso"/>
+    <sequenceFlow id="f2" sourceRef="desarrollarCurso" targetRef="fin"/>
+  </process>
+</definitions>

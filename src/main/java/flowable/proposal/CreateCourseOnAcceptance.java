@@ -9,18 +9,26 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.function.Supplier;
 
 import org.flowable.common.engine.api.FlowableException;
 import org.flowable.common.engine.api.FlowableIllegalArgumentException;
 import org.flowable.engine.delegate.DelegateExecution;
 import org.flowable.engine.delegate.JavaDelegate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import shared.PasswordHash;
 
 /**
- * Actividad "Habilitar acceso de la empresa": crea el curso de la propuesta aceptada
- * y guarda su ID en la solicitud. Es idempotente ante reintentos.
+ * Actividad "Habilitar acceso de la empresa": crea el curso de la propuesta aceptada, guarda su ID
+ * en la solicitud y crea la cuenta de la empresa si todavía no tiene una. Todo va en una sola
+ * transacción y es idempotente ante reintentos.
  */
 public class CreateCourseOnAcceptance implements JavaDelegate {
+    private static final Logger LOG = LoggerFactory.getLogger(CreateCourseOnAcceptance.class);
+    private static final int LARGO_CLAVE = 12;
     private static final String SELECT_SOLICITUD =
             "SELECT empresa_id, tematica, descripcion, curso_id FROM solicitudes WHERE id = ? FOR UPDATE";
     private static final String SELECT_CURSO_POR_INSTANCIA =
@@ -29,6 +37,12 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
             "INSERT INTO cursos (empresa_id, nombre, descripcion, programa, presupuesto, fecha_inicio, fecha_fin, "
                     + "instancia_flowable_id, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'en_preparacion')";
     private static final String UPDATE_SOLICITUD = "UPDATE solicitudes SET curso_id = ? WHERE id = ?";
+    private static final String SELECT_CONTACTO =
+            "SELECT s.empresa_id, s.contacto_email, c.usuario FROM solicitudes s "
+                    + "LEFT JOIN cuentas_empresa c ON c.empresa_id = s.empresa_id WHERE s.id = ?";
+    private static final String SELECT_USUARIO = "SELECT 1 FROM cuentas_empresa WHERE usuario = ?";
+    private static final String INSERT_CUENTA = "INSERT INTO cuentas_empresa (empresa_id, usuario, clave_hash) "
+            + "VALUES (?, ?, ?) ON CONFLICT DO NOTHING";
 
     private final Supplier<Connection> connections;
 
@@ -60,8 +74,14 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
             try {
                 long cursoId = crearYVincular(connection, execution.getProcessInstanceId(), solicitudId,
                         budget, start, end, program);
+                CuentaNueva cuenta = crearCuentaSiFalta(connection, solicitudId);
                 connection.commit();
                 execution.setVariable("cursoId", cursoId);
+                if (cuenta != null) {
+                    // Simulación del envío: la demo no manda emails, las credenciales quedan en el log de Flowable.
+                    LOG.info("Cuenta de empresa creada (envío simulado a {}): empresa {}, usuario {}, clave {}",
+                            cuenta.destino, cuenta.empresaId, cuenta.usuario, cuenta.clave);
+                }
             } catch (SQLException | RuntimeException exception) {
                 connection.rollback();
                 throw exception;
@@ -118,6 +138,66 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
             update.executeUpdate();
         }
         return cursoId;
+    }
+
+    /**
+     * Crea la cuenta de la empresa de la solicitud si no tiene una y devuelve las credenciales nuevas;
+     * devuelve null si ya existía. El usuario es el email de contacto; si falta o ya lo usa otra
+     * empresa, es "empresa-ID".
+     */
+    private CuentaNueva crearCuentaSiFalta(Connection connection, long solicitudId) throws SQLException {
+        long empresaId;
+        String email;
+        try (PreparedStatement select = connection.prepareStatement(SELECT_CONTACTO)) {
+            select.setLong(1, solicitudId);
+            try (ResultSet rs = select.executeQuery()) {
+                rs.next();
+                if (rs.getString("usuario") != null) {
+                    return null;
+                }
+                empresaId = rs.getLong("empresa_id");
+                email = rs.getString("contacto_email");
+            }
+        }
+
+        String usuario = email == null || email.isBlank() ? null : email.trim().toLowerCase(Locale.ROOT);
+        if (usuario == null || usuarioOcupado(connection, usuario)) {
+            usuario = "empresa-" + empresaId;
+        }
+        String clave = PasswordHash.generarClave(LARGO_CLAVE);
+        try (PreparedStatement insert = connection.prepareStatement(INSERT_CUENTA)) {
+            insert.setLong(1, empresaId);
+            insert.setString(2, usuario);
+            insert.setString(3, PasswordHash.hash(clave));
+            // 0 filas: otra instancia de la misma empresa la creó al mismo tiempo; esa entrega las credenciales.
+            if (insert.executeUpdate() == 0) {
+                return null;
+            }
+        }
+        return new CuentaNueva(empresaId, usuario, clave, email);
+    }
+
+    private static boolean usuarioOcupado(Connection connection, String usuario) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement(SELECT_USUARIO)) {
+            select.setString(1, usuario);
+            try (ResultSet rs = select.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private static final class CuentaNueva {
+        final long empresaId;
+        final String usuario;
+        final String clave;
+        final String destino;
+
+        CuentaNueva(long empresaId, String usuario, String clave, String destino) {
+            this.empresaId = empresaId;
+            this.usuario = usuario;
+            this.clave = clave;
+            this.destino = destino == null ? "la empresa" : destino;
+        }
     }
 
     private Long buscarPorInstancia(Connection connection, String processInstanceId) throws SQLException {

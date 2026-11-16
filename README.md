@@ -152,6 +152,12 @@ mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-seed"
 mvn exec:java -Dexec.mainClass=flowable.seed.Main -Dexec.args="--no-import"
 ```
 
+La seed se conecta a `jdbc:postgresql://localhost:5432/Institucion` con `UserPostgres` y `Password`. Si tu Postgres está en otro puerto o tiene otras credenciales, usá las mismas variables que la app de materiales:
+
+```bash
+MOTOR_DB_URL=jdbc:postgresql://localhost:5433/Institucion MOTOR_DB_USER=UserPostgres MOTOR_DB_PASSWORD=... make seed
+```
+
 Usar `--no-seed` y `--no-import` juntos es un error: `Main` muestra el uso y termina con código de salida distinto de cero, porque no habría nada para hacer. Un argumento desconocido también produce un error. Aun con `--no-seed` se crea el motor IDM y se conecta a `Institucion`.
 
 También podés compilar y ejecutar en un solo comando, una vez que `make dev-up` haya terminado y Flowable esté listo: `mvn compile exec:java -Dexec.mainClass=flowable.seed.Main`. `Main` conecta con `Institucion` y ejecuta `FlowableSeed`, que crea los usuarios con IDs del `1` al `10`, los grupos `Admin`, `Administracion` y `Docentes`, y sus membresías. Los datos se guardan en las tablas de identidad de Flowable, no en una tabla propia de usuarios.
@@ -194,6 +200,24 @@ Si el BPMN tiene errores, Flowable rechaza el despliegue y `make deploy` muestra
 
 `make deploy` usa por defecto el usuario `admin`/`test` de Flowable UI. Se puede cambiar con `make deploy FLOWABLE_USER=... FLOWABLE_PASSWORD=...`.
 
+### Recorrer el proceso de punta a punta
+
+La Task app de Flowable UI no muestra los formularios del BPMN (`formProperty`), y los pasos de la empresa (aceptación, nómina, cancelación) todavía no tienen pantalla. `make recorrido` hace todo eso por la API REST: inicia una solicitud desde el backend, completa las tareas con sus datos y manda los mensajes. Sirve para probar, para la demo y para generar ejecuciones con cierres distintos (minería, 4.4).
+
+```bash
+make recorrido ESCENARIO=final           # acepta, prepara, desarrolla el curso y cierra con el informe (~1 minuto)
+make recorrido ESCENARIO=cancelar        # acepta y cancela durante "Preparar curso"
+make recorrido ESCENARIO=rechazo         # la empresa rechaza y se archiva
+make recorrido ESCENARIO=sin-respuesta   # dos recordatorios y se archiva (~1 minuto)
+make recorrido ESCENARIO=limite          # completa hasta 5 cursos en ejecución y la solicitud siguiente no es viable (escenario 5)
+make recorrido ESCENARIO=limpiar-limite  # cancela los cursos que dejó «limite»
+make recorrido ESCENARIO=final RECURSOS=virtual FLOWABLE_USER=juan FLOWABLE_PASSWORD=Juan
+```
+
+Al terminar muestra las actividades recorridas, el valor de `resultado` y si la instancia terminó. Si el proceso se queda en algún paso, avisa dónde. Cada corrida crea una empresa "Empresa recorrido HHMMSS" (`limite` crea "Empresa límite 2" a "Empresa límite 5", según cuántos cursos haya ya en ejecución, y los deja esperando en "Preparar curso" para mostrarlos en la defensa); las instancias se pueden seguir en la Admin app mientras corre. Necesita el backend y Flowable levantados y el BPMN desplegado; solo usa Python 3 sin dependencias.
+
+Cada escenario termina con su `resultado` (`finalizado`, `cancelado`, `rechazado` o `cerrado_por_falta_de_respuesta`), que `RecordProcessResult` registra en `solicitudes.resultado` y, si hay curso, en `cursos.estado`.
+
 #### Problema conocido: Flowable se queda en "Waiting for changelog lock"
 
 Si Flowable se corta mientras crea o actualiza sus tablas (por ejemplo, porque se reinició varias veces seguidas), puede quedar un bloqueo en la base y el siguiente arranque espera para siempre. Para liberarlo:
@@ -226,6 +250,7 @@ Además de las tablas `ACT_*` que administra Flowable, el schema define cuatro t
 | `empresas` | `id` (PK identity), `nombre` (único sin distinguir mayúsculas ni espacios externos), `cantidad_empleados` (entero `>= 0`, opcional) | Empresas que solicitan cursos; se reutilizan por nombre normalizado. |
 | `solicitudes` | `id` (PK identity), `empresa_id` (FK), `business_key` (único), temática/descripción, contacto, participantes, fechas preferidas, `instancia_flowable_id` (único), estado de integración | Datos del formulario público. Se crea al recibir la solicitud y se vincula inmediatamente con su instancia Flowable. |
 | `cursos` | `id` (PK identity), `empresa_id` (FK), nombre, descripción, programa, presupuesto, fechas, resultados, `instancia_flowable_id` (único), estado de negocio | Cursos existentes/registrados. En esta entrega no tienen relación con solicitudes; esa asociación y la creación tras la aceptación quedan para otra PR. |
+| `cuentas_empresa` | `empresa_id` (PK y FK), `usuario` (único), `clave_hash`, `creada_en` | Cuenta de acceso de cada empresa. La crea "Habilitar acceso de la empresa"; la clave se guarda con hash (ver `docs/contrato.md`, "Acceso de las empresas"). |
 
 `solicitudes.instancia_flowable_id` guarda el ID de la instancia de Flowable desde que se inicia el proceso. `solicitudes.business_key` se genera antes del inicio y permite correlacionar el proceso con la solicitud local. `integracion_flowable_estado` diferencia `pendiente`, `iniciada` y `legacy`.
 
@@ -235,7 +260,7 @@ La relación entre `solicitudes` e instancias de Flowable es **1:1**: cada formu
 
 La solicitud no tiene un estado de curso: su integración con Flowable se controla por separado. Los estados de `cursos` corresponden al ciclo de vida de los cursos existentes.
 
-> **Sobre `resultados`:** es un `VARCHAR(255)` y en la seed ya contiene una ruta de ejemplo. La idea es que guarde la **ruta donde se va a guardar el PDF** con el informe de resultados del curso, no el contenido del informe en sí. Podriamos mover los PDFs a un storage externo por ejemplo MinIO, ahi conviene reemplazar esa ruta por la clave o URL del objeto y agregar una columna para el **hash** que permita verificar que el archivo no se corrompió.
+> **Sobre `resultados`:** es un `VARCHAR(255)` y en la seed ya contiene una ruta de ejemplo. Guarda la **ruta relativa del PDF** con el informe de resultados, no el contenido del informe en sí. El backend usa `INFORMES_DIR=/data/informes` y `docker-compose.yml` monta `./data/informes:/data/informes`; la ruta guardada tiene la forma `cursos/<instanciaFlowableId>/<uuid>.pdf`. El texto del informe queda en la instancia de Flowable (`informeResultados`), no en la base. Si más adelante mueven los PDFs a un storage externo como MinIO, conviene reemplazar esa ruta por la clave o URL del objeto y agregar una columna para el **hash** que permita verificar que el archivo no se corrompió.
 
 ---
 

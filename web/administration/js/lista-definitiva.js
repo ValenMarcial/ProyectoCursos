@@ -5,13 +5,18 @@
  * empresa, permite agregar, editar y quitar nombres, valida la lista y completa
  * la tarea.
  *
- * La tarea llega asignada por un listener del motor, así que no se reclama.
+ * La tarea suele llegar asignada por un listener del motor, y entonces no se
+ * reclama. Si llega sin asignar (el listener no encontró a nadie en el grupo y
+ * la dejó para Administracion), se reclama antes de mostrar el formulario.
  * Toda la comunicación pasa por api.js. Los datos vienen de afuera: se muestran
  * con textContent o value y nunca se interpretan como HTML.
  */
 
-import { completarTarea, ErrorApi, listarTareas, obtenerVariables } from './api.js';
+import { completarTarea, obtenerVariables, reclamarTarea } from './api.js';
 import { tareas, variables } from './contrato.js';
+import { buscarTarea, mostrarDatos } from './pantalla-tarea.js';
+import { quitarAcentos } from './texto.js';
+import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
 
 /** Variables del curso que se muestran, con su etiqueta. */
 const camposCurso = [
@@ -21,8 +26,6 @@ const camposCurso = [
 
 /** Separa los nombres en la lista que se envía, con el mismo formato que la nómina recibida. */
 const separadorSalida = ', ';
-
-const mensajeGenerico = 'Ocurrió un error inesperado. Intentá de nuevo más tarde.';
 
 const aviso = document.getElementById('aviso');
 const bloqueCurso = document.getElementById('bloque-curso');
@@ -39,68 +42,6 @@ let tareaActual = null;
 let participantesEstimados = null;
 
 /**
- * Muestra un aviso y lo trae a la vista.
- * Recibe: texto y tipo ('error', 'exito' o 'neutro'). No devuelve nada.
- */
-function mostrarAviso(texto, tipo) {
-  aviso.textContent = texto;
-  aviso.className = `aviso aviso-${tipo}`;
-  aviso.hidden = false;
-  aviso.scrollIntoView({ block: 'nearest' });
-}
-
-/**
- * Muestra un error atrapado, sin exponer texto técnico al usuario.
- * Recibe: el error. No devuelve nada.
- */
-function mostrarError(error) {
-  // Solo el message de un ErrorApi es apto para el usuario; el resto va a la consola.
-  console.error(error, error?.detalle ?? '');
-  mostrarAviso(error instanceof ErrorApi ? error.message : mensajeGenerico, 'error');
-}
-
-/**
- * Busca la tarea a mostrar.
- * Usa el parámetro ?tarea=<id> de la URL o, si no viene, la primera disponible.
- * No recibe nada.
- * Devuelve: promesa de { tarea } con la tarea normalizada o, si no se encontró,
- * de { tarea: null, texto, tipo } con el aviso que corresponde mostrar.
- */
-async function buscarTarea() {
-  const idPedido = new URLSearchParams(window.location.search).get('tarea');
-  // Sin filtro porque todavía no hay login: quién es el usuario lo resuelve la sesión.
-  const lista = await listarTareas();
-  const deEstaPantalla = lista.filter((tarea) => tarea.claveTarea === tareas.confeccionarLista);
-
-  if (idPedido) {
-    const pedida = deEstaPantalla.find((tarea) => tarea.id === idPedido);
-    // Un id que no aparece es un error, aunque haya otras tareas pendientes.
-    return pedida
-      ? { tarea: pedida }
-      : { tarea: null, texto: 'Esa tarea no existe o ya fue completada.', tipo: 'error' };
-  }
-
-  return deEstaPantalla.length > 0
-    ? { tarea: deEstaPantalla[0] }
-    : { tarea: null, texto: 'No hay ninguna tarea pendiente de confeccionar lista definitiva.', tipo: 'neutro' };
-}
-
-/**
- * Dibuja los datos del curso.
- * Recibe: objeto { nombreVariable: valor }. No devuelve nada.
- */
-function mostrarCurso(valores) {
-  datosCurso.replaceChildren(...camposCurso.flatMap(([nombre, etiqueta]) => {
-    const termino = document.createElement('dt');
-    termino.textContent = etiqueta;
-    const definicion = document.createElement('dd');
-    const valor = valores[nombre] ?? '';
-    definicion.textContent = valor === '' ? 'No informado' : String(valor);
-    return [termino, definicion];
-  }));
-}
-
-/**
  * Normaliza un nombre para mostrarlo y enviarlo.
  * Recibe: texto. Devuelve: el texto sin espacios en los extremos ni repetidos.
  */
@@ -114,11 +55,7 @@ function limpiarNombre(nombre) {
  * Devuelve: el nombre sin acentos y en minúsculas ("Ana Pérez" da "ana perez").
  */
 function claveDeNombre(nombre) {
-  return nombre
-    .normalize('NFD')
-    // NFD separa la letra de su acento, y este reemplazo borra los acentos.
-    .replace(/[̀-ͯ]/g, '')
-    .toLocaleLowerCase('es');
+  return quitarAcentos(nombre).toLocaleLowerCase('es');
 }
 
 /**
@@ -325,7 +262,7 @@ async function alEnviar(evento) {
   if (errores.length > 0) {
     // En este orden: enfocar desplaza la página y el aviso tiene que quedar a la vista.
     enfocarPrimerError(errores);
-    mostrarAviso(errores.map((error) => error.mensaje).join('\n'), 'error');
+    mostrarAviso(aviso, errores.map((error) => error.mensaje).join('\n'), 'error');
     return;
   }
 
@@ -338,12 +275,12 @@ async function alEnviar(evento) {
   } catch (error) {
     // Si falla, la tarea sigue activa: se conserva la lista para reintentar.
     botonConfirmar.disabled = false;
-    mostrarError(error);
+    mostrarError(aviso, error);
     return;
   }
 
   bloqueLista.hidden = true;
-  mostrarAviso('La lista definitiva quedó confirmada.', 'exito');
+  mostrarAviso(aviso, 'La lista definitiva quedó confirmada.', 'exito');
 }
 
 /**
@@ -358,35 +295,45 @@ function alPresionarTecla(evento) {
 }
 
 /**
- * Carga la pantalla: busca la tarea y muestra sus datos y la nómina.
+ * Carga la pantalla: busca la tarea, la reclama si llegó sin asignar y muestra
+ * sus datos y la nómina.
  * No recibe nada. Devuelve: promesa sin valor.
  */
 async function iniciar() {
   let valores;
   try {
-    const busqueda = await buscarTarea();
+    const busqueda = await buscarTarea({
+      clave: tareas.confeccionarLista,
+      textoSinTareas: 'No hay ninguna tarea pendiente de confeccionar lista definitiva.',
+    });
     if (!busqueda.tarea) {
-      mostrarAviso(busqueda.texto, busqueda.tipo);
+      mostrarAviso(aviso, busqueda.texto, busqueda.tipo);
       return;
     }
     tareaActual = busqueda.tarea;
+    // Sin asignar, la tarea es del grupo: se toma antes de mostrar el formulario para
+    // que nadie más trabaje la misma lista. Si otra persona la tomó primero (409) o
+    // ya no existe (404), el catch muestra el aviso y el formulario no aparece.
+    if (!tareaActual.asignado) {
+      await reclamarTarea(tareaActual.id);
+    }
     valores = await obtenerVariables(tareaActual.instanciaId);
   } catch (error) {
-    mostrarError(error);
+    mostrarError(aviso, error);
     return;
   }
 
   participantesEstimados = valores.participantesEstimados ?? null;
   const nomina = separarNomina(valores.participantes);
 
-  mostrarCurso(valores);
+  mostrarDatos(datosCurso, camposCurso, valores);
   filasParticipantes.replaceChildren(...nomina.map(crearFila));
   actualizarTextos();
   bloqueCurso.hidden = false;
   bloqueLista.hidden = false;
 
   if (nomina.length === 0) {
-    mostrarAviso('La nómina llegó vacía. Agregá los participantes antes de confirmar.', 'neutro');
+    mostrarAviso(aviso, 'La nómina llegó vacía. Agregá los participantes antes de confirmar.', 'neutro');
   }
 }
 

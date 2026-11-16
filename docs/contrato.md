@@ -61,12 +61,13 @@ Los scripts están en Groovy, que viene incluido en Flowable UI. No usan `${...}
 | Notificar Decisión | Script | Log y `resultado = "no_viable"` |
 | Enviar propuesta | Script | Simula el envío registrando en el log el programa, presupuesto y fechas de la propuesta; reinicia `recordatoriosEnviados = 0` y define `plazoRecordatorio = "P5D"` si no existe |
 | Enviar recordatorio | Script | `recordatoriosEnviados + 1` y log |
-| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Si la `fechaInicio` acordada es posterior a `fechaFinPropuesta`, falla sin crear el curso. Es idempotente: un reintento no duplica el curso. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
+| Habilitar acceso de la empresa | Java (`flowable.proposal.CreateCourseOnAcceptance`) | Crea el curso con nombre y descripción de la solicitud, programa y presupuesto de la propuesta, `fechaInicio` acordada por la empresa y fecha de finalización propuesta; asigna su ID a `solicitudes.curso_id`. Si la `fechaInicio` acordada es posterior a `fechaFinPropuesta`, falla sin crear el curso. También crea la cuenta de la empresa si no tiene (ver "Acceso de las empresas"). Es idempotente: un reintento no duplica el curso ni la cuenta. Usa `SPRING_DATASOURCE_URL/USERNAME/PASSWORD` en el motor de Flowable |
 | Enviar confirmación | Script | Log |
 | Notificar Cierre | Script | Log y `resultado = "cancelado"` |
 | Liberar Aula Virtual | Script (compensación) | Log |
 | Reservar aula | Service task (`flowable.classroom.ReserveClassroom`) | Simula el web service de aulas: asigna la primera aula libre en `aulaAsignada` o lanza el error `SIN_AULAS` (escenario 7). Ver "Reservar y liberar aula" |
 | Liberar Aula | Service task (`flowable.classroom.ReleaseClassroom`, compensación) | Simula la liberación en el web service y elimina `aulaAsignada` |
+| Entrada a Preparar curso | Execution listener | Inicializa la variable de proceso `cancelada = false` al iniciar el subproceso |
 
 ## Reservar y liberar aula
 
@@ -81,16 +82,11 @@ El web service de aulas está simulado (enunciado 4.1.3) y deja el log `[WS Aula
 Cambios en el BPMN:
 
 ```xml
-<!-- dentro de <definitions>, junto a los <message> -->
-<error id="errSinAulas" errorCode="SIN_AULAS"/>
-
 <serviceTask id="sid-065649F8-9F01-4C34-B290-C37474CC479D" name="Reservar aula" flowable:class="flowable.classroom.ReserveClassroom"/>
 <serviceTask id="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" name="Liberar Aula" isForCompensation="true" flowable:class="flowable.classroom.ReleaseClassroom"/>
 ```
 
-Flowable 6.8 vincula el boundary de compensación con su tarea mediante una `association`, no mediante un `sequenceFlow`. Con `sequenceFlow`, la instancia falla al llegar a la tarea con el error `Parent activity for boundary compensation event could not be found`. Lo reproduje en un test aislado.
-
-Hay que reemplazar los tres `sequenceFlow` que salen de los boundaries "Liberar recursos" por associations dentro del `<subProcess>`:
+Flowable 6.8 vincula cada boundary de compensación con su tarea compensatoria mediante una `association`, no mediante un `sequenceFlow`. El modelo ya usa estas associations:
 
 ```xml
 <association id="assocLiberarAula" sourceRef="sid-6EF58547-6206-4065-BC46-BDE7A86300E7" targetRef="sid-CF527638-CD0A-48BF-9EF6-DDB557838793" associationDirection="One"/>
@@ -98,11 +94,13 @@ Hay que reemplazar los tres `sequenceFlow` que salen de los boundaries "Liberar 
 <association id="assocLiberarEquipamiento" sourceRef="sid-0FB02D1D-DFB1-4222-BA0E-6D58C0E87619" targetRef="sid-3DEB48C5-A36A-4EBF-A77C-150D02FC969E" associationDirection="One"/>
 ```
 
-**Manejo de `SIN_AULAS`:** el boundary de error del subproceso "Preparar curso" no tiene `errorRef`, así que hoy ya atrapa cualquier error. Eso incluye `SIN_AULAS`, que termina en "Notificar Cierre" con `resultado = "cancelado"`. Si se agrega un boundary de error propio sobre "Reservar aula", tiene que declararse antes que el boundary de compensación. En el orden inverso, Flowable 6.8 falla con el mismo error de arriba.
+**Referencias de compensación:** cada disparador usa como `activityRef` el ID de la actividad original dentro de "Preparar curso": `sid-065649F8-9F01-4C34-B290-C37474CC479D` (Reservar aula), `sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB` (Solicitar Aula Virtual) y `sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790` (Contratar equipamiento). El mismo patrón se usa tanto en la cancelación como en la liberación al finalizar normalmente. Los boundary events de compensación permanecen asociados a sus respectivas tareas compensatorias.
 
-## Registrar y elaborar propuesta
+**Manejo de `SIN_AULAS`:** `ReserveClassroom` lanza una `BpmnError` con código `SIN_AULAS` cuando no quedan aulas. Un boundary event en "Reservar aula" captura el error dentro de "Preparar curso" y dispara los tres eventos de compensación, cada uno dirigido a su tarea original; Flowable solo ejecuta las compensaciones de actividades que ya terminaron. Luego se propaga el mismo error a un boundary event en "Preparar curso", que lleva a "Notificar Cierre" y al fin del proceso, sin pasar por la XOR. Ese boundary guarda el error en `motivoCierre`, que permite distinguir el mensaje de falta de aulas; el resultado sigue siendo `cancelado`. Los tests del servicio comprueban el error cuando dos aulas están ocupadas y el test del proceso ejecuta el BPMN real hasta el cierre.
 
-La tarea de usuario `Registrar y Elaborar propuesta` se asigna exclusivamente al usuario `jefeAdministrativo`. Su formulario requiere estos campos:
+## Registrar y revisar propuesta
+
+Las tareas de usuario `Registrar y Elaborar propuesta` y `Revisar propuesta` se asignan exclusivamente al usuario `jefeAdministrativo`. Sus formularios requieren estos campos:
 
 | Campo | Tipo | Uso |
 |---|---|---|
@@ -112,6 +110,8 @@ La tarea de usuario `Registrar y Elaborar propuesta` se asigna exclusivamente al
 | `fechaFinPropuesta` | date | Fecha posible de finalización |
 
 Al completar la tarea, el motor valida que `presupuesto` sea mayor o igual a cero y que `fechaFinPropuesta` sea posterior o igual a `fechaInicioPosible`; si alguna regla no se cumple, la tarea no se completa. Si la validación pasa, el flujo continúa automáticamente a `Enviar propuesta` y luego espera la respuesta de la empresa. El envío está simulado en el log de Flowable; todavía no integra correo u otro canal externo. Las fechas propuestas no son la fecha confirmada de inicio: `fechaInicio` sigue siendo la fecha que la empresa informa al aceptar la propuesta.
+
+Cuando la empresa solicita modificaciones, `Revisar propuesta` permite actualizar esos mismos valores y aplica el mismo listener de validación antes de volver a enviar la propuesta.
 
 ## Confeccionar lista definitiva
 
@@ -136,7 +136,7 @@ En el BPMN, la tarea queda así (el grupo candidato es el respaldo si el listene
 Las siguientes tareas tienen al grupo `Administracion` como grupo candidato en Flowable:
 
 - `Confeccionar lista definitiva` (además, se asigna automáticamente a un miembro menos ocupado).
-- `Prepara materiales`.
+- `Preparar materiales`.
 - `Evaluar Recursos`.
 - `Solicitar Aula Virtual`.
 - `Contratar equipamiento`.
@@ -149,16 +149,18 @@ Las tareas sin asignación explícita permanecen sin responsable/grupo candidato
 | Variable | Tipo | La define | La usa |
 |---|---|---|---|
 | `isViable` | boolean | Tarea "Evaluar Viabilidad" (ver sección de viabilidad) | Gateway "Es viable?" |
-| `programa` | string | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
-| `presupuesto` | long | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa y validación no negativa |
-| `fechaInicioPosible` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa y validación de fechas |
-| `fechaFinPropuesta` | date | Formulario "Registrar y Elaborar propuesta" | Propuesta enviada a la empresa |
+| `programa` | string | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa |
+| `presupuesto` | long | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa y validación no negativa |
+| `fechaInicioPosible` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa y validación de fechas |
+| `fechaFinPropuesta` | date | Formularios de registro y revisión de propuesta | Propuesta enviada a la empresa, `cursos.fecha_fin` y validación de fin del dictado |
 | `plazoRecordatorio` | String (duración ISO-8601) | "Enviar propuesta" (`P5D`, si no existe) | Timer "5 días" |
 | `recordatoriosEnviados` | int | "Enviar propuesta" (0) y "Enviar recordatorio" (+1) | Gateway "¿Se enviaron 2 recordatorios?": Sí `${recordatoriosEnviados >= 2}`, No `${recordatoriosEnviados < 2}` |
 | `fechaInicio` | String (fecha ISO-8601) | Simulador, con `msgAceptacion` | Timer "Fecha programada" y `cursos.fecha_inicio` |
 | `observaciones` | String | Simulador, con `msgModificaciones` | Solo informativa: queda guardada en la instancia |
 | `participantes` | String (nombres separados por coma) | Simulador, al señalar "Recibir nómina" | Tarea "Confeccionar lista definitiva" |
 | `docenteSeleccionado` | String (ID de usuario del grupo `Docentes`) | Formulario o variables al completar "Definir Docente que desarrolla el curso" | Assignee de "Desarrollar curso" |
+| `informeResultados` | String | Formulario de "Elaborar informe de resultados"; la web lo llena con el texto extraído del PDF | Validación del informe |
+| `rutaInforme` | String (ruta relativa) | La web al subir el PDF; no la escribe la persona | `SaveReport` la guarda en `cursos.resultados` |
 | `aulaAsignada` | String | "Reservar aula" | "Liberar Aula" |
 | `resultado` | String | Cada camino de cierre | `RecordProcessResult` (ver "Resultado del proceso") |
 
@@ -178,6 +180,45 @@ Si el ID falta, está vacío, no es un string, no existe o no pertenece a `Docen
 
 Una vez completada, el proceso espera el timer `Fecha programada` y asigna `Desarrollar curso` al usuario guardado en `docenteSeleccionado`.
 
+## Finalización del dictado
+
+La tarea `Desarrollar curso` no tiene formulario ni variables propias. Al completarla, el listener `flowable.course.ValidateCourseEndDate` exige que la fecha actual (UTC) sea igual o posterior a `fechaFinPropuesta`. Si todavía no llegó la fecha de fin, la tarea queda pendiente y Flowable devuelve un 400 con el mensaje:
+
+```text
+El curso no puede finalizarse antes del 15/11/2026 (fecha de fin programada).
+```
+
+La comparación es por día y en UTC, igual que las fechas guardadas en `cursos.fecha_fin`. Si falta `fechaFinPropuesta`, se trata como un error interno del proceso.
+
+## Elaborar informe de resultados
+
+La tarea `Elaborar informe de resultados` tiene un solo campo visible y obligatorio:
+
+| Campo | Tipo | Quién lo llena |
+|---|---|---|
+| `informeResultados` | string | La web, con todo el texto extraído del PDF |
+
+El formulario no muestra la ruta del archivo. La ruta la genera la web/backend al subir el PDF y viaja como variable de proceso `rutaInforme`; la persona que elabora el informe no la escribe.
+
+**Flujo para la web:**
+
+1. Reclamar la tarea y subir el PDF con `POST /api/tareas/{id}/informe` (multipart, campo `archivo`).
+2. El backend lo guarda en `./data/informes/cursos/<instanciaFlowableId>/<uuid>.pdf`.
+3. El backend devuelve `{"rutaInforme": "cursos/<instanciaFlowableId>/<uuid>.pdf"}`.
+4. La web extrae el texto del PDF y completa `informeResultados`.
+5. La web completa la tarea enviando `informeResultados` y `rutaInforme`.
+
+**Validación y persistencia:**
+
+- `flowable.report.ValidateReport` exige que `informeResultados` no esté vacío.
+- `flowable.report.SaveReport` exige que `rutaInforme` tenga la forma `cursos/<instanciaFlowableId>/<archivo>.pdf`, sin `..`, sin subcarpetas, con extensión `.pdf` y hasta 255 caracteres; después la guarda en `cursos.resultados` con la conexión del motor, en la misma transacción de la tarea.
+- El texto del informe queda en la instancia de Flowable; no se guarda en la base institucional.
+- La tarea está pensada para completarse desde la web. Si se completa desde Flowable UI sin subir el PDF, falta `rutaInforme` y la tarea no se completa.
+
+**Subida del PDF (`POST /api/tareas/{id}/informe`):** exige sesión del personal y que la tarea sea *Elaborar informe de resultados* y esté asignada a quien sube. Acepta solo PDF (empieza con `%PDF-`), no vacío, de hasta 10 MB. Errores, siempre `{"message"}`: `400` (tarea que no es la del informe, archivo faltante, vacío o que no es PDF), `403`/`404` (tarea ajena o inexistente, igual que al completar), `413` (más de 10 MB) y `500` (no se pudo escribir en `INFORMES_DIR`). Cada subida genera un archivo nuevo; vale la ruta que la web manda al completar. Si el PDF se sube y la tarea no se completa, el archivo queda sin referencia.
+
+`cursos.resultados` sigue siendo `VARCHAR(255)`: la ruta relativa entra sin cambios de schema. El backend configura `INFORMES_DIR=/data/informes` y el `docker-compose.yml` monta `./data/informes:/data/informes`.
+
 
 ## Asignaciones directas de tareas
 
@@ -191,7 +232,7 @@ Las siguientes tareas tienen responsables fijos en el modelo BPMN:
 | Definir Docente que desarrolla el curso | `jefeDeEquipo` |
 | Elaborar informe de resultados | `jefeDeEquipo` |
 
-Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable` y `cancelado` (ya definidos); `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado` (pendientes).
+Valores de `resultado`, iguales a los del `CHECK` de `cursos.estado`: `no_viable`, `cancelado`, `rechazado`, `cerrado_por_falta_de_respuesta` y `finalizado`.
 
 ## Resultado del proceso
 
@@ -204,17 +245,70 @@ El Execution Listener `flowable.result.RecordProcessResult` (enunciado 3.4) corr
 
 Usa la conexión de la transacción del motor, porque Flowable y las tablas de la institución están en la misma base. El UPDATE se ejecuta justo antes del commit, así el estado y el cierre de la instancia se confirman o se deshacen juntos. Probado en Flowable UI: si la instancia no logra terminar, no queda ningún estado cambiado.
 
-Para que corra hay que aplicar la migración (`make db-migrate`) y engancharlo a nivel proceso, dentro de `<process>` y antes del primer elemento:
+El rechazo se asigna al completar el evento "Rechazo", por lo que la variable ya está disponible mientras "Archivar solicitud" está pendiente. La falta de respuesta se asigna al tomar el flujo "Sí" de "¿Se enviaron 2 recordatorios?". La finalización normal se asigna al entrar al fin del proceso, después de "Enviar informe" y de las compensaciones. El resultado se persiste al terminar la instancia, no al crear la tarea de archivo.
 
-```xml
-<process id="process-proyecto-curso" name="Proyecto Cursos" isExecutable="true">
-  <extensionElements>
-    <flowable:executionListener event="end" class="flowable.result.RecordProcessResult"></flowable:executionListener>
-  </extensionElements>
-  ...
+El listener está configurado a nivel proceso, dentro de `<process>` y antes del primer elemento. Para que pueda escribir los resultados hay que aplicar la migración (`make db-migrate`):
+
+Dónde se define `resultado` en cada camino:
+
+| Resultado | Dónde se setea | Momento |
+|---|---|---|
+| `no_viable` | Script de "Notificar Decisión" | Al no ser viable la solicitud |
+| `rechazado` | Listener `end` del evento "Rechazo" | Antes de "Archivar solicitud", así la tarea ya muestra el motivo |
+| `cerrado_por_falta_de_respuesta` | Listener `take` del flujo "Sí" de "¿Se enviaron 2 recordatorios?" | Antes de "Archivar solicitud" |
+| `cancelado` | Script de "Notificar Cierre" | Cancelación o falta de aulas |
+| `finalizado` | Listener `start` del fin del proceso, después de "Enviar informe" | Al cerrar el curso |
+
+`src/test/java/flowable/result/ProcessResultModelTest.java` recorre los cinco cierres sobre el BPMN real y verifica la variable, `solicitudes.resultado` y, cuando hay curso, `cursos.estado`. También se probó en Flowable UI con `make recorrido`.
+
+## Unión asíncrona de "Preparar curso"
+
+La unión "Preparación completa" (`sid-420D072A-C42B-404D-BBDA-B884DD90C410`) tiene `flowable:async="true"`. Completar la última rama solo deja un job, y el resto del proceso ("Enviar confirmación" en adelante) lo ejecuta Flowable UI. Así la app de materiales, que usa su propio motor sin Groovy ni las clases del proyecto, puede completar "Preparar materiales" aunque sea la última rama (ver `desktop/materiales/README.md`). En los tests con motor en memoria hay que ejecutar ese job con `managementService.executeJob`.
+
+## Acceso de las empresas (escenario 10)
+
+### Cuenta
+
+"Habilitar acceso de la empresa" crea la cuenta en `cuentas_empresa` (migración `004`), en la misma transacción que el curso. Una empresa tiene una sola cuenta: si ya tenía una por un curso anterior, se reutiliza y no se generan credenciales nuevas.
+
+- **Usuario:** el `contactoEmail` de la solicitud, en minúsculas. Si falta, o si ya lo usa otra empresa, es `empresa-<id>`.
+- **Clave:** 12 caracteres aleatorios. Se guarda solo el hash PBKDF2 (`shared.PasswordHash`, formato `pbkdf2-sha256$iteraciones$sal$hash`); nunca en texto plano ni en variables del proceso.
+- **Entrega (simulada):** las credenciales quedan en el log de Flowable, en texto plano. Es solo para la demo: un despliegue real las mandaría por email y no las escribiría en el log. Para verlas:
+
+```bash
+docker compose logs flowable | grep "Cuenta de empresa creada"
 ```
 
-En el Modeler se configura en las propiedades del proceso (clic en un lugar vacío del lienzo), en "Execution listeners".
+### Estados del curso
+
+`cursos.estado` lo escriben listeners del BPMN, así la base siempre tiene la etapa actual. Los intermedios los escribe `flowable.course.UpdateCourseState`, con el estado como campo `estado` del listener. Los finales los escribe `RecordProcessResult` (ver "Resultado del proceso").
+
+| Estado | Dónde se escribe | Texto sugerido para la web |
+|---|---|---|
+| `en_preparacion` | "Habilitar acceso" al crear el curso | En preparación |
+| `confirmado` | Listener `start` de "Enviar confirmación" (la preparación terminó sin cancelación) | Confirmado |
+| `pendiente_de_inicio` | Listener `start` del timer "Fecha programada" (ya hay docente, falta la fecha) | Pendiente de inicio |
+| `en_desarrollo` | Listener `start` de "Desarrollar curso" | En curso |
+| `en_elaboracion_informe` | Listener `start` de "Elaborar informe de resultados" | En redacción del informe |
+| `finalizado` / `cancelado` | `RecordProcessResult` al terminar la instancia | Finalizado / Cancelado |
+
+### API para la web de empresas
+
+Las rutas `/api/empresa/**` usan una sesión de empresa, distinta de la del personal: con una no se puede usar la otra parte de la API (`401`). La empresa sale siempre de la sesión, nunca del pedido. Los errores responden `{"message": "..."}`.
+
+| Método y ruta | Pedido | Respuesta |
+|---|---|---|
+| `POST /api/empresa/sesion` | `{"usuario", "clave"}` | `200 {"usuario", "empresa"}`; `400` sin datos; `401` usuario o clave incorrectos |
+| `GET /api/empresa/sesion` | — | `200 {"usuario", "empresa"}`; `401` sin sesión |
+| `DELETE /api/empresa/sesion` | — | `204` |
+| `GET /api/empresa/cursos` | — | `200 [{"id", "nombre", "descripcion", "estado", "fechaInicio", "fechaFin"}]`, del más nuevo al más viejo |
+| `GET /api/empresa/cursos/{id}` | — | `200` el curso con `"actividades": [{"nombre", "tipo", "desde"}]`; `404` si no existe o es de otra empresa; `502` si Flowable no responde |
+
+- Las fechas del curso van como `AAAA-MM-DD`; `desde` es la hora de inicio de la actividad en ISO-8601.
+- `actividades` son las actividades sin terminar de la instancia (historial de Flowable), así aparecen las ramas paralelas de "Preparar curso", la recepción de la nómina y la espera de "Fecha programada". Se omiten compuertas, eventos de inicio y fin y el subproceso. Un curso finalizado o cancelado devuelve la lista vacía.
+- El login usa la misma cookie de sesión que el personal (`JSESSIONID`, 30 minutos sin uso) y renueva su id al autenticar. Cerrar la sesión de empresa quita solo la empresa: si en el mismo navegador también hay una sesión del personal, sigue abierta. Al revés no: `DELETE /api/sesion` cierra todo.
+
+Probado en Flowable UI y Postgres: credenciales en el log, login, "Mis cursos", detalle con las tres ramas de la preparación, `404` sobre un curso de otra empresa, `401` sobre `/api/tareas` con sesión de empresa, y los seis estados en orden hasta `finalizado`.
 
 ## Errores de negocio y errores internos
 
@@ -225,6 +319,11 @@ Cuando una clase rechaza un dato por una regla de negocio, lanza `FlowableIllega
 | `flowable.proposal.ValidateProposalDates` | Presupuesto obligatorio y no negativo; fechas obligatorias; fin posterior o igual al inicio |
 | `flowable.resources.ValidateResourceSelection` | Al menos un recurso elegido |
 | `flowable.proposal.CreateCourseOnAcceptance` | `fechaInicio` acordada no posterior a `fechaFinPropuesta` |
+| `flowable.assignment.ValidateSelectedTeacher` | `docenteSeleccionado` obligatorio y del grupo `Docentes` |
+| `flowable.course.ValidateCourseEndDate` | El dictado no puede finalizarse antes de `fechaFinPropuesta` |
+| `flowable.report.ValidateReport` | `informeResultados` obligatorio |
+
+`flowable.report.SaveReport` lanza `FlowableException` (500) si falta `rutaInforme`, si la ruta no corresponde a la instancia o si no tiene la forma esperada: son errores de integración de la web, no datos que la persona pueda corregir.
 
 Una clase nueva con validaciones de negocio debe seguir la misma regla. El backend reenvía el status que recibe de Flowable.
 
@@ -232,8 +331,6 @@ Una clase nueva con validaciones de negocio debe seguir la misma regla. El backe
 
 Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:
 
-- `resultado` en los caminos que terminan en tareas de usuario: rechazo, sin respuesta y finalización normal.
-- Enganchar `RecordProcessResult` a nivel proceso (ver "Resultado del proceso").
 - Asignaciones y grupos candidatos de las demás tareas de usuario.
 - Enganchar en el BPMN las clases de "Reservar aula" y "Liberar Aula", y vincular las compensaciones con `association` (ver "Reservar y liberar aula").
 
@@ -440,6 +537,8 @@ El umbral está fijado en las reglas Drools. Para cambiarlo hay que modificar `v
 4. Iniciar 5 solicitudes y dejarlas en "Registrar y Elaborar propuesta": la siguiente sigue siendo **Sí**, porque no son cursos en ejecución.
 
 5. Llevar esas 5 hasta "Habilitar acceso de la empresa" (completar la propuesta y enviar `msgAceptacion` con `fechaInicio` desde el simulador). La siguiente solicitud debe tomar el camino **No** y terminar en `Notificar Decisión`.
+
+Los pasos 3 a 5 los hace `make recorrido ESCENARIO=limite`: completa hasta 5 cursos en ejecución con solicitudes aceptadas (inicio dentro de 30 días) y muestra que la siguiente termina en `Notificar Decisión` con `resultado = no_viable`. `make recorrido ESCENARIO=limpiar-limite` cancela después esos cursos.
 
 Para inspeccionar la decisión se puede consultar la variable `isViable` de la instancia desde Flowable UI o la API. La colección intermedia se sobrescribe al terminar la tarea, así que el valor observable es el booleano final.
 
