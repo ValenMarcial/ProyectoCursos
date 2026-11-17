@@ -35,8 +35,14 @@
   color-scheme: light dark;
 }
 
-.sesion {
-  margin: 0.5rem 0 0;
+/* Quién tiene la sesión y el botón para cerrarla (common/js/seccion.js), al pie de la cabecera. */
+.barra-sesion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0 0;
   color: var(--texto-suave);
 }
 
@@ -136,6 +142,12 @@
 
 .boton {
   min-height: 44px;
+}
+
+/* Variante sin relleno de .boton: usa el acento como texto. */
+.boton-secundario {
+  background: transparent;
+  color: var(--acento);
 }
 
 /* En el celular los botones ocupan todo el ancho, más fáciles de tocar. */

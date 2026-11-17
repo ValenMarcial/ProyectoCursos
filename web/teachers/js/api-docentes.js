@@ -53,5 +53,5 @@ function redirigirALogin() {
 }
 
 export const {
-  usuarioActual, listarTareas, completarTarea, obtenerVariables, subirInforme,
+  usuarioActual, cerrarSesion, listarTareas, completarTarea, obtenerVariables, subirInforme,
 } = crearApi(transportes[modoActual], { alPerderSesion: redirigirALogin });
