@@ -6,7 +6,8 @@ FLOWABLE_REST := http://127.0.0.1:8080/flowable-ui/process-api
 FLOWABLE_USER ?= admin
 FLOWABLE_PASSWORD ?= test
 
-.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy seed import recorrido
+.PHONY: build backend-test db-migrate dev-up dev-down dev-reset dev-logs dev-psql verify deploy seed import recorrido \
+	corridas demo-guardar demo-cargar
 
 # Dejar en flowable-lib/ el .jar y las librerías de Drools que Flowable UI no trae.
 # Está fuera de target/ y se vacía sin borrar la carpeta: es la que monta el contenedor de Flowable,
@@ -56,6 +57,34 @@ RECURSOS ?= fisica,virtual,equipamiento
 recorrido:
 	FLOWABLE_USER=$(FLOWABLE_USER) FLOWABLE_PASSWORD=$(FLOWABLE_PASSWORD) \
 		python3 infra/scripts/recorrido.py $(ESCENARIO) --recursos $(RECURSOS)
+
+# Generar muchas instancias variadas para 4.3 y 4.4 (ver docs/preparar-demo.md).
+# make corridas CANTIDAD=40 PARALELO=4 NO_VIABLES=2 (ESCALA=0 saca las pausas)
+CANTIDAD ?= 40
+PARALELO ?= 4
+ESCALA ?= 1
+NO_VIABLES ?= 0
+corridas:
+	FLOWABLE_USER=$(FLOWABLE_USER) FLOWABLE_PASSWORD=$(FLOWABLE_PASSWORD) \
+		python3 infra/scripts/corridas.py --cantidad $(CANTIDAD) --paralelo $(PARALELO) \
+		--escala $(ESCALA) --no-viables $(NO_VIABLES)
+
+# Guardar o cargar la base completa (instancias, historial, cursos, cuentas) y los PDF de informes.
+# make demo-guardar [DEMO=data/demo/demo]  ->  DEMO.dump y DEMO-informes.tar.gz
+# make demo-cargar  [DEMO=data/demo/demo]  ->  REEMPLAZA la base local por la del archivo
+DEMO ?= data/demo/demo
+demo-guardar:
+	mkdir -p $(dir $(DEMO)) data/informes
+	$(DEV_COMPOSE) exec -T postgres sh -c 'pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -Fc' > $(DEMO).dump
+	tar -czf $(DEMO)-informes.tar.gz -C data informes
+	@ls -lh $(DEMO).dump $(DEMO)-informes.tar.gz
+
+demo-cargar:
+	test -f $(DEMO).dump
+	$(DEV_COMPOSE) stop flowable backend
+	$(DEV_COMPOSE) exec -T postgres sh -c 'pg_restore -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" --clean --if-exists --no-owner' < $(DEMO).dump
+	if [ -f $(DEMO)-informes.tar.gz ]; then mkdir -p data && tar -xzf $(DEMO)-informes.tar.gz -C data; fi
+	$(DEV_COMPOSE) up -d --wait --wait-timeout 180 flowable backend
 
 dev-down:
 	$(DEV_COMPOSE) down

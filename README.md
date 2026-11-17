@@ -218,6 +218,8 @@ Al terminar muestra las actividades recorridas, el valor de `resultado` y si la 
 
 Cada escenario termina con su `resultado` (`finalizado`, `cancelado`, `rechazado` o `cerrado_por_falta_de_respuesta`), que `RecordProcessResult` registra en `solicitudes.resultado` y, si hay curso, en `cursos.estado`.
 
+Para la presentación hacen falta muchas instancias variadas (4.3 y 4.4): `make corridas` las genera con usuarios reales, pausas y negociación variada, y `make demo-guardar` / `make demo-cargar` guardan y cargan la base completa. Ver [docs/preparar-demo.md](docs/preparar-demo.md).
+
 #### Problema conocido: Flowable se queda en "Waiting for changelog lock"
 
 Si Flowable se corta mientras crea o actualiza sus tablas (por ejemplo, porque se reinició varias veces seguidas), puede quedar un bloqueo en la base y el siguiente arranque espera para siempre. Para liberarlo:

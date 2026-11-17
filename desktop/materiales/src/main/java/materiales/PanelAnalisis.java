@@ -102,6 +102,8 @@ public class PanelAnalisis extends JPanel {
         duraciones.addRow(new Object[] {"Recursos", Analisis.Duraciones.formato(d.recursos), d.cursosRecursos});
         tareas.setRowCount(0);
         t.forEach((k, v) -> tareas.addRow(new Object[] {k, v}));
-        estado.setText("Actualizado " + new java.text.SimpleDateFormat("HH:mm:ss").format(new java.util.Date()));
+        java.text.SimpleDateFormat hora = new java.text.SimpleDateFormat("HH:mm:ss");
+        hora.setTimeZone(Main.ZONA_LOCAL);
+        estado.setText("Actualizado " + hora.format(new java.util.Date()));
     }
 }
