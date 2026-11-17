@@ -25,10 +25,14 @@
         <!-- Solo cuando el docente adjuntó su propio PDF y no escribió texto -->
         <p id="aviso-adjunto" hidden>El docente adjuntó su propio PDF y no escribió un texto: el informe completo está en el PDF.</p>
         <dl id="datos-informe" class="datos"></dl>
-        <!-- Descarga del PDF: queda oculta hasta que exista GET /api/tareas/{id}/informe -->
-        <p id="descarga-informe" hidden>
+        <!-- Ver y descargar el PDF (GET /api/tareas/{id}/informe): aparece cuando el PDF ya llegó.
+             Los dos enlaces usan la misma URL blob: que arma enviar-informe.js. -->
+        <p id="descarga-informe" class="acciones-pdf" hidden>
           <a id="enlace-informe" class="boton boton-secundario" href="#" target="_blank" rel="noopener">Ver el PDF del informe</a>
+          <a id="descargar-informe" class="boton boton-secundario" href="#">Descargar PDF</a>
         </p>
+        <!-- Aviso si no se pudo traer el PDF (por ejemplo, "El informe no está disponible.") -->
+        <p id="aviso-pdf" class="aviso" role="alert" hidden></p>
       </div>
     </section>
 

@@ -20,18 +20,11 @@
  * nunca se interpretan como HTML.
  */
 
-import { completarTarea, obtenerVariables } from './api.js';
-import { rutasApi, tareas, variables } from './contrato.js';
+import { completarTarea, obtenerInforme, obtenerVariables } from './api.js';
+import { tareas, variables } from './contrato.js';
 import { buscarTarea, camposSolicitud, mostrarDatos, recordarTareaEnUrl } from './pantalla-tarea.js';
 import { formatearFechaAcordada } from './texto.js';
 import { mostrarAviso, mostrarError } from '../../common/js/avisos.js';
-
-/**
- * PENDIENTE: pasar a true cuando el backend tenga GET /api/tareas/{id}/informe
- * (pedido a Juan). Mientras sea false, el enlace para ver el PDF no se muestra:
- * hoy esa ruta solo acepta POST (la subida del informe).
- */
-const descargaInformeDisponible = false;
 
 /** Datos del curso que se muestran: variable y etiqueta. */
 const camposCurso = [
@@ -55,6 +48,8 @@ const avisoAdjunto = document.getElementById('aviso-adjunto');
 const datosInforme = document.getElementById('datos-informe');
 const descargaInforme = document.getElementById('descarga-informe');
 const enlaceInforme = document.getElementById('enlace-informe');
+const enlaceDescarga = document.getElementById('descargar-informe');
+const avisoPdf = document.getElementById('aviso-pdf');
 const bloqueCurso = document.getElementById('bloque-curso');
 const datosCurso = document.getElementById('datos-curso');
 const bloqueSolicitud = document.getElementById('bloque-solicitud');
@@ -77,8 +72,35 @@ function soloPdfAdjunto(valores) {
 }
 
 /**
+ * Pide el PDF del informe y deja listos los enlaces para verlo y descargarlo.
+ * Se pide al cargar la pantalla y no al hacer clic: así los enlaces apuntan a una URL
+ * blob: ya armada y el navegador no bloquea la pestaña nueva (lo hace con las que se
+ * abren después de un await), y si el PDF falta el aviso aparece enseguida.
+ * Recibe: el nombre con el que se descarga el archivo.
+ * Devuelve: promesa sin valor. Si falla, muestra el aviso del PDF y no lanza: el resto
+ * de la pantalla (y el botón de enviar) sigue andando.
+ */
+async function prepararPdf(nombreArchivo) {
+  let pdf;
+  try {
+    pdf = await obtenerInforme(tareaActual.id);
+  } catch (error) {
+    // Un 401 ya llevó al login (alPerderSesion); cualquier otro error queda a la vista.
+    mostrarError(avisoPdf, error);
+    return;
+  }
+  // La URL vive mientras la pestaña esté abierta: el PDF se puede volver a abrir o
+  // descargar incluso después de completar la tarea.
+  const url = URL.createObjectURL(pdf);
+  enlaceInforme.href = url;
+  enlaceDescarga.href = url;
+  enlaceDescarga.download = nombreArchivo;
+  descargaInforme.hidden = false;
+}
+
+/**
  * Muestra el informe: el texto o el aviso de PDF adjunto, la ruta del PDF y,
- * si ya existe el GET, el enlace para verlo.
+ * si hay PDF, los enlaces para verlo y descargarlo (ver prepararPdf).
  * Recibe: valores de la instancia. No devuelve nada.
  */
 function mostrarInforme(valores) {
@@ -89,12 +111,9 @@ function mostrarInforme(valores) {
   const campos = adjunto ? [campoRutaInforme] : [campoTextoInforme, campoRutaInforme];
   mostrarDatos(datosInforme, campos, valores);
 
-  const hayPdf = Boolean(valores[variables.rutaInforme]);
-  descargaInforme.hidden = !(descargaInformeDisponible && hayPdf);
-  if (!descargaInforme.hidden) {
-    // El backend busca el PDF por la tarea (lee rutaInforme de la instancia): la ruta
-    // del archivo nunca viaja desde el navegador.
-    enlaceInforme.href = rutasApi.informe(tareaActual.id);
+  // Sin rutaInforme no hay nada que pedir: la fila ya dice "No informado".
+  if (valores[variables.rutaInforme]) {
+    prepararPdf('informe-de-resultados.pdf');
   }
 }
 
