@@ -24,7 +24,7 @@
     <!-- Bandeja común del personal: mis tareas y las del grupo, con su pantalla -->
     <p class="bloque"><a class="boton" href="../common/bandeja.html">Ir a mi bandeja de tareas</a></p>
 
-    <!-- Menú de tareas, en el orden del proceso. Las que todavía no tienen pantalla van sin enlace. -->
+    <!-- Menú de tareas, en el orden del proceso. Cada tarea tiene su pantalla y su botón de acción. -->
     <section class="bloque" aria-labelledby="titulo-tareas">
       <h2 id="titulo-tareas">Tareas</h2>
       <div class="tarjetas">
@@ -35,10 +35,10 @@
           <a class="boton-de-accion" href="registrar-propuesta.html">Abrir registrar y elaborar propuesta</a>
         </article>
 
-        <article class="tarjeta tarjeta-deshabilitada">
+        <article class="tarjeta">
           <h3>Revisar propuesta</h3>
           <p>Ajusta la propuesta según las observaciones de la empresa.</p>
-          <p class="estado-tarjeta">Próximamente</p>
+          <a class="boton-de-accion" href="revisar-propuesta.html">Abrir revisar propuesta</a>
         </article>
 
         <article class="tarjeta">
@@ -53,16 +53,16 @@
           <a class="boton-de-accion" href="lista-definitiva.html">Abrir confeccionar lista definitiva</a>
         </article>
 
-        <article class="tarjeta tarjeta-deshabilitada">
+        <article class="tarjeta">
           <h3>Enviar informe de resultados</h3>
           <p>Envía el informe del curso a la empresa y archiva el expediente.</p>
-          <p class="estado-tarjeta">Próximamente</p>
+          <a class="boton-de-accion" href="enviar-informe.html">Abrir enviar informe de resultados</a>
         </article>
 
-        <article class="tarjeta tarjeta-deshabilitada">
+        <article class="tarjeta">
           <h3>Archivar solicitud</h3>
           <p>Cierra una solicitud rechazada o que quedó sin respuesta de la empresa.</p>
-          <p class="estado-tarjeta">Próximamente</p>
+          <a class="boton-de-accion" href="archivar-solicitud.html">Abrir archivar solicitud</a>
         </article>
 
       </div>
