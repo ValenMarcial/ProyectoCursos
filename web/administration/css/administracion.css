@@ -139,6 +139,17 @@
   color: var(--acento);
 }
 
+/* Quién tiene la sesión y el botón para cerrarla (common/js/seccion.js), al pie de la cabecera. */
+.barra-sesion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.75rem 0 0;
+  color: var(--texto-suave);
+}
+
 .pie {
   text-align: center;
   padding: 1.5rem;

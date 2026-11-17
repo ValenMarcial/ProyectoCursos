@@ -10,11 +10,12 @@
  */
 
 import { rutaLogin } from '../../administration/js/contrato.js';
+import { destinoPorGrupo, puedeEntrar, seccionDeRuta } from './secciones.js';
 
 /** Parámetro de la URL del login con la pantalla a la que hay que volver. */
 export const parametroVolver = 'volver';
 
-/** Bandeja común del personal: destino por defecto después del login, para cualquier grupo. */
+/** Bandeja común del personal: destino cuando no hay una sección propia (otro grupo, o los dos). */
 export const rutaBandeja = '/common/bandeja.html';
 
 // Caracteres de control (incluye tab y salto de línea). El parser de URL los
@@ -49,13 +50,19 @@ export function rutaVolverSegura(volver, origen) {
 }
 
 /**
- * Elige a dónde ir después del login: la pantalla pedida si es segura y, si no,
- * la bandeja común (sirve para cualquier grupo: muestra las tareas de cada uno).
- * Recibe: el valor de ?volver= y el origen del sitio.
+ * Elige a dónde ir después del login. Si la persona venía de una pantalla (?volver=) segura
+ * y de una sección que le corresponde, vuelve ahí. Si no, va al inicio de su sección según
+ * su grupo (Administración o Equipo docente) y, si no tiene una sola, a la bandeja común.
+ * Una pantalla pedida de la sección de otro grupo se descarta: no tiene sentido llevarla ahí.
+ * Recibe: el valor de ?volver=, el origen del sitio y los grupos del usuario (por defecto, ninguno).
  * Devuelve: la ruta destino.
  */
-export function elegirDestino(volver, origen) {
-  return rutaVolverSegura(volver, origen) ?? rutaBandeja;
+export function elegirDestino(volver, origen, grupos = []) {
+  const propio = destinoPorGrupo(grupos, rutaBandeja);
+  const ruta = rutaVolverSegura(volver, origen);
+  if (ruta === null) return propio;
+  const seccion = seccionDeRuta(new URL(ruta, origen).pathname);
+  return seccion !== null && !puedeEntrar(grupos, seccion) ? propio : ruta;
 }
 
 /**

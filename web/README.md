@@ -77,6 +77,21 @@ Reutiliza el adaptador de Administración (`crearApi` de `administration/js/api.
 
 Por defecto usa la API real: sin sesión, la bandeja manda al login común y vuelve después de ingresar. Para probar en modo simulado: `cd web && python3 -m http.server 8000` y abrir `http://localhost:8000/teachers/index.html?api=mock`. El selector "Ver como" (o `?usuario=docente1`) cambia de integrante. `?api=real` vuelve al backend.
 
+## Quién entra adónde
+
+El personal (Administración y Equipo docente) usa el mismo login y las mismas credenciales de Flowable; lo que decide a qué sección pertenece cada persona es su grupo:
+
+| Grupo | Sección | Carpeta |
+|---|---|---|
+| `Administracion` | Administración | `administration/` |
+| `Docentes` | Equipo docente | `teachers/` |
+
+- **Después del login** cada persona va al inicio de su sección. Si venía de una pantalla (`?volver=`) y es de su sección, vuelve ahí; si era de la sección de otro grupo, se descarta. Sin una sección única (otro grupo, o los dos a la vez) va a la bandeja común.
+- **Cada pantalla de una sección** carga primero `js/guardia.js`, que exige sesión, muestra quién ingresó con el botón "Cerrar sesión" al pie de la cabecera y, si la persona es de otro grupo, reemplaza la pantalla por un aviso con un enlace a la suya. La regla está en `common/js/secciones.js` y la guardia en `common/js/seccion.js`.
+- **Es una regla de la interfaz, no de seguridad.** Los datos los protege el backend: una tarea de otro grupo responde 404 al verla y 403 al completarla, aunque alguien llegue a la pantalla.
+- **Las empresas son aparte:** tienen otra cuenta y otra sesión (`/api/empresa/**`), así que ingresar como personal no las deja entrar a "Mis cursos" ni al revés.
+- La bandeja común (`common/bandeja.html`) y el login no pertenecen a ninguna sección: sirven a todo el personal.
+
 ## Cómo abrir el sitio
 
 Los archivos estáticos los sirve el backend (Spring Boot). Con `make dev-up`,

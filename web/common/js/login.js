@@ -3,7 +3,8 @@
  *
  * Pantalla de login del personal (Administración y Docentes). Inicia la sesión
  * en el backend con el usuario y la clave de Flowable y lleva al usuario a la
- * pantalla de ?volver= (si es una ruta segura del sitio) o a la bandeja común.
+ * pantalla de ?volver= (si es una ruta segura y de una sección que le corresponde) o al
+ * inicio de su sección según su grupo; sin una sección única, a la bandeja común.
  *
  * La clave solo viaja en el pedido de login: no se guarda en ningún storage, no
  * se escribe en la consola y el campo se vacía después de cada intento.
@@ -31,11 +32,11 @@ const mensajeDatosFaltantes = 'Ingresá el usuario y la clave.';
 const volver = leerVolver(window.location.search);
 
 /**
- * Calcula el destino después del login: ?volver= si es segura o la bandeja.
- * No recibe nada. Devuelve: la ruta destino.
+ * Calcula el destino después del login (ver elegirDestino de navegacion.js).
+ * Recibe: el usuario de la sesión ({ usuario, nombre, grupos }). Devuelve: la ruta destino.
  */
-function destino() {
-  return elegirDestino(volver, window.location.origin);
+function destino(usuario) {
+  return elegirDestino(volver, window.location.origin, usuario.grupos);
 }
 
 /** Muestra el formulario de ingreso y le da foco al usuario. */
@@ -53,7 +54,7 @@ function mostrarFormulario() {
  */
 function mostrarSesionIniciada(usuario) {
   textoSesion.textContent = `Ya iniciaste sesión como ${usuario.nombre} (${usuario.usuario}).`;
-  enlaceContinuar.href = destino();
+  enlaceContinuar.href = destino(usuario);
   bloqueIngreso.hidden = true;
   bloqueSesion.hidden = false;
 }
@@ -96,9 +97,9 @@ async function ingresar(evento) {
 
   bloquearFormulario(true);
   try {
-    await iniciarSesion(usuario, clave);
+    const sesion = await iniciarSesion(usuario, clave);
     // replace: con "atrás" no se vuelve al login.
-    window.location.replace(destino());
+    window.location.replace(destino(sesion));
   } catch (error) {
     mostrarError(aviso, error);
     if (error?.tipo === 'credenciales') {

@@ -28,7 +28,6 @@ const acciones = {
 };
 
 const aviso = document.getElementById('aviso');
-const sesion = document.getElementById('sesion');
 const bloqueUsuario = document.getElementById('bloque-usuario-simulado');
 const selectorUsuario = document.getElementById('usuario-simulado');
 const bloqueTareas = document.getElementById('bloque-tareas');
@@ -88,7 +87,7 @@ function mostrarSelectorUsuario(usuario) {
 }
 
 /**
- * Carga la bandeja: quién tiene la sesión y sus tareas docentes, con los datos del curso.
+ * Carga la bandeja: las tareas docentes del usuario de la sesión, con los datos del curso.
  * Sin sesión va al login común con ?volver= de esta pantalla (exigirSesion).
  * No recibe nada. Devuelve: promesa sin valor.
  */
@@ -98,8 +97,6 @@ async function iniciar() {
     // usuarioActual de docentes: en modo simulado devuelve un integrante del grupo Docentes.
     const usuario = await exigirSesion({ consultarUsuario: usuarioActual });
     if (!usuario) return;
-    sesion.textContent = `${usuario.nombre} (${usuario.usuario})`;
-    sesion.hidden = false;
     if (modoActual === 'mock') mostrarSelectorUsuario(usuario.usuario);
 
     const claves = Object.keys(acciones);
