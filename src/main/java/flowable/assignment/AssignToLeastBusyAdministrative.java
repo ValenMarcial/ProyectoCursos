@@ -60,9 +60,7 @@ public class AssignToLeastBusyAdministrative implements TaskListener {
                 .map(Map.Entry::getKey)
                 .sorted()
                 .collect(Collectors.toList());
-        // TaskHelper y no delegateTask.setAssignee: el listener corre después de que Flowable registró
-        // la tarea en el historial, y setAssignee solo cambia la tarea en ejecución. changeTaskAssignee
-        // también actualiza el historial (la consulta 4.3.3 cuenta por ahí) y dispara el evento de asignación.
+        // Actualiza el historial y dispara el evento de asignación
         TaskHelper.changeTaskAssignee((TaskEntity) delegateTask, tieBreaker.apply(leastBusyUsers));
     }
 }
