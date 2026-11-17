@@ -238,7 +238,10 @@ def preparar(instancia, recursos):
         except Terminada:
             pass  # la instancia terminó (por ejemplo, sin aulas): las demás ramas se cancelan solas
         except (Exception, SystemExit) as error:
-            errores.append(error)
+            # recorrido.py (nómina, mensajes) avisa con Trabado o SystemExit, no con Terminada. Si la instancia
+            # ya terminó, es el mismo caso: otra rama la cerró (falta de aulas) mientras esta esperaba.
+            if not termino(instancia):
+                errores.append(error)
 
     hilos = [threading.Thread(target=rama, args=(f,)) for f in (materiales, inscripciones, recursos_)]
     for hilo in hilos:
@@ -249,6 +252,14 @@ def preparar(instancia, recursos):
         raise errores[0]
     if not r.activa(instancia):
         raise Terminada()
+
+
+def termino(instancia):
+    """True si la instancia ya no está activa (la cerró el motor: no viable, falta de aulas)."""
+    try:
+        return not r.activa(instancia)
+    except (Exception, SystemExit):
+        return False
 
 
 def participantes():
@@ -348,6 +359,11 @@ def corrida(numero, destino, modificaciones, recordatorio, escala):
         r.esperar(lambda: not r.activa(instancia), r.ESPERA_TAREA, "el fin del proceso", instancia)
     except Terminada:
         pass  # el motor la cerró antes (no viable o falta de aulas): se informa con su resultado
+    except (r.Trabado, SystemExit):
+        # Un mensaje o una espera de recorrido.py que encontró la instancia ya terminada (por ejemplo, la
+        # cancelación de una que ya se cerró por falta de aulas). Si sigue activa, es una falla de verdad.
+        if not termino(instancia):
+            raise
     return {"numero": numero, "instancia": instancia, "destino": destino, "modificaciones": modificaciones,
             "resultado": historica(instancia, "resultado"), "motivo": historica(instancia, "motivoCierre")}
 
