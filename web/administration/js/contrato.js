@@ -98,8 +98,9 @@ export const rutasApi = {
   },
 
   /**
-   * Ruta para subir el PDF del informe de resultados (POST multipart, campo "archivo").
-   * Recibe: id de la tarea. Devuelve: la ruta. Responde { rutaInforme }.
+   * Ruta del PDF del informe de resultados. POST (multipart, campo "archivo") lo sube y
+   * responde { rutaInforme }; GET lo devuelve (application/pdf) para la tarea asignada.
+   * Recibe: id de la tarea. Devuelve: la ruta.
    */
   informe(id) {
     return `${rutasApi.tarea(id)}/informe`;

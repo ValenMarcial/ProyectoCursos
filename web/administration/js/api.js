@@ -229,10 +229,11 @@ function normalizarTarea(tarea) {
 
 /**
  * Transporte real: llama al backend con fetch.
- * Recibe: método HTTP, ruta y cuerpo opcional.
- * Devuelve: promesa de { estado, cuerpo }; cuerpo es null si no hay JSON.
+ * Recibe: método HTTP, ruta, cuerpo opcional y { archivo }: con archivo en true, una
+ * respuesta 2xx se entrega como Blob (por ejemplo, un PDF) en vez de leerla como JSON.
+ * Devuelve: promesa de { estado, cuerpo }; cuerpo es null si no hay JSON, o el Blob.
  */
-export async function enviarReal(metodo, ruta, cuerpo) {
+export async function enviarReal(metodo, ruta, cuerpo, { archivo = false } = {}) {
   // same-origin es el valor por defecto; va explícito porque la sesión depende de la
   // cookie: la web y la API se sirven desde el mismo backend.
   const opciones = { method: metodo, credentials: 'same-origin' };
@@ -245,6 +246,10 @@ export async function enviarReal(metodo, ruta, cuerpo) {
   }
 
   const respuesta = await fetch(ruta, opciones);
+  // Los errores siguen viniendo como JSON ({ message }): solo el 2xx se lee como archivo.
+  if (archivo && respuesta.ok) {
+    return { estado: respuesta.status, cuerpo: await respuesta.blob() };
+  }
   // Reclamar y completar responden 204 sin cuerpo, y un error puede no ser JSON.
   const texto = await respuesta.text();
   let datos = null;
@@ -266,18 +271,19 @@ export async function enviarReal(metodo, ruta, cuerpo) {
 export function crearApi(enviar, { alPerderSesion = () => {} } = {}) {
   /**
    * Hace un pedido y unifica el manejo de errores.
-   * Recibe: método, ruta, cuerpo opcional y { esLogin, sin401 }:
+   * Recibe: método, ruta, cuerpo opcional y { esLogin, sin401, archivo }:
    * - esLogin: un 401 son credenciales incorrectas.
    * - sin401: el 401 es una respuesta esperada (consultar o cerrar la sesión) y no
    *   dispara alPerderSesion; si no, una pantalla de login que pregunta por la
    *   sesión se redirigiría a sí misma.
+   * - archivo: la respuesta 2xx es un archivo (Blob), no JSON (ver enviarReal).
    * Devuelve: el cuerpo de la respuesta.
    * Lanza: ErrorApi si no hubo conexión o el status no es 2xx.
    */
-  async function pedir(metodo, ruta, cuerpo, { esLogin = false, sin401 = false } = {}) {
+  async function pedir(metodo, ruta, cuerpo, { esLogin = false, sin401 = false, archivo = false } = {}) {
     let respuesta;
     try {
-      respuesta = await enviar(metodo, ruta, cuerpo);
+      respuesta = await enviar(metodo, ruta, cuerpo, { archivo });
     } catch (error) {
       throw new ErrorApi('No se pudo conectar con el servidor.', { tipo: 'red', detalle: String(error) });
     }
@@ -410,6 +416,32 @@ export function crearApi(enviar, { alPerderSesion = () => {} } = {}) {
     },
 
     /**
+     * Pide el PDF del informe de resultados de una tarea asignada al usuario. El backend
+     * busca el archivo por la tarea (lee rutaInforme de la instancia): la ruta nunca viaja
+     * desde el navegador.
+     * Recibe: id de la tarea. Devuelve: el PDF como Blob.
+     * Lanza: ErrorApi 'noEncontrado' con "El informe no está disponible." si el backend
+     * responde 404 (falta el PDF o la tarea no es del usuario: no lo distingue), y los
+     * errores de siempre para 401 (sesión vencida), 403, red o 500.
+     */
+    async obtenerInforme(id) {
+      let pdf;
+      try {
+        pdf = await pedir('GET', rutasApi.informe(id), undefined, { archivo: true });
+      } catch (error) {
+        if (error instanceof ErrorApi && error.tipo === 'noEncontrado') {
+          throw new ErrorApi('El informe no está disponible.', { tipo: 'noEncontrado', estado: error.estado, detalle: error.detalle });
+        }
+        throw error;
+      }
+      // Un 2xx sin archivo sería un bug del transporte: no se muestra como PDF.
+      if (!(pdf instanceof Blob) || pdf.size === 0) {
+        throw new ErrorApi('Ocurrió un error inesperado. Intentá de nuevo más tarde.', { tipo: 'interno', detalle: 'El informe llegó vacío o no es un archivo.' });
+      }
+      return pdf;
+    },
+
+    /**
      * Lee las variables de una instancia.
      * Recibe: id de la instancia.
      * Devuelve: objeto { nombreVariable: valor }, con fechas en dd/MM/yyyy.
@@ -495,5 +527,5 @@ function redirigirALogin() {
 
 export const {
   iniciarSesion, usuarioActual, cerrarSesion,
-  listarTareas, obtenerTarea, reclamarTarea, completarTarea, obtenerVariables,
+  listarTareas, obtenerTarea, reclamarTarea, completarTarea, obtenerVariables, obtenerInforme,
 } = crearApi(elegirTransporte(), { alPerderSesion: redirigirALogin });
