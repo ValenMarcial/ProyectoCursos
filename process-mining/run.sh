@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 # Prepara el entorno (si hace falta) y corre el análisis de minería de procesos.
 #
@@ -52,7 +51,7 @@ if [ "$MODO" = "todo" ] || [ "$MODO" = "analizar" ]; then
         exit 1
     fi
     if [ ! -f analyze.py ]; then
-        echo "AVISO: todavía no existe analizar.py; se omite el análisis."
+        echo "AVISO: todavía no existe analyze.py; se omite el análisis."
         exit 0
     fi
     echo ">> Analizando eventos.csv"

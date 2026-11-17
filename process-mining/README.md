@@ -143,7 +143,7 @@ En una prueba local con datos provisorios, sin este filtro la exportación daba 
 
 ### 4. Tipos de actividad que se analizan
 
-`analizar.py` conserva `userTask`, `serviceTask`, `scriptTask`, `businessRuleTask` e `intermediateCatchEvent`. El script original conservaba solo los dos primeros, lo que descartaba la evaluación de viabilidad, el envío de propuesta y recordatorios, y los eventos de espera: justamente los que distinguen un recorrido de otro.
+`analyze.py` conserva `userTask`, `serviceTask`, `scriptTask`, `businessRuleTask` e `intermediateCatchEvent`. El script original conservaba solo los dos primeros, lo que descartaba la evaluación de viabilidad, el envío de propuesta y recordatorios, y los eventos de espera: justamente los que distinguen un recorrido de otro.
 
 ### 5. Empates en los tres recorridos más frecuentes
 
