@@ -1,6 +1,5 @@
 """Exporta el historial de actividades de Flowable a un CSV (log de eventos).
 
-VERSIÓN CON FILTRO DE FLUJOS. Adaptación del script del profesor al proceso del proyecto:
   - PROCESS_KEY y ACTIVIDADES (elementos de la etapa de negociación) son los del BPMN real.
   - No se filtra por instancias terminadas: también se exportan las que siguen en curso. La
     columna "instancia_terminada" permite distinguirlas después.
@@ -8,8 +7,6 @@ VERSIÓN CON FILTRO DE FLUJOS. Adaptación del script del profesor al proceso de
     eventos de una compuerta basada en eventos ("Esperar respuesta": 5 días, Aceptación, Rechazo,
     Modificaciones), aunque solo uno haya ocurrido. Se conservan las actividades de las que salió un
     flujo realmente recorrido (misma idea que resumen() de infra/scripts/recorrido.py).
-
-Para comparar el efecto del filtro, ver exportar_history_sin_filtro.py.
 """
 import csv
 import xml.etree.ElementTree as ET
