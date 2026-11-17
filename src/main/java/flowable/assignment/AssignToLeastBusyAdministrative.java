@@ -11,8 +11,10 @@ import org.flowable.engine.TaskService;
 import org.flowable.engine.delegate.TaskListener;
 import org.flowable.engine.impl.cfg.ProcessEngineConfigurationImpl;
 import org.flowable.engine.impl.util.CommandContextUtil;
+import org.flowable.engine.impl.util.TaskHelper;
 import org.flowable.idm.api.User;
 import org.flowable.task.service.delegate.DelegateTask;
+import org.flowable.task.service.impl.persistence.entity.TaskEntity;
 
 /**
  * Task Listener de creación de "Confeccionar lista definitiva" (enunciado 3.4): asigna la tarea
@@ -58,6 +60,9 @@ public class AssignToLeastBusyAdministrative implements TaskListener {
                 .map(Map.Entry::getKey)
                 .sorted()
                 .collect(Collectors.toList());
-        delegateTask.setAssignee(tieBreaker.apply(leastBusyUsers));
+        // TaskHelper y no delegateTask.setAssignee: el listener corre después de que Flowable registró
+        // la tarea en el historial, y setAssignee solo cambia la tarea en ejecución. changeTaskAssignee
+        // también actualiza el historial (la consulta 4.3.3 cuenta por ahí) y dispara el evento de asignación.
+        TaskHelper.changeTaskAssignee((TaskEntity) delegateTask, tieBreaker.apply(leastBusyUsers));
     }
 }
