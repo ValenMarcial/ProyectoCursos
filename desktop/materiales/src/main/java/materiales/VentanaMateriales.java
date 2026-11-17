@@ -257,6 +257,10 @@ public class VentanaMateriales extends JFrame {
         private final SimpleDateFormat formato = new SimpleDateFormat("dd/MM HH:mm");
         private List<TareaMateriales> filas = new ArrayList<>();
 
+        ModeloTareas() {
+            formato.setTimeZone(Main.ZONA_LOCAL); 
+        }
+
         void reemplazar(List<TareaMateriales> nuevas) {
             filas = nuevas;
             fireTableDataChanged();
