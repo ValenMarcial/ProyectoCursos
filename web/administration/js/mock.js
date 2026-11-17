@@ -43,6 +43,7 @@ const mensajes = {
   noAutorizada: 'La tarea no es tuya ni de tu grupo.',
   noAsignada: 'La tarea no está asignada a vos: reclamala primero.',
   variableInvalida: 'Variable no permitida o con tipo o valor incorrecto:',
+  informeNoEncontrado: 'El informe no existe: todavía no se subió el PDF o el archivo no está en el servidor.',
   // Mensajes de SesionException.Motivo.
   datosInvalidos: 'Ingresá el usuario y la clave. El usuario no puede contener ":".',
   credencialesInvalidas: 'Usuario o clave incorrectos.',
@@ -408,6 +409,54 @@ function leerVariables(instanciaId) {
 }
 
 /**
+ * Arma un PDF mínimo válido, de una página con una línea de texto, para simular el
+ * informe sin depender de jsPDF. Calcula los desplazamientos de la tabla xref, así los
+ * visores lo abren sin tener que repararlo.
+ * Recibe: el texto de la página (solo ASCII, sin paréntesis ni barras invertidas).
+ * Devuelve: el PDF como Blob de tipo application/pdf.
+ */
+function pdfMinimo(texto) {
+  const contenido = `BT /F1 18 Tf 72 720 Td (${texto}) Tj ET`;
+  const objetos = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${contenido.length} >>\nstream\n${contenido}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  // Posición en bytes de cada objeto: todo es ASCII, así que coincide con la longitud del texto.
+  const posiciones = objetos.map((objeto, indice) => {
+    const posicion = pdf.length;
+    pdf += `${indice + 1} 0 obj\n${objeto}\nendobj\n`;
+    return posicion;
+  });
+  const inicioXref = pdf.length;
+  pdf += `xref\n0 ${objetos.length + 1}\n0000000000 65535 f \n`;
+  pdf += posiciones.map((posicion) => `${String(posicion).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objetos.length + 1} /Root 1 0 R >>\nstartxref\n${inicioXref}\n%%EOF\n`;
+  return new Blob([pdf], { type: 'application/pdf' });
+}
+
+/**
+ * Simula GET /api/tareas/{id}/informe como InformeService.ubicar: la tarea tiene que
+ * estar asignada a la sesión (mismos 404 y 403 que al completar) y su instancia tener
+ * rutaInforme; si falta, 404 como cuando el archivo no está en el servidor.
+ * Recibe: la tarea (o undefined). Devuelve: { estado: 200, cuerpo: Blob } o el error.
+ */
+function leerInforme(item) {
+  if (!item) return errorBackend(404, mensajes.tareaNoEncontrada);
+  if (!esSuya(item)) {
+    return errorBackend(403, esDeSuGrupo(item) ? mensajes.noAsignada : mensajes.noAutorizada);
+  }
+  const ruta = datos.instancias[item.processInstanceId]
+    ?.find((variable) => variable.name === nombres.rutaInforme)?.value;
+  if (!ruta) return errorBackend(404, mensajes.informeNoEncontrado);
+  // Sin structuredClone (responder): el Blob es nuevo en cada pedido y no se comparte.
+  return { estado: 200, cuerpo: pdfMinimo(`Informe simulado - ${item.processInstanceId}`) };
+}
+
+/**
  * Simula /api/sesion. Solo existe el usuario simulado; la clave no se revisa,
  * pero no puede faltar (como en el backend).
  * Recibe: método y cuerpo. Devuelve: la respuesta.
@@ -448,6 +497,7 @@ export async function enviarSimulado(metodo, ruta, cuerpo) {
     if (metodo === 'GET' && partes.length === 1) return listar(url.searchParams);
     const item = datos.tareas.find((existente) => existente.id === id);
     if (metodo === 'GET' && partes.length === 2) return leer(item);
+    if (metodo === 'GET' && partes.length === 3 && accion === 'informe') return leerInforme(item);
     if (metodo === 'POST' && partes.length === 3 && accion === 'reclamar') {
       return item ? reclamar(item) : errorBackend(404, mensajes.tareaNoEncontrada);
     }
