@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.flowable.engine.HistoryService;
 import org.flowable.engine.IdentityService;
 import org.flowable.engine.ProcessEngine;
 import org.flowable.engine.TaskService;
@@ -127,6 +128,28 @@ class AssignToLeastBusyAdministrativeTest {
         assertNull(task.getAssignee());
         assertTrue(taskService.getIdentityLinksForTask(task.getId()).stream()
                 .anyMatch(link -> "Administracion".equals(link.getGroupId())));
+    }
+
+    /**
+     * La consulta 4.3.3 (tareas completadas por persona) sale del historial: la asignación del
+     * listener tiene que quedar registrada ahí también, no solo en la tarea en ejecución.
+     */
+    @Test
+    void laAsignacionQuedaEnElHistorialAntesYDespuesDeCompletar() {
+        assignTasks("jefeAdministrativo", 1);
+        assignTasks("empleadoAdministrativo", 2);
+        String instanceId = engine.getRuntimeService().startProcessInstanceByKey("test-lista-definitiva").getId();
+        Task task = taskService.createTaskQuery().processInstanceId(instanceId).singleResult();
+        HistoryService historyService = engine.getHistoryService();
+
+        assertEquals("jefeAdministrativo", task.getAssignee());
+        assertEquals("jefeAdministrativo",
+                historyService.createHistoricTaskInstanceQuery().taskId(task.getId()).singleResult().getAssignee());
+
+        taskService.complete(task.getId());
+
+        assertEquals(1, historyService.createHistoricTaskInstanceQuery()
+                .taskId(task.getId()).taskAssignee("jefeAdministrativo").finished().count());
     }
 
     private void assignTasks(String userId, int amount) {
