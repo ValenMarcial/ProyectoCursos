@@ -10,7 +10,7 @@ Es un único sitio con distintas vistas según quién ingresa. Todas las vistas 
 ```
 web/
 ├── index.html          Portada con acceso a cada sección
-├── common/              Código compartido (actualmente solo un estilo)
+├── common/              Login y bandeja del personal, módulos JS y estilos compartidos
 ├── public/            Sección pública: formulario de solicitud
 ├── enterprise/            Acceso y seguimiento para empresas
 ├── administration/     Funciones para Administración
@@ -105,11 +105,23 @@ Para editar más rápido se puede servir `web/` con un servidor estático en el
 puerto 3000 y abrirlo como `http://localhost:3000`. En ese caso las llamadas
 al backend necesitan URL absoluta y CORS habilitado en el controller.
 
-## Pendiente
+## Estado
 
-- Desarrollar las vistas de cada carpeta.
-- Definir los endpoints del backend que cada vista necesite.
-- Resolver cómo consumen las pantallas del personal la API REST de Flowable.
+Hecho:
+
+- `public/`: formulario de solicitud (`request.html`), que llama a `POST /api/solicitudes` e inicia la instancia.
+- `enterprise/`: login de la empresa (`login.html`) y "Mis cursos" (`course.html`), con el estado de cada curso y sus actividades en curso, sobre `/api/empresa/**`.
+- `common/`: login del personal (`login.html`) contra `POST /api/sesion`, bandeja común (`bandeja.html`, con "Mis tareas" y "Del grupo") y los módulos compartidos: avisos, sesión, `?volver=`, tabla de tarea → pantalla (`pantallas.js`) y de quién entra adónde (`secciones.js`, `seccion.js`).
+- `administration/`: menú y las seis pantallas (Registrar y elaborar propuesta, Revisar propuesta, Archivar solicitud, Evaluar recursos, Confeccionar lista definitiva, y Enviar informe y archivar expediente), con el adaptador `js/api.js`, su contrato (`js/contrato.js`) y el modo simulado (`js/mock.js`). El PDF de la propuesta se arma en el navegador con jsPDF (copia local en `js/vendor/`).
+- `teachers/`: bandeja docente y las pantallas Definir docente, Desarrollar curso y Elaborar informe de resultados (ver arriba).
+- Las pantallas del personal no hablan con Flowable: usan el backend (`/api/sesion`, `/api/tareas`, `/api/instancias`), que llama al motor con su cuenta y aplica los permisos con el usuario y los grupos de la sesión. El detalle está en `docs/informe-web-administracion.md`.
+
+Pendiente:
+
+- Llevar a un módulo común la vista previa y descarga del PDF, hoy copiadas entre Registrar y Revisar propuesta, y usar `formatearFechaAcordada` de `administration/js/texto.js` en `teachers/js/pantalla-docentes.js`, que tiene una copia.
+- `obtenerInforme` (`administration/js/api.js`) no comprueba que el archivo sea `application/pdf` antes de abrirlo.
+- Las pantallas de una sección cargan su script aunque la persona sea de otro grupo, antes de que la guardia las reemplace: el backend frena los pedidos, pero puede verse un error en la consola.
+- El envío del informe a la empresa no lo hace el sistema: "Enviar y archivar" registra que se envió por fuera y completa la tarea.
 
 ## Convenciones que se pueden seguir para llamar al backend
 
