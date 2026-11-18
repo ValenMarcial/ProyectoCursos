@@ -15,6 +15,8 @@ import {
 import { alcances, rutaLogin } from '../../administration/js/contrato.js';
 import { mostrarAviso, mostrarError, ocultarAviso } from './avisos.js';
 import { enlaceDeTarea } from './pantallas.js';
+import { enlaceAlMenu } from './seccion.js';
+import { destinoPorGrupo, seccionDeRuta } from './secciones.js';
 import { exigirSesion } from './sesion.js';
 
 /** Etiqueta de una tarea que todavía no tiene pantalla en el sitio. */
@@ -166,6 +168,18 @@ async function salir() {
 }
 
 /**
+ * Agrega, antes de "Cerrar sesión", el enlace al menú de la sección del usuario.
+ * La sección sale de sus grupos con la misma regla que el login (destinoPorGrupo): si no
+ * es de ninguna, o es de las dos, no hay una sola y el enlace no se muestra.
+ * Recibe: los grupos del usuario. No devuelve nada.
+ */
+function mostrarEnlaceAlMenu(grupos) {
+  const clave = seccionDeRuta(destinoPorGrupo(grupos, null) ?? '');
+  const enlace = clave ? enlaceAlMenu(clave) : null;
+  if (enlace) botonCerrarSesion.before(enlace, ' ');
+}
+
+/**
  * Muestra los datos de la sesión en la cabecera.
  * Recibe: { usuario, nombre, grupos }.
  */
@@ -173,6 +187,7 @@ function mostrarSesion(usuario) {
   const grupos = usuario.grupos?.length ? usuario.grupos.join(', ') : 'sin grupos';
   textoSesion.textContent = `${usuario.nombre} (${usuario.usuario}) · Grupos: ${grupos}`;
   textoSesion.hidden = false;
+  mostrarEnlaceAlMenu(usuario.grupos);
   botonCerrarSesion.hidden = false;
 }
 
