@@ -55,5 +55,5 @@ if [ "$MODO" = "todo" ] || [ "$MODO" = "analizar" ]; then
         exit 0
     fi
     echo ">> Analizando eventos.csv"
-    python analyze.py
+    python analyze.py "${@:2}"
 fi

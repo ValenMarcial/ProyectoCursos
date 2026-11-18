@@ -2,6 +2,14 @@ import os
 
 import pandas as pd
 import pm4py
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--solo-terminadas", action="store_true",
+    help="Excluye las instancias que todavía no terminaron",
+)
+argumentos = parser.parse_args()
 
 # Carpeta donde se guardan los gráficos y el modelo.
 SALIDA = "resultados"
@@ -9,6 +17,16 @@ os.makedirs(SALIDA, exist_ok=True)
 
 # Leer el CSV. Mantener los identificadores como texto.
 df = pd.read_csv("eventos.csv", dtype=str)
+
+sin_terminar = df.loc[df["instancia_terminada"] == "false", "instancia"].nunique()
+if argumentos.solo_terminadas:
+    df = df[df["instancia_terminada"] == "true"]
+    print(f"Se excluyeron {sin_terminar} instancias sin terminar.")
+    if df.empty:
+        raise SystemExit("No quedan instancias terminadas para analizar.")
+elif sin_terminar:
+    print(f"Aviso: {sin_terminar} instancias no terminaron y se incluyen "
+          "(con --solo-terminadas se excluyen).")
 
 # Conservar las tareas y eventos de la negociación.
 TIPOS = [
