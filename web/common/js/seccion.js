@@ -3,7 +3,8 @@
  *
  * Entrada de cada pantalla del personal (Administración y Equipo docente). Hace tres cosas:
  * - Exige sesión: sin ella lleva al login con ?volver= de la pantalla actual (exigirSesion).
- * - Muestra quién tiene la sesión, con el botón "Cerrar sesión", al pie de la cabecera.
+ * - Muestra quién tiene la sesión, con enlaces a la bandeja y al menú de la sección y el
+ *   botón "Cerrar sesión", al pie de la cabecera.
  * - Si la persona no es del grupo de la sección, reemplaza el contenido por un aviso con un
  *   enlace a la suya, en lugar de dejar la pantalla de otro grupo a medio funcionar.
  *
@@ -53,7 +54,34 @@ function botonCerrarSesion(texto, cerrar, ubicacion, documento, avisarError) {
 }
 
 /**
- * Agrega al final de la cabecera quién tiene la sesión y el botón para cerrarla.
+ * Crea un enlace con el aspecto del botón secundario. Si lleva a la pantalla en la que ya
+ * se está, la marca con aria-current="page" (los lectores de pantalla lo anuncian).
+ * Recibe: el documento, el texto, la ruta absoluta y la ubicación actual (puede faltar).
+ * Devuelve: el elemento <a>.
+ */
+function enlaceSecundario(documento, texto, ruta, ubicacion) {
+  const enlace = crear(documento, 'a', 'boton boton-secundario', texto);
+  enlace.href = ruta;
+  if (ubicacion?.pathname === ruta) enlace.setAttribute('aria-current', 'page');
+  return enlace;
+}
+
+/**
+ * Crea el enlace al menú (pantalla de inicio) de una sección: "Menú de <nombre>".
+ * La usan la barra de sesión y la bandeja común.
+ * Recibe: la clave de la sección ('administracion' o 'docentes') y, opcionalmente, el
+ * documento y la ubicación (para probarla sin navegador).
+ * Devuelve: el elemento <a>, o null si la clave no es de ninguna sección.
+ */
+export function enlaceAlMenu(clave, documento = globalThis.document, ubicacion = globalThis.location) {
+  if (!Object.hasOwn(secciones, clave)) return null;
+  const { nombre, inicio } = secciones[clave];
+  return enlaceSecundario(documento, `Menú de ${nombre}`, inicio, ubicacion);
+}
+
+/**
+ * Agrega al final de la cabecera quién tiene la sesión, los enlaces a la bandeja y al menú
+ * de la sección, y el botón para cerrarla.
  * Recibe: el usuario, la clave de la sección, la función que cierra la sesión, la ubicación
  * y el documento. No hace nada si la página no tiene cabecera. No devuelve nada.
  */
@@ -62,10 +90,18 @@ function mostrarBarraDeSesion(usuario, clave, cerrar, ubicacion, documento) {
   if (!cabecera) return;
   const quien = crear(documento, 'span', 'barra-sesion-texto',
     `${usuario.nombre} (${usuario.usuario}) · ${secciones[clave].nombre}`);
+  // Enlaces y botón van juntos en un <span>: la barra (flex con space-between) deja así
+  // el texto a la izquierda y las acciones a la derecha, sin CSS nuevo.
+  const acciones = crear(documento, 'span', '', '');
+  acciones.append(
+    enlaceSecundario(documento, 'Mi bandeja', rutaBandeja, ubicacion), ' ',
+    enlaceAlMenu(clave, documento, ubicacion), ' ',
+    botonCerrarSesion('Cerrar sesión', cerrar, ubicacion, documento,
+      (texto) => { quien.textContent = texto; }),
+  );
   const barra = crear(documento, 'p', 'barra-sesion', '');
   barra.id = 'barra-sesion';
-  barra.append(quien, botonCerrarSesion('Cerrar sesión', cerrar, ubicacion, documento,
-    (texto) => { quien.textContent = texto; }));
+  barra.append(quien, acciones);
   cabecera.append(barra);
 }
 
