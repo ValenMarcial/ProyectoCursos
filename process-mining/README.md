@@ -111,7 +111,7 @@ Los pasos para dejar la base de la demo están en [docs/preparar-demo.md](../doc
 
 ### Cómo repetirlos
 
-- **Mismos datos exactos.** La base se guardó con `make demo-guardar DEMO=data/demo/demo-18-11` y se comparte por Drive (`data/demo/` no se sube al repositorio). Para usarla: copiar los dos archivos a `data/demo/` y ejecutar `make demo-cargar DEMO=data/demo/demo-18-11`. **Reemplaza la base local.** Después, exportar y analizar como arriba.
+- **Mismos datos exactos.** El CSV usado en el análisis está en `eventos.csv`, así que `./run.sh analizar --solo-terminadas` reproduce los resultados sin levantar nada. La base de origen se guardó con `make demo-guardar DEMO=data/demo/demo-18-11` (`data/demo/` no se incluye en el repositorio). Si se tiene ese respaldo: copiar los dos archivos a `data/demo/` y ejecutar `make demo-cargar DEMO=data/demo/demo-18-11`. **Reemplaza la base local.** Después, exportar y analizar como arriba.
 - **Nuevos datos con la misma estructura.** Repetir los comandos de la sección anterior. La semilla fija el sorteo de destinos, modificaciones y recordatorios, de modo que los recorridos de la negociación son los mismos. No fija las pausas, los usuarios ni los recursos, así que los datos no son idénticos y algunas instancias pueden terminar canceladas por falta de aulas (un camino válido del modelo, que no afecta a la negociación).
 - **Con otra semilla o sin semilla**, los porcentajes cambian.
 
