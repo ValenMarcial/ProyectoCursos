@@ -63,7 +63,7 @@ public final class ModelerExportFixer {
             }
             Element container = (Element) flow.getParentNode();
             xml = removeSequenceFlow(xml, flow.getAttribute("id"));
-            // Dentro de cada contenedor, el esquema BPMN pide las associations después de los flowElements
+            // Las associations van después de los flowElements de cada contenedor
             xml = insertBeforeClosingTag(xml, container, String.format(
                     "<association id=\"%s\" sourceRef=\"%s\" targetRef=\"%s\" associationDirection=\"One\"></association>",
                     flow.getAttribute("id"), flow.getAttribute("sourceRef"), flow.getAttribute("targetRef")));
@@ -96,7 +96,7 @@ public final class ModelerExportFixer {
         if (!open.find()) {
             throw new IllegalStateException("No se encontró el subProcess " + container.getAttribute("id"));
         }
-        // Saltar los subprocesos anidados (por ejemplo, el de Cancelación) hasta el cierre que corresponde
+        // Saltar los subprocesos anidados hasta su cierre
         Matcher tags = SUBPROCESS_TAG.matcher(xml);
         int depth = 0;
         int from = open.start();

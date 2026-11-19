@@ -9,10 +9,7 @@ public class VariableResponse {
     private final String type;
     private final Object value;
 
-    /**
-     * Recibe el nombre de la variable, su tipo en Flowable (string, integer, boolean, date...)
-     * y su valor tal como lo devolvió el motor (puede ser null).
-     */
+    /** Recibe el nombre, el tipo de Flowable y el valor (puede ser null). */
     public VariableResponse(String name, String type, Object value) {
         this.name = name;
         this.type = type;

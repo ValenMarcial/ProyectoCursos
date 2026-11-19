@@ -35,7 +35,7 @@ public class EmpresaRepository {
         return jdbc.query(CURSOS, (rs, fila) -> curso(rs).curso, empresaId);
     }
 
-    /** El curso solo si es de la empresa: el de otra empresa no se distingue de uno inexistente. */
+    /** El curso, solo si es de la empresa. */
     public Optional<CursoConInstancia> curso(long empresaId, long cursoId) {
         return jdbc.query(CURSO, (rs, fila) -> curso(rs), empresaId, cursoId).stream().findFirst();
     }

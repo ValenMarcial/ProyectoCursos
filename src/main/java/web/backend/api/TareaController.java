@@ -47,12 +47,7 @@ public class TareaController {
         this.informes = informes;
     }
 
-    /**
-     * GET /api/tareas?alcance=mias|grupo[&start&size]: tareas asignadas al usuario (mias) o sin
-     * asignar de sus grupos (grupo). Devuelve {data, total, start, size}.
-     * Los parámetros van opcionales a propósito: si faltan, el servicio responde con su propio
-     * mensaje (alcance inválido o valores por defecto de la página).
-     */
+    /** GET /api/tareas?alcance=mias|grupo[&start&size]: tareas del usuario o de sus grupos. */
     @GetMapping
     public PaginaResponse<TareaResponse> listar(
             @SessionAttribute(SesionController.ATRIBUTO_USUARIO) UsuarioSesion usuario,
@@ -70,10 +65,7 @@ public class TareaController {
         return tareas.obtener(usuario, id);
     }
 
-    /**
-     * POST /api/tareas/{id}/reclamar: asigna la tarea al usuario de la sesión. Responde 204.
-     * No lee el cuerpo a propósito: si la web manda un "assignee", se ignora.
-     */
+    /** POST /api/tareas/{id}/reclamar: asigna la tarea al usuario de la sesión. */
     @PostMapping("/{id}/reclamar")
     public ResponseEntity<Void> reclamar(
             @SessionAttribute(SesionController.ATRIBUTO_USUARIO) UsuarioSesion usuario,
@@ -82,10 +74,7 @@ public class TareaController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * POST /api/tareas/{id}/completar con {"variables": [{name, type, value}]}: completa la tarea
-     * del usuario de la sesión. Responde 204. El cuerpo puede faltar si la tarea no pide datos.
-     */
+    /** POST /api/tareas/{id}/completar: completa la tarea con las variables recibidas. */
     @PostMapping("/{id}/completar")
     public ResponseEntity<Void> completar(
             @SessionAttribute(SesionController.ATRIBUTO_USUARIO) UsuarioSesion usuario,
@@ -95,11 +84,7 @@ public class TareaController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * POST /api/tareas/{id}/informe (multipart, campo "archivo"): guarda el PDF del informe de la
-     * tarea "Elaborar informe de resultados" del usuario de la sesión. Responde {"rutaInforme"},
-     * que la web manda después al completar la tarea.
-     */
+    /** POST /api/tareas/{id}/informe: guarda el PDF del informe y devuelve su ruta. */
     @PostMapping(path = "/{id}/informe", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public RutaInformeResponse subirInforme(
             @SessionAttribute(SesionController.ATRIBUTO_USUARIO) UsuarioSesion usuario,
@@ -112,12 +97,7 @@ public class TareaController {
         }
     }
 
-    /**
-     * GET /api/tareas/{id}/informe: el PDF del informe de resultados de la instancia, para verlo
-     * en el navegador. Exige una tarea asignada al usuario de la sesión. La ruta del archivo
-     * sale del servidor (variable rutaInforme), no del pedido. Responde application/pdf sin
-     * caché (el informe es de una sola empresa) o 404 con {"message"} si no existe.
-     */
+    /** GET /api/tareas/{id}/informe: el PDF del informe de la instancia de la tarea. */
     @GetMapping("/{id}/informe")
     public ResponseEntity<Resource> verInforme(
             @SessionAttribute(SesionController.ATRIBUTO_USUARIO) UsuarioSesion usuario,

@@ -134,10 +134,7 @@ class SesionInterceptorTest {
                 .andExpect(status().isCreated());
     }
 
-    /**
-     * La protección va por defecto: una ruta que todavía no existe bajo /api (como la de un
-     * endpoint nuevo que nadie agregó a SesionWebConfig) responde 401 y no 404.
-     */
+    /** Una ruta inexistente bajo /api responde 401. */
     @Test
     void unaRutaNuevaBajoApiPideSesion() throws Exception {
         for (String ruta : new String[] {"/api", "/api/cursos", "/api/cursos/curso-1/participantes"}) {
@@ -158,10 +155,7 @@ class SesionInterceptorTest {
                 .andExpect(content().json(SIN_SESION, true));
     }
 
-    /**
-     * La excepción de /api/solicitudes es por método: solo el POST es libre. GET, PUT y DELETE
-     * (OtrosMetodosDeSolicitudes, endpoints que hoy no existen) piden sesión.
-     */
+    /** En /api/solicitudes solo el POST es libre. */
     @Test
     void otroMetodoSobreSolicitudesPideSesion() throws Exception {
         mvc.perform(get("/api/solicitudes"))
@@ -185,10 +179,7 @@ class SesionInterceptorTest {
                 .andExpect(status().isOk());
     }
 
-    /**
-     * Un método sin ningún endpoint en la ruta lo rechaza Spring con 405 antes de llegar al
-     * interceptor. No expone nada: el 405 no trae datos.
-     */
+    /** Un método sin endpoint en la ruta responde 405. */
     @Test
     void unMetodoSinEndpointLoResuelveSpringAntesDelInterceptor() throws Exception {
         mvc.perform(patch("/api/solicitudes"))
@@ -246,11 +237,7 @@ class SesionInterceptorTest {
                 .andExpect(status().isOk());
     }
 
-    /**
-     * Endpoints de prueba con otros métodos sobre /api/solicitudes. Hoy SolicitudController
-     * solo tiene POST; sin un endpoint, Spring responde 405 antes del interceptor y no se
-     * podría ver si la ruta pide sesión.
-     */
+    /** Endpoints de prueba con otros métodos sobre /api/solicitudes. */
     @RestController
     static class OtrosMetodosDeSolicitudes {
         @GetMapping("/api/solicitudes")

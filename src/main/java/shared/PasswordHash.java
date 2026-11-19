@@ -37,7 +37,7 @@ public final class PasswordHash {
         return PREFIJO + "$" + ITERACIONES + "$" + base64(sal) + "$" + base64(pbkdf2(clave, sal, ITERACIONES));
     }
 
-    /** Indica si la clave corresponde al hash guardado. Un hash con otro formato nunca coincide. */
+    /** Indica si la clave corresponde al hash guardado. */
     public static boolean coincide(String clave, String guardado) {
         String[] partes = guardado == null ? new String[0] : guardado.split("\\$");
         if (clave == null || partes.length != 4 || !PREFIJO.equals(partes[0])) {
@@ -46,7 +46,7 @@ public final class PasswordHash {
         try {
             byte[] esperado = Base64.getDecoder().decode(partes[3]);
             byte[] calculado = pbkdf2(clave, Base64.getDecoder().decode(partes[2]), Integer.parseInt(partes[1]));
-            // Comparación en tiempo constante: no revela cuántos bytes coinciden.
+            // Comparación en tiempo constante
             return MessageDigest.isEqual(esperado, calculado);
         } catch (IllegalArgumentException exception) {
             return false;

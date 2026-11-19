@@ -27,7 +27,7 @@ public class Analisis {
             "sid-065649F8-9F01-4C34-B290-C37474CC479D",   // Reservar aula
             "sid-C3399A6A-261E-4D23-9AF8-F9F58D4A81CB",   // Solicitar aula virtual
             "sid-6AAC5E2F-BF84-4C7C-8963-7D1F6CBEF790");  // Contratar equipamiento
-    /** Fin del subproceso "Preparar curso", después de la unión "Preparación completa". La cancelación nunca llega acá. */
+    /** Fin del subproceso "Preparar curso". */
     static final String FIN_PREPARACION = "sid-85D22149-CBE0-424A-9E0D-9C03CFB275CD";
 
     /** Resultados que reconoce el enunciado, en el orden en que se muestran. */
@@ -67,8 +67,7 @@ public class Analisis {
         List<Long> inscripciones = new ArrayList<>();
         List<Long> materiales = new ArrayList<>();
         List<Long> recursos = new ArrayList<>();
-        // Solo cursos que completaron la preparación: llegaron al fin del subproceso. Una preparación
-        // interrumpida por cancelación nunca llega ahí, aunque alguna rama ya hubiera terminado.
+        // Solo cursos que llegaron al fin de la preparación
         Set<String> instancias = new LinkedHashSet<>();
         for (HistoricActivityInstance fin : historial.createHistoricActivityInstanceQuery()
                 .activityId(FIN_PREPARACION).finished().list()) {
@@ -121,8 +120,7 @@ public class Analisis {
         Map<String, Integer> cuenta = new TreeMap<>();
         for (HistoricTaskInstance t : historial.createHistoricTaskInstanceQuery()
                 .processDefinitionKey(PROCESO).finished().list()) {
-            // Una tarea completada termina sin motivo de borrado; una cancelada (por ejemplo, por la cancelación
-            // del curso) también tiene fin, pero con un motivo.
+            // Completada: sin motivo de borrado
             if (t.getAssignee() != null && t.getDeleteReason() == null) {
                 cuenta.merge(t.getAssignee(), 1, Integer::sum);
             }

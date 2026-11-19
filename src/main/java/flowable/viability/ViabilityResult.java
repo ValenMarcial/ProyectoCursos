@@ -9,10 +9,9 @@ public class ViabilityResult implements ExecutionListener {
     public void notify(DelegateExecution execution) {
         Collection<?> rawResult = (Collection<?>) execution.getVariable("isViable");
         
-        // Extrae si la colección insertada por Drools contiene Boolean.TRUE
+        // Viable si Drools insertó Boolean.TRUE
         boolean isViable = rawResult != null && rawResult.contains(Boolean.TRUE);
         
-        // Guarda la variable booleana pura en el proceso
         execution.setVariable("isViable", isViable);
     }
 }

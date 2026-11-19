@@ -64,13 +64,7 @@ public class Simulador {
         return habilitadas;
     }
 
-    /**
-     * Envía una comunicación a la instancia.
-     *
-     * @param datos valores de los campos de la comunicación, por nombre de variable
-     * @throws IllegalArgumentException si falta un dato o no es válido
-     * @throws IllegalStateException si el proceso no espera esa comunicación en este momento
-     */
+    /** Envía una comunicación a la instancia. */
     public void enviar(String instanciaId, Comunicacion comunicacion, Map<String, String> datos) {
         Map<String, String> variables = validar(comunicacion, datos);
 
@@ -113,11 +107,7 @@ public class Simulador {
         return variables;
     }
 
-    /**
-     * Devuelve la fecha con zona horaria. Flowable interpreta una fecha sin zona con la hora del servidor
-     * (UTC en Docker), así que una hora local quedaría corrida. Si el usuario no indica zona, se usa la
-     * de esta máquina.
-     */
+    /** Devuelve la fecha con zona horaria (la de esta máquina si no se indica). */
     static String normalizarFecha(String valor, ZoneId zonaLocal) {
         try {
             return DateTimeFormatter.ISO_OFFSET_DATE_TIME.format(OffsetDateTime.parse(valor));

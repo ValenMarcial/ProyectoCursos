@@ -32,7 +32,7 @@ import web.backend.service.UsuarioSesion;
 @RestController
 @RequestMapping(SesionController.RUTA)
 public class SesionController {
-    /** Ruta del recurso; la usan también el interceptor y su configuración. */
+    /** Ruta del recurso. */
     public static final String RUTA = "/api/sesion";
     /** Atributo de la sesión HTTP donde queda el usuario autenticado. */
     public static final String ATRIBUTO_USUARIO = "usuarioSesion";
@@ -49,13 +49,13 @@ public class SesionController {
             @Valid @RequestBody IniciarSesionRequest request, HttpServletRequest httpRequest) {
         UsuarioSesion usuario = sesiones.iniciar(request.getUsuario(), request.getClave());
         HttpSession sesion = httpRequest.getSession();
-        // Un id nuevo al autenticar evita que un id fijado antes del login quede con sesión (session fixation).
+        // Id de sesión nuevo al autenticar
         httpRequest.changeSessionId();
         sesion.setAttribute(ATRIBUTO_USUARIO, usuario);
         return respuesta(usuario);
     }
 
-    /** Devuelve el usuario actual. Sin sesión no llega acá: lo corta SesionInterceptor. */
+    /** Devuelve el usuario actual. */
     @GetMapping
     public SesionResponse actual(@SessionAttribute(ATRIBUTO_USUARIO) UsuarioSesion usuario) {
         return respuesta(usuario);
@@ -73,8 +73,6 @@ public class SesionController {
         return error(exception.getMotivo());
     }
 
-    // Se atrapan acá para responder {"message"} en vez del error estándar de Spring,
-    // y para que el cuerpo del login (con la clave) nunca termine en un mensaje de error.
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<MensajeErrorResponse> manejarPedidoInvalido() {
         return error(Motivo.DATOS_INVALIDOS);

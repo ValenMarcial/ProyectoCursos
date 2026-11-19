@@ -14,8 +14,7 @@ public enum Comunicacion {
             Collections.emptyList()),
     MODIFICACIONES("Solicitud de modificaciones", Via.MENSAJE, "msgModificaciones", null,
             List.of(new Campo("observaciones", "Observaciones de la empresa"))),
-    // "Recibir nómina" es un receive task (no un evento de mensaje): se despierta con una señal
-    // a la ejecución que está en esa actividad.
+    // "Recibir nómina" es un receive task: se despierta con una señal
     NOMINA("Envío de la nómina de participantes", Via.SENAL, null, "sid-40B80C57-5A63-4D5C-A43B-710C8B140370",
             List.of(new Campo("participantes", "Participantes, separados por coma"))),
     CANCELACION("Cancelación durante la preparación", Via.MENSAJE, "msgCancelacion", null,

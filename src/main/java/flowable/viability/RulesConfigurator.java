@@ -22,7 +22,7 @@ public class RulesConfigurator implements EngineConfigurator {
             return;
         }
 
-        // Flowable UI: nos llama el motor principal (App Engine), que construye el de procesos más tarde
+        // Flowable UI: el motor de procesos se construye después
         for (EngineConfigurator configurator : engineConfiguration.getAllConfigurators()) {
             if (configurator instanceof ProcessEngineConfigurator) {
                 addRulesDeployer((ProcessEngineConfigurationImpl)

@@ -5,7 +5,7 @@ package materiales;
  * 4.3 y termina, sin ventana. Variables opcionales: MOTOR_DB_URL, MOTOR_DB_USER, MOTOR_DB_PASSWORD.
  */
 public final class Main {
-    /** Zona de esta máquina, para mostrar horas en la ventana. El motor trabaja en UTC (ver main). */
+    /** Zona de esta máquina, para mostrar horas en la ventana. */
     static final java.util.TimeZone ZONA_LOCAL = java.util.TimeZone.getDefault();
 
     public static void main(String[] args) {

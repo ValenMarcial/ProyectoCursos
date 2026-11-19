@@ -39,27 +39,23 @@ import web.backend.api.dto.VariableResponse;
  */
 @Component
 public class FlowableTareaClient {
-    /** Key del proceso en el BPMN. Toda consulta se limita a las tareas de este proceso. */
+    /** Key del proceso en el BPMN. */
     public static final String PROCESO = "process-proyecto-curso";
 
     private static final Logger LOG = LoggerFactory.getLogger(FlowableTareaClient.class);
     private static final String RUTA_TAREAS = "/runtime/tasks";
-    // Los ids van como variables de la URI para que se codifiquen y no alteren la ruta.
     private static final String RUTA_TAREA = "/runtime/tasks/{id}";
     private static final String RUTA_VINCULOS = "/runtime/tasks/{id}/identitylinks";
     private static final String RUTA_VARIABLES = "/runtime/process-instances/{id}/variables";
     private static final String RUTA_ACTIVIDADES = "/history/historic-activity-instances";
-    /**
-     * Tipos de actividad que se muestran a la empresa. Quedan afuera compuertas, eventos de inicio
-     * y fin, y el subproceso, que siguen "sin terminar" mientras corren sus actividades internas.
-     */
+    /** Tipos de actividad que se muestran a la empresa. */
     private static final Set<String> TIPOS_VISIBLES = Set.of("userTask", "receiveTask", "serviceTask",
             "scriptTask", "intermediateCatchEvent");
-    /** Más que suficiente: una instancia tiene como mucho unas pocas actividades en paralelo. */
+    /** Máximo de actividades en curso por instancia. */
     private static final int MAXIMO_ACTIVIDADES = 100;
     /** Tipo de vínculo de Flowable que marca a un grupo (o usuario) como candidato de la tarea. */
     private static final String VINCULO_CANDIDATO = "candidate";
-    /** Orden fijo para que la paginación sea estable: las tareas más viejas primero. */
+    /** Orden de las tareas: las más viejas primero. */
     private static final String ORDEN_CAMPO = "createTime";
     private static final String ORDEN_SENTIDO = "asc";
 
@@ -74,15 +70,7 @@ public class FlowableTareaClient {
         this.baseUrl = baseUrl.replaceAll("/+$", "");
     }
 
-    /**
-     * Busca tareas activas del proceso, paginadas y ordenadas por fecha de creación.
-     * Recibe el usuario asignado (o null), los grupos candidatos (o null), la instancia (o null)
-     * y la página (start y size). Con grupos, solo trae tareas SIN asignar: las que ya tomó
-     * alguien dejan de estar disponibles para el grupo.
-     * Hace falta asignado o grupos: sin ninguno de los dos Flowable devolvería todas las tareas,
-     * así que se corta antes con IllegalArgumentException. Por lo mismo no se aceptan grupos vacíos.
-     * Devuelve la página con el total que informa Flowable y el size pedido.
-     */
+    /** Busca tareas activas del proceso por asignado o por grupos candidatos, paginadas. */
     public PaginaResponse<TareaResponse> buscarTareas(
             String asignado, List<String> gruposCandidatos, String instanciaId, int start, int size) {
         boolean conAsignado = asignado != null && !asignado.isBlank();
@@ -92,8 +80,6 @@ public class FlowableTareaClient {
         }
         UriComponentsBuilder url = UriComponentsBuilder.fromHttpUrl(baseUrl + RUTA_TAREAS)
                 .queryParam("processDefinitionKey", PROCESO);
-        // Los valores van como variables {..} para que encode() los codifique completos: un "&" o
-        // un "+" en un usuario o grupo no agrega ni cambia parámetros de la consulta.
         Map<String, Object> valores = new HashMap<>();
         if (conAsignado) {
             url.queryParam("assignee", "{asignado}");
@@ -106,7 +92,6 @@ public class FlowableTareaClient {
             url.queryParam("processInstanceId", "{instancia}");
             valores.put("instancia", instanciaId);
         }
-        // Siempre se manda size: si no, Flowable pagina de a 10 y la web perdería tareas.
         URI uri = url.queryParam("sort", ORDEN_CAMPO)
                 .queryParam("order", ORDEN_SENTIDO)
                 .queryParam("start", start)
@@ -125,10 +110,7 @@ public class FlowableTareaClient {
                 start, size);
     }
 
-    /**
-     * Busca una tarea activa por id. Devuelve vacío si no existe (404 del motor) o si es de otro
-     * proceso, para que quien llama no distinga entre los dos casos.
-     */
+    /** Busca una tarea activa del proceso por id. */
     public Optional<TareaResponse> obtenerTarea(String tareaId) {
         URI uri = url(RUTA_TAREA, tareaId);
         Map<?, ?> tarea;
@@ -140,7 +122,7 @@ public class FlowableTareaClient {
             }
             throw exception;
         }
-        // El id de la definición tiene la forma "<key>:<versión>:<id>"; así se filtra por key.
+        // Filtra por key: el id de la definición es "<key>:<versión>:<id>"
         Object definicion = tarea == null ? null : tarea.get("processDefinitionId");
         if (!(definicion instanceof String) || !((String) definicion).startsWith(PROCESO + ":")) {
             return Optional.empty();
@@ -163,10 +145,7 @@ public class FlowableTareaClient {
         return grupos;
     }
 
-    /**
-     * Devuelve todas las variables de la instancia, sin filtrar, como {name, type, value}.
-     * Qué variables puede ver la web lo decide TareaService.
-     */
+    /** Devuelve todas las variables de la instancia, sin filtrar. */
     public List<VariableResponse> variablesDeInstancia(String instanciaId) {
         URI uri = url(RUTA_VARIABLES, instanciaId);
         List<?> variables = consultar("consultar las variables de una instancia",
@@ -179,11 +158,7 @@ public class FlowableTareaClient {
         return resultado;
     }
 
-    /**
-     * Devuelve las actividades sin terminar de la instancia, incluidas las de ramas paralelas, de
-     * la más vieja a la más nueva. Se usa el historial (y no las tareas) porque también incluye
-     * la recepción de la nómina y la espera de la fecha de inicio.
-     */
+    /** Devuelve las actividades sin terminar de la instancia, incluidas las de ramas paralelas. */
     public List<ActividadResponse> actividadesEnCurso(String instanciaId) {
         URI uri = UriComponentsBuilder.fromHttpUrl(baseUrl + RUTA_ACTIVIDADES)
                 .queryParam("processInstanceId", "{id}")
@@ -206,12 +181,7 @@ public class FlowableTareaClient {
         return resultado;
     }
 
-    /**
-     * Reclama la tarea para el usuario: manda {"action":"claim","assignee":usuario}.
-     * Recibe el id de la tarea y el usuario. Un claim sin assignee LIBERA la tarea en Flowable,
-     * así que con el usuario vacío se corta antes con IllegalArgumentException.
-     * Si la tarea ya la tiene otra persona, el 409 del motor sale como FlowableRespuestaException.
-     */
+    /** Reclama la tarea para el usuario. */
     public void reclamarTarea(String tareaId, String usuario) {
         if (usuario == null || usuario.isBlank()) {
             throw new IllegalArgumentException("Un claim sin assignee libera la tarea: hace falta el usuario.");
@@ -222,15 +192,10 @@ public class FlowableTareaClient {
         accion("reclamar una tarea", tareaId, cuerpo);
     }
 
-    /**
-     * Completa la tarea con las variables recibidas: manda {"action":"complete","variables":[...]}.
-     * Recibe el id de la tarea y las variables ya validadas por TareaService (puede ser una lista
-     * vacía). Los errores de negocio del motor (400) salen como FlowableRespuestaException.
-     */
+    /** Completa la tarea con las variables recibidas. */
     public void completarTarea(String tareaId, List<CompletarTareaRequest.Variable> variables) {
         List<Map<String, Object>> lista = new ArrayList<>();
         for (CompletarTareaRequest.Variable variable : variables) {
-            // Se arma cada variable de nuevo: solo viajan nombre, tipo y valor.
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("name", variable.getName());
             item.put("type", variable.getType());
@@ -243,24 +208,20 @@ public class FlowableTareaClient {
         accion("completar una tarea", tareaId, cuerpo);
     }
 
-    /** Manda una acción (claim, complete) a la tarea. Flowable responde 200 sin datos útiles. */
+    /** Manda una acción (claim, complete) a la tarea. */
     private void accion(String descripcion, String tareaId, Map<String, Object> cuerpo) {
         URI uri = url(RUTA_TAREA, tareaId);
         consultar(descripcion, () -> restTemplate.postForEntity(uri, cuerpo, Void.class));
     }
 
-    /**
-     * Ejecuta una consulta y traduce los errores del motor (ver la descripción de la clase).
-     * Recibe una descripción para el log (sin datos de la cuenta) y la consulta a ejecutar.
-     */
+    /** Ejecuta una consulta y traduce los errores del motor. */
     private static <T> T consultar(String descripcion, Supplier<T> consulta) {
         try {
             return consulta.get();
         } catch (HttpStatusCodeException exception) {
             HttpStatus estado = exception.getStatusCode();
             if (estado == HttpStatus.UNAUTHORIZED || estado == HttpStatus.FORBIDDEN) {
-                // No es un error de la persona: el motor rechazó la cuenta del backend. Se registra
-                // solo el estado y la operación; el usuario y la clave no se escriben nunca.
+                // El motor rechazó la cuenta del backend
                 LOG.error("Flowable rechazó la cuenta del backend ({}) al {}. Revisar FLOWABLE_USER y "
                         + "FLOWABLE_PASSWORD.", estado.value(), descripcion);
                 throw new RestClientException("Flowable rechazó la cuenta del backend (" + estado.value() + ").");
@@ -271,7 +232,6 @@ public class FlowableTareaClient {
         }
     }
 
-    // encode() antes de expandir codifica el id completo: un "/" en el id no cambia la ruta.
     private URI url(String ruta, String id) {
         return UriComponentsBuilder.fromHttpUrl(baseUrl + ruta)
                 .encode()

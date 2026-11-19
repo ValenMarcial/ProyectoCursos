@@ -26,10 +26,7 @@ import web.backend.service.EmpresaException.Motivo;
 public class EmpresaService {
     /** Estados en los que el proceso ya terminó: no hay actividades para consultar. */
     private static final Set<String> ESTADOS_FINALES = Set.of("finalizado", "cancelado");
-    /**
-     * Se compara contra este hash cuando el usuario no existe, para que la respuesta tarde lo mismo
-     * y no revele qué usuarios hay.
-     */
+    /** Hash contra el que se compara cuando el usuario no existe. */
     private static final String HASH_SIN_CUENTA = PasswordHash.hash("sin-cuenta");
 
     private final EmpresaRepository empresas;
@@ -40,7 +37,7 @@ public class EmpresaService {
         this.flowable = flowable;
     }
 
-    /** Valida usuario y clave. El usuario no distingue mayúsculas, como el email del que sale. */
+    /** Valida usuario y clave de la empresa. */
     public EmpresaSesion iniciar(String usuario, String clave) {
         Optional<Cuenta> cuenta = empresas.buscarCuenta(usuario.trim().toLowerCase(Locale.ROOT));
         boolean valida = PasswordHash.coincide(clave, cuenta.map(c -> c.claveHash).orElse(HASH_SIN_CUENTA));
@@ -54,10 +51,7 @@ public class EmpresaService {
         return empresas.cursos(sesion.getEmpresaId());
     }
 
-    /**
-     * Detalle de un curso de la empresa con las actividades en curso, incluidas las de ramas
-     * paralelas. Un curso de otra empresa responde igual que uno que no existe.
-     */
+    /** Detalle de un curso de la empresa con sus actividades en curso. */
     public CursoEmpresaResponse curso(EmpresaSesion sesion, long cursoId) {
         CursoConInstancia curso = empresas.curso(sesion.getEmpresaId(), cursoId)
                 .orElseThrow(() -> new EmpresaException(Motivo.CURSO_NO_ENCONTRADO));

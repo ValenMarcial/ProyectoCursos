@@ -130,10 +130,7 @@ class AssignToLeastBusyAdministrativeTest {
                 .anyMatch(link -> "Administracion".equals(link.getGroupId())));
     }
 
-    /**
-     * La consulta 4.3.3 (tareas completadas por persona) sale del historial: la asignación del
-     * listener tiene que quedar registrada ahí también, no solo en la tarea en ejecución.
-     */
+    /** La asignación queda registrada en el historial. */
     @Test
     void laAsignacionQuedaEnElHistorialAntesYDespuesDeCompletar() {
         assignTasks("jefeAdministrativo", 1);

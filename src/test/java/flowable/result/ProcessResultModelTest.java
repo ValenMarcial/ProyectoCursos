@@ -296,10 +296,7 @@ class ProcessResultModelTest {
                 "fechaFinPropuesta", new Date(1_802_000_000_000L)));
     }
 
-    /**
-     * Mueve una solicitud a "Preparar curso" con un curso ya creado. "Habilitar acceso" necesita
-     * la base institucional real, así que acá se carga cursoId como lo dejaría esa tarea.
-     */
+    /** Mueve una solicitud a "Preparar curso" con un curso ya creado. */
     private String llegarAPrepararCurso(long solicitudId, long cursoId) {
         String instancia = iniciar(solicitudId);
         sql("INSERT INTO cursos (id, estado) VALUES (" + cursoId + ", 'en_preparacion')");

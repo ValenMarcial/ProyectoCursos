@@ -25,18 +25,17 @@ public class TareaErrorHandler {
     /** Error de las reglas del backend: devuelve {"message"} con el estado del motivo. */
     @ExceptionHandler(TareaException.class)
     public ResponseEntity<MensajeErrorResponse> manejarError(TareaException exception) {
-        // getMessage y no el del motivo: puede traer un detalle (por ejemplo, la variable rechazada).
         return ResponseEntity.status(estado(exception.getMotivo()))
                 .body(new MensajeErrorResponse(exception.getMessage()));
     }
 
-    /** Cuerpo que no es JSON o no tiene la forma esperada: 400 con mensaje, en vez del error de Spring. */
+    /** Cuerpo que no es JSON o no tiene la forma esperada: 400. */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<MensajeErrorResponse> manejarCuerpoInvalido() {
         return error(Motivo.CUERPO_INVALIDO);
     }
 
-    /** start o size que no son números: se responde como página inválida, en vez del error de Spring. */
+    /** start o size que no son números: página inválida. */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<MensajeErrorResponse> manejarParametroInvalido() {
         return error(Motivo.PAGINA_INVALIDA);
@@ -48,7 +47,7 @@ public class TareaErrorHandler {
         return error(Motivo.INFORME_INVALIDO);
     }
 
-    /** Archivo que pasa el límite de Spring antes de llegar al servicio: 413 con mensaje. */
+    /** Archivo que pasa el límite de Spring: 413. */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<MensajeErrorResponse> manejarArchivoMuyGrande() {
         return error(Motivo.INFORME_MUY_GRANDE);

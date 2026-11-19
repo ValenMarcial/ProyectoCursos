@@ -29,7 +29,7 @@ public class RecordProcessResult implements ExecutionListener {
     public void notify(DelegateExecution execution) {
         Object resultado = execution.getVariable("resultado");
         if (resultado == null) {
-            // camino de cierre sin resultado, se avisa sin trabar el fin de la instancia
+            // Cierre sin resultado: solo se avisa
             LOG.warn("La instancia {} terminó sin la variable resultado; no se actualiza el estado",
                     execution.getProcessInstanceId());
             return;

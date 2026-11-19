@@ -84,8 +84,7 @@ class RecordProcessResultTest {
 
     @Test
     void siFallaElUpdateDelCursoNoQuedaNadaAMedias() throws SQLException {
-        // La solicitud se actualiza primero; el curso falla por una restricción. No tiene que quedar
-        // la solicitud cancelada con la instancia todavía activa.
+        // Falla la actualización del curso: no se guarda nada
         sql("ALTER TABLE cursos ADD CONSTRAINT estado_valido CHECK (estado <> 'cancelado')");
         String instanceId = startAtTask(variables(1L, 10L, "cancelado"));
 
@@ -96,7 +95,7 @@ class RecordProcessResultTest {
 
     @Test
     void siElMotorFallaDespuesDelListenerNoSeActualizaNada() throws SQLException {
-        // Otro listener de fin, que corre después de este, falla antes de que el motor escriba sus cambios
+        // Falla un listener de fin posterior
         engine.getRepositoryService().createDeployment()
                 .addClasspathResource("processes/resultado-falla-test.bpmn20.xml")
                 .deploy();

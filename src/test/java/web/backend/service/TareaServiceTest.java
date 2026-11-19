@@ -277,10 +277,7 @@ class TareaServiceTest {
         verify(flowable).completarTarea("7501", variables);
     }
 
-    /**
-     * "Definir Docente": el jefe de equipo manda el id de usuario del docente como texto. El
-     * backend solo valida nombre y tipo; que sea del grupo Docentes lo valida el motor.
-     */
+    /** "Definir Docente": el id del docente va como texto. */
     @Test
     void completarDefinirDocenteMandaElDocenteSeleccionado() {
         List<CompletarTareaRequest.Variable> variables =

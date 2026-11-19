@@ -9,7 +9,6 @@ import java.util.List;
  * backend aplique los permisos usando su propio cliente de Flowable.
  */
 public class UsuarioSesion implements Serializable {
-    // Serializable porque el contenedor puede persistir la sesión entre reinicios.
     private static final long serialVersionUID = 1L;
 
     private final String usuario;
