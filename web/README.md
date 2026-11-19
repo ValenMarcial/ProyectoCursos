@@ -116,7 +116,7 @@ Hecho:
 - `teachers/`: bandeja docente y las pantallas Definir docente, Desarrollar curso y Elaborar informe de resultados (ver arriba).
 - Las pantallas del personal no hablan con Flowable: usan el backend (`/api/sesion`, `/api/tareas`, `/api/instancias`), que llama al motor con su cuenta y aplica los permisos con el usuario y los grupos de la sesión. El detalle está en `docs/informe-web-administracion.md`.
 
-Pendiente:
+Limitaciones conocidas:
 
 - Llevar a un módulo común la vista previa y descarga del PDF, hoy copiadas entre Registrar y Revisar propuesta, y usar `formatearFechaAcordada` de `administration/js/texto.js` en `teachers/js/pantalla-docentes.js`, que tiene una copia.
 - `obtenerInforme` (`administration/js/api.js`) no comprueba que el archivo sea `application/pdf` antes de abrirlo.

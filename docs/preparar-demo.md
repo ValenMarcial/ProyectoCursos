@@ -81,7 +81,7 @@ make demo-cargar                  # REEMPLAZA la base local por la de esos archi
 make demo-guardar DEMO=data/demo/demo-17-11   # con otro nombre
 ```
 
-- `data/demo/` no se sube al repo, porque el dump pesa y tiene datos de prueba con cuentas. Se comparte por Drive.
+- `data/demo/` no se incluye en el repositorio, porque el dump pesa y tiene datos de prueba con cuentas.
 - `demo-cargar` para Flowable y el backend, restaura la base y los PDF, y los vuelve a levantar. El dump incluye el BPMN desplegado: no hace falta `make deploy`, pero sí tener el mismo código (`make build`).
 - Antes de una prueba que pueda romper algo, conviene guardar con `make demo-guardar` y volver con `make demo-cargar`.
 
