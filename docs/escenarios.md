@@ -59,8 +59,8 @@ Partir de una solicitud del escenario 9.
 ## 2. Modificaciones y nueva propuesta
 
 - [ ] Con una propuesta enviada, simulador → **MODIFICACIONES** con observaciones.
-- [ ] `jefeAdministrativo` → "Revisar propuesta": se ven las observaciones, los datos de la solicitud y "versión 2". Cambiar el presupuesto, completar y revisar el PDF nuevo.
-- [ ] Repetir MODIFICACIONES y comprobar "versión 3". Después **ACEPTACION** y que el curso siga el camino normal.
+- [ ] `jefeAdministrativo` → "Revisar propuesta": se ven las observaciones y los datos de la solicitud. Cambiar el presupuesto y completar: el PDF nuevo y el mensaje de confirmación dicen "versión 2".
+- [ ] Repetir MODIFICACIONES y comprobar que al completar la revisión dice "versión 3". Después **ACEPTACION** y que el curso siga el camino normal.
 
 ## 3. Rechazo
 
