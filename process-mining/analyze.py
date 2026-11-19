@@ -83,6 +83,10 @@ if len(mostrados) > 3:
         f"con {mostrados[-1][1]} casos; se muestran todos."
     )
 
+print("\nTodos los recorridos:")
+for recorrido, cantidad in ordenadas:
+    print(f"{cantidad} casos ({100 * cantidad / total:.1f} %): " + " → ".join(recorrido))
+
 # 2. Grafo de sucesión directa:
 # cada flecha indica cuántas veces una tarea siguió a otra.
 dfg, inicios, finales = pm4py.discover_dfg(log)
