@@ -60,14 +60,16 @@ recorrido:
 
 # Generar muchas instancias variadas para 4.3 y 4.4 (ver docs/preparar-demo.md).
 # make corridas CANTIDAD=40 PARALELO=4 NO_VIABLES=2 (ESCALA=0 saca las pausas)
+# SEMILLA es opcional: fija el sorteo de destinos y modificaciones (las pausas y los usuarios siguen al azar)
 CANTIDAD ?= 40
 PARALELO ?= 4
 ESCALA ?= 1
 NO_VIABLES ?= 0
+SEMILLA ?=
 corridas:
 	FLOWABLE_USER=$(FLOWABLE_USER) FLOWABLE_PASSWORD=$(FLOWABLE_PASSWORD) \
 		python3 infra/scripts/corridas.py --cantidad $(CANTIDAD) --paralelo $(PARALELO) \
-		--escala $(ESCALA) --no-viables $(NO_VIABLES)
+		--escala $(ESCALA) --no-viables $(NO_VIABLES) $(if $(SEMILLA),--semilla $(SEMILLA))
 
 # Guardar o cargar la base completa (instancias, historial, cursos, cuentas) y los PDF de informes.
 # make demo-guardar [DEMO=data/demo/demo]  ->  DEMO.dump y DEMO-informes.tar.gz

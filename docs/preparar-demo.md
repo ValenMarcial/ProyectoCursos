@@ -27,7 +27,7 @@ make deploy
 ## 3. Generar las instancias: `make corridas`
 
 ```bash
-make corridas CANTIDAD=40 PARALELO=4 NO_VIABLES=2
+make corridas CANTIDAD=40 PARALELO=4 NO_VIABLES=2 SEMILLA=10
 ```
 
 Lanza 40 instancias, 4 a la vez. Tarda unos 30 a 40 minutos, porque hace pausas reales. Cada instancia:
@@ -43,14 +43,18 @@ Lanza 40 instancias, 4 a la vez. Tarda unos 30 a 40 minutos, porque hace pausas 
   - el docente (`jefeDeEquipo`, `docente1` o `docente2`);
   - si el informe se escribe o se adjunta. El PDF se sube de verdad, así "Enviar informe" lo puede mostrar.
 
-Destinos aproximados:
+Destinos de las 40 corridas con `SEMILLA=10`:
 
-| Destino | Proporción |
-|---|---|
-| Fin normal | 45 % |
-| Rechazo | 25 % |
-| Cancelación durante la preparación | 15 % |
-| Falta de respuesta | 15 % |
+| Destino | Peso del sorteo | Corridas con SEMILLA=10 | Cómo termina la negociación |
+|---|---|---|---|
+| Fin normal | 45 % | 17 | Aceptación |
+| Rechazo | 25 % | 10 | Rechazo |
+| Falta de respuesta | 15 % | 7 | Sin respuesta |
+| Cancelación durante la preparación | 15 % | 6 | Aceptación |
+
+- Los pesos son los del sorteo. La semilla fija el resultado de ese sorteo, por eso con otra semilla, o sin ella, las cantidades cambian.
+- `NO_VIABLES=2` agrega 7 instancias fuera del plan: 5 solicitudes aceptadas que llenan el cupo de cursos en ejecución (después se cancelan) y 2 no viables. Quedan 47 instancias en total.
+- El análisis de 4.4 mide solo la negociación: 28 aceptaciones (17 + 6 + 5), 10 rechazos, 7 sin respuesta y 2 no viables.
 
 Con varias instancias a la vez, a veces no queda aula física (hay dos). Esa instancia termina cancelada por `SIN_AULAS`, que también es un camino del modelo. `NO_VIABLES=2` llena al final el cupo de 5 cursos, manda 2 solicitudes que el motor rechaza por viabilidad y después cancela los cursos que usó para llenar el cupo.
 

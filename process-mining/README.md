@@ -2,7 +2,7 @@
 
 Análisis con PM4Py de las ejecuciones de la **etapa de negociación** (la que ocurre antes de "Preparar curso"), a partir del historial de Flowable.
 
-> **Estado:** esta carpeta contiene el código. El CSV con los datos, los gráficos y la conclusión se agregan cuando estén generadas las instancias finales (ver [Los datos](#los-datos) y [CONCLUSION.md](CONCLUSION.md)).
+> **Estado:** incluye los datos finales (`eventos.csv` y `resultados/`). La comparación con el BPMN y la conclusión están en [CONCLUSION.md](CONCLUSION.md). Cómo se generaron los datos: ver [Los datos de este repositorio](#los-datos-de-este-repositorio).
 
 ## Qué hay en esta carpeta
 
@@ -12,10 +12,10 @@ Análisis con PM4Py de las ejecuciones de la **etapa de negociación** (la que o
 | `requirements.txt` | Dependencias de Python: `pm4py`, `pandas`, `requests` |
 | `export_history.py` | Exporta el historial de Flowable a `eventos.csv` |
 | `analyze.py` | Calcula los recorridos más frecuentes y genera los gráficos |
-| `CONCLUSION.md` | Comparación con el modelo BPMN (pendiente de los datos finales) |
+| `eventos.csv` | Log de eventos de los datos finales (47 instancias, 324 eventos) |
+| `resultados/` | Grafo de sucesión directa y modelo descubierto de esos datos |
+| `CONCLUSION.md` | Recorridos más frecuentes y comparación con el modelo BPMN |
 | `.gitignore` | Evita subir el entorno virtual (`.venv/`) |
-
-Los archivos que genera el análisis (`eventos.csv` y la carpeta `resultados/`) no están incluidos todavía.
 
 ## Requisitos
 
@@ -30,10 +30,11 @@ Los archivos que genera el análisis (`eventos.csv` y la carpeta `resultados/`) 
 Desde esta carpeta:
 
 ```bash
-chmod +x run.sh      # solo la primera vez
-./run.sh             # exporta el historial y lo analiza
-./run.sh exportar    # solo genera eventos.csv
-./run.sh analizar    # solo analiza el eventos.csv existente
+chmod +x run.sh                       # solo la primera vez
+./run.sh                              # exporta el historial y lo analiza
+./run.sh exportar                     # solo genera eventos.csv
+./run.sh analizar                     # solo analiza el eventos.csv existente
+./run.sh analizar --solo-terminadas   # analiza solo las instancias terminadas
 ```
 
 `run.sh` hace lo siguiente:
@@ -41,9 +42,18 @@ chmod +x run.sh      # solo la primera vez
 1. Crea el entorno virtual `.venv` si no existe.
 2. Instala `requirements.txt` solo si todavía no está instalado o si el archivo cambió.
 3. Avisa si no encuentra Graphviz.
-4. Ejecuta los pasos pedidos.
+4. Ejecuta los pasos pedidos. En el modo `analizar`, los argumentos que siguen se pasan a `analyze.py`.
 
 La exportación pide por la terminal el usuario y la contraseña de Flowable. La URL de la API está escrita en `export_history.py` (`BASE_URL`, por defecto `http://localhost:8080/flowable-ui/process-api`).
+
+### Instancias terminadas y no terminadas
+
+`export_history.py` exporta todas las instancias, terminadas o no, y las distingue en la columna `instancia_terminada`. El filtro se aplica al analizar:
+
+- Sin opciones, `analyze.py` usa todas las instancias. Si alguna no terminó, avisa cuántas son.
+- Con `--solo-terminadas`, excluye las que siguen en curso e informa cuántas descartó.
+
+Los resultados de este repositorio se generaron con `--solo-terminadas`. Como todas las instancias de los datos finales están terminadas, el resultado es el mismo con y sin la opción. Volver a ejecutar el `./run.sh` o `./run`  **sobrescribe** `eventos.csv` y `resultados/`.
 
 ### Sin `run.sh`
 
@@ -52,7 +62,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python export_history.py
-python analyze.py
+python analyze.py --solo-terminadas
 ```
 
 ## Qué produce
@@ -60,53 +70,58 @@ python analyze.py
 | Salida | Contenido |
 |---|---|
 | `eventos.csv` | Una fila por actividad ejecutada: `instancia`, `instancia_terminada`, `definicion`, `evento_id`, `actividad_id`, `actividad`, `tipo`, `inicio`, `fecha_hora`, `recurso` |
-| Consola | Cantidad de instancias, recorridos distintos y los tres más frecuentes con su cantidad y porcentaje |
-| `resultados/recorridos.png` | Grafo de sucesión directa: cada flecha indica cuántas veces una actividad siguió a otra |
+| Consola | Cantidad de instancias, recorridos distintos, los tres más frecuentes con su cantidad y porcentaje y la lista completa al final|
+| `resultados/recorridos.png` | Grafo de sucesión directa: cada caja indica cuántas veces ocurrió la actividad y cada flecha, cuántas veces una actividad siguió a otra |
 | `resultados/modelo_descubierto.png` y `.bpmn` | Modelo BPMN reconstruido a partir de las ejecuciones |
 
-## Los datos
+## Los datos de este repositorio
 
-El análisis usa **las instancias que haya en Flowable al momento de exportar**. Todavía no hay datos en el repositorio: el CSV y los gráficos definitivos se agregan cuando estén generadas las instancias finales. Para actualizarlos basta con volver a correr `./run.sh`; el código no cambia.
+Los datos finales son **47 instancias** del proceso, generadas con `make corridas`. No son 40 porque el comando agrega 7 instancias al final:
 
-Sirve cualquier instancia ya generada, por el medio que sea (simulador, sitio web, etc.).
+| Origen | Instancias | Descripción |
+|---|---|---|
+| Corridas | 40 | El plan sortea el destino de cada una (aceptación, rechazo, falta de respuesta o cancelación), la cantidad de modificaciones y si deja pasar un recordatorio |
+| Cupo de cursos | 5 | Con `NO_VIABLES` el script acepta 5 solicitudes para llenar el cupo de 5 cursos en ejecución; después las cancela. Todas recorren la negociación como aceptación directa |
+| No viables | 2 | Con el cupo lleno, el motor rechaza estas solicitudes por viabilidad |
 
-### Generar instancias en el momento (opcional)
+El plan de las 40 corridas se fijó con la semilla 10: 17 con destino final, 10 rechazos, 7 faltas de respuesta y 6 cancelaciones; 13 con modificaciones y 8 con recordatorio.
 
-Una forma rápida de comprobarlo localmente es el script `infra/scripts/recorrido.py`, desde la raíz del repositorio:
+Los datos son simulados y las esperas están acortadas: el evento “5 días” se ejecuta con un plazo de 20 segundos en las corridas sin respuesta y de 30 en las que dejan pasar un recordatorio.
 
-```bash
-make recorrido ESCENARIO=<escenario>
-```
+### Cómo se generaron
 
-| Escenario | Recorrido de negociación que produce |
-|---|---|
-| `rechazo` | Propuesta, rechazo, archivo |
-| `sin-respuesta` | Propuesta, dos recordatorios, archivo (dura cerca de un minuto) |
-| `cancelar` | Propuesta, aceptación (el resto es preparación) |
-| `final` | Igual que `cancelar` en la negociación, pero recorre todo el proceso (tarda unos minutos) |
-| `limite` | Solicitud no viable: antes completa los cursos que faltan para llegar a cinco en ejecución |
-| `limpiar-limite` | Cancela los cursos que dejó `limite` |
-
-Conviene ejecutar `limite` al final, seguido de `limpiar-limite`: mientras haya cinco cursos en ejecución, toda solicitud nueva resulta no viable.
-
-Ejemplo de una tanda:
+Desde la raíz del repositorio, con una base vacía:
 
 ```bash
-for i in 1 2 3 4; do make recorrido ESCENARIO=rechazo; done
-for i in 1 2 3;   do make recorrido ESCENARIO=cancelar; done
-make recorrido ESCENARIO=final
-for i in 1 2;     do make recorrido ESCENARIO=sin-respuesta; done
-make recorrido ESCENARIO=limite
-make recorrido ESCENARIO=limpiar-limite
+make dev-reset          # BORRA la base local
+make db-migrate
+make seed               # pide las credenciales de Flowable
+make deploy
+make corridas CANTIDAD=40 PARALELO=4 NO_VIABLES=2 SEMILLA=10
 ```
 
-Estos escenarios no generan el camino de **modificaciones** (la empresa pide cambios y el jefe revisa la propuesta). Si ninguna instancia lo recorre, ese lazo no aparece en el análisis (ver [Limitaciones](#limitaciones)).
+Tarda entre 20 y 40 minutos porque hace pausas reales; conviene evitar que el equipo se suspenda durante la ejecución. Después, desde esta carpeta:
 
-Verificación sugerida: la cantidad de instancias que informa la exportación debería coincidir con las ejecutadas.
+```bash
+./run.sh exportar
+./run.sh analizar --solo-terminadas
+```
+
+Los pasos para dejar la base de la demo están en [docs/preparar-demo.md](../docs/preparar-demo.md).
+
+### Cómo repetirlos
+
+- **Mismos datos exactos.** La base se guardó con `make demo-guardar DEMO=data/demo/demo-18-11` y se comparte por Drive (`data/demo/` no se sube al repositorio). Para usarla: copiar los dos archivos a `data/demo/` y ejecutar `make demo-cargar DEMO=data/demo/demo-18-11`. **Reemplaza la base local.** Después, exportar y analizar como arriba.
+- **Nuevos datos con la misma estructura.** Repetir los comandos de la sección anterior. La semilla fija el sorteo de destinos, modificaciones y recordatorios, de modo que los recorridos de la negociación son los mismos. No fija las pausas, los usuarios ni los recursos, así que los datos no son idénticos y algunas instancias pueden terminar canceladas por falta de aulas (un camino válido del modelo, que no afecta a la negociación).
+- **Con otra semilla o sin semilla**, los porcentajes cambian.
+
+### Problemas conocidos
+
+- `make corridas` no debe interrumpirse: deja instancias sin terminar en la base.
 
 ## Decisiones de diseño
 
-El script de exportación parte del provisto por la cátedra y se adaptó al proceso implementado.
+Se adapto el script que nos dejo el profe
 
 ### 1. Qué se considera "negociación"
 
@@ -125,9 +140,9 @@ Se exportan solo los elementos de la etapa previa a "Preparar curso", identifica
 
 Quedan afuera las compuertas, el evento de inicio y los eventos de fin: no aportan información propia, y el resultado de cada caso ya se distingue por su última actividad (Notificar Decisión, Archivar solicitud o Habilitar acceso). **Habilitar acceso de la empresa** se incluye como cierre del camino aceptado; es la primera actividad después de la aceptación.
 
-### 2. No se filtra por instancias terminadas
+### 2. No se filtra por instancias terminadas al exportar
 
-El script original exporta solo instancias terminadas. Acá también se exportan las que siguen en curso, porque una solicitud que aceptó la propuesta y está en preparación ya completó su negociación; excluirla sesgaría el análisis hacia los casos que terminan dentro de la negociación. La columna `instancia_terminada` permite distinguirlas o excluirlas después. Las instancias eliminadas administrativamente (`deleteReason`) se siguen descartando, como en el original.
+El script original exporta solo instancias terminadas. Acá se exportan todas, porque una solicitud que aceptó la propuesta y está en preparación ya completó su negociación; excluirla sesgaría el análisis hacia los casos que terminan dentro de la negociación. La columna `instancia_terminada` permite distinguirlas, y el filtro se elige al analizar con `--solo-terminadas`. Esa opción descarta también las instancias en preparación, aunque su negociación esté completa. Las instancias eliminadas administrativamente (`deleteReason`) se siguen descartando, como en el original.
 
 ### 3. Filtro de flujos recorridos
 
@@ -139,7 +154,7 @@ El script conserva solo las actividades de las que salió un flujo realmente rec
 2. Arma el conjunto de flujos recorridos de la instancia, identificados por **(ejecución, elemento de origen)**. La ejecución evita un error en los lazos: un evento que dispara en una ronda y no en otra es el mismo elemento, pero tiene una ejecución distinta en cada ronda.
 3. Descarta las actividades sin flujo de salida recorrido.
 
-En una prueba local con datos provisorios, sin este filtro la exportación daba 152 eventos y 11 recorridos distintos, frente a 92 eventos y 4 recorridos con el filtro. Sin filtro, los eventos de la compuerta aparecen en cada caso en un orden que varía, y el recorrido de un rechazo es indistinguible del de una aceptación.
+Sin este filtro, los eventos de la compuerta que no ocurrieron aparecerían en el CSV en cada paso por la compuerta, y los recorridos no se podrían distinguir.
 
 ### 4. Tipos de actividad que se analizan
 
@@ -147,7 +162,7 @@ En una prueba local con datos provisorios, sin este filtro la exportación daba 
 
 ### 5. Empates en los tres recorridos más frecuentes
 
-Si varios recorridos empatan en el tercer lugar, se muestran todos y se indica con una nota.
+Si varios recorridos empatan en el tercer lugar, se muestran todos y se indica con una nota. En los datos finales hay un empate: dos recorridos con 3 casos.
 
 ### 6. Salidas ordenadas
 
@@ -155,10 +170,10 @@ Los gráficos y el modelo descubierto se guardan en `resultados/`.
 
 ## Limitaciones
 
-- **Dependencia de `executionId`.** El filtro de flujos asume que el historial informa la ejecución de cada registro. Si no coincidiera, el CSV saldría vacío o incompleto.
+- **Dependencia de `executionId`.** El filtro de flujos asume que el historial informa la ejecución de cada registro. Con los datos finales funcionó, incluidos los lazos de modificaciones y los casos mixtos (por ejemplo, modificaciones, recordatorio y rechazo). Si no coincidiera, el CSV saldría vacío o incompleto.
 - **Ids del BPMN.** `ACTIVIDADES` usa los ids del diagrama actual. Si el BPMN se reexporta con ids distintos, la lista debe actualizarse.
-- **Lazos con casos mixtos.** El filtro por ejecución está pensado para casos donde un evento dispara en una ronda y no en otra (por ejemplo, un recordatorio y luego un rechazo). Hay que comprobarlo con datos que incluyan ese caso.
-- **Solo lo observado.** La minería solo reconstruye lo que aparece en los datos: un camino sin instancias (por ejemplo, las modificaciones) no figura en el modelo descubierto.
+- **Solo lo observado.** La minería solo reconstruye lo que aparece en los datos. Por ejemplo, no hay ninguna instancia que reciba modificaciones después de un recordatorio, aunque el BPMN lo permite.
+- **Datos simulados.** Los porcentajes dependen del plan de `make corridas` (y de las 5 instancias del cupo, que son aceptaciones directas) y no representan el comportamiento de empresas reales.
 - **Solo la negociación.** Las actividades de preparación y posteriores no se analizan.
 
 ## Adaptar el script a otro proceso
