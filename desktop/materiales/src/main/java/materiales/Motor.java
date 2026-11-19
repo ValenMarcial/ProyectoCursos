@@ -11,11 +11,7 @@ public final class Motor implements AutoCloseable {
         this.procesos = procesos;
     }
 
-    /**
-     * Se conecta a la base del motor sin crear ni modificar tablas y con el ejecutor asíncrono apagado:
-     * esta app solo consulta y completa tareas, los timers y trabajos los sigue ejecutando Flowable UI
-     * (si los dos motores corrieran jobs sobre la misma base, se disputarían las tareas del proceso).
-     */
+    /** Se conecta a la base del motor sin tocar tablas y con el ejecutor asíncrono apagado. */
     public static Motor conectar(ConfigMotor config) {
         return new Motor(ProcessEngineConfiguration.createStandaloneProcessEngineConfiguration()
                 .setJdbcUrl(config.url)

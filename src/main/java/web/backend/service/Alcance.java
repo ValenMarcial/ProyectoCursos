@@ -13,10 +13,7 @@ public enum Alcance {
     MIAS,
     GRUPO;
 
-    /**
-     * Convierte el texto de la URL en el alcance. Solo acepta "mias" o "grupo", en minúscula.
-     * Lanza TareaException(ALCANCE_INVALIDO) si falta o no es ninguno de los dos.
-     */
+    /** Convierte el texto de la URL ("mias" o "grupo") en el alcance. */
     public static Alcance desde(String texto) {
         for (Alcance alcance : values()) {
             if (alcance.name().toLowerCase(Locale.ROOT).equals(texto)) {

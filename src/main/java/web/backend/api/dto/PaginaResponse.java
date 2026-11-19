@@ -15,10 +15,7 @@ public class PaginaResponse<T> {
     private final int start;
     private final int size;
 
-    /**
-     * Recibe los elementos de esta página, el total de resultados (de todas las páginas),
-     * la posición del primero (start) y el tamaño de página pedido (size).
-     */
+    /** Recibe los elementos, el total, la posición del primero y el tamaño de página. */
     public PaginaResponse(List<T> data, long total, int start, int size) {
         this.data = List.copyOf(data);
         this.total = total;

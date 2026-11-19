@@ -38,8 +38,7 @@ public class AuthenticationFlowable {
     }
 
     private static void initializeSession(HttpClient client) throws Exception {
-        // Enviar una solicitud GET a Flowable UI para inicializar la sesión y obtener
-        // cookies de sesion
+        // Inicializar la sesión en Flowable UI para obtener las cookies
         HttpRequest initRequest = HttpRequest.newBuilder()
                 .uri(FLOWABLE_UI_URI)
                 .GET()

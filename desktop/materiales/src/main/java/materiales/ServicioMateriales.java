@@ -13,9 +13,9 @@ import org.flowable.task.api.Task;
 
 /** Lo que puede hacer un administrativo con las tareas "Preparar materiales", usando la API Java del motor. */
 public class ServicioMateriales {
-    /** Id de la tarea en el BPMN (no cambia si en el editor se renombra la tarea). */
+    /** Id de la tarea en el BPMN. */
     static final String CLAVE_TAREA = "sid-809C7C67-70EC-4018-BBF7-6A27DD12D4BB";
-    /** Respaldo por nombre, por si se vuelve a dibujar la tarea y cambia el id: "Prepara/Preparar materiales". */
+    /** Nombre de la tarea, si cambia el id. */
     static final String PATRON_NOMBRE = "prepar% materiales";
     static final String GRUPO_ADMINISTRACION = "Administracion";
 
@@ -29,7 +29,7 @@ public class ServicioMateriales {
         this.identidades = identidades;
     }
 
-    /** Devuelve el usuario si el ID y la contraseña son los de Flowable y pertenece a Administración; si no, null. */
+    /** Devuelve el usuario si es válido y de Administración; si no, null. */
     public Usuario identificar(String id, String clave) {
         if (id == null || id.isBlank() || clave == null || !identidades.checkPassword(id.trim(), clave)) {
             return null;
@@ -75,7 +75,7 @@ public class ServicioMateriales {
         tareas.claim(tareaId, usuario.id);
     }
 
-    /** Completa una tarea. Solo puede hacerlo quien la tiene asignada (hay que reclamarla antes). */
+    /** Completa una tarea asignada al usuario. */
     public void completar(Usuario usuario, String tareaId) {
         Task t = buscar(tareaId);
         if (t.getAssignee() == null) {

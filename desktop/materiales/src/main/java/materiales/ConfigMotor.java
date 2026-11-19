@@ -19,10 +19,7 @@ public final class ConfigMotor {
         this.clave = clave;
     }
 
-    /**
-     * Toma los valores de MOTOR_DB_URL, MOTOR_DB_USER y MOTOR_DB_PASSWORD. Lo que falte se completa con el
-     * .env de la raíz del repo (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB) y con el puerto 5432.
-     */
+    /** Toma la conexión de MOTOR_DB_* o, si falta, del .env del repo. */
     public static ConfigMotor desdeEntorno() {
         Map<String, String> env = leerEnv(Path.of("../../.env"));
         String base = env.getOrDefault("POSTGRES_DB", "Institucion");

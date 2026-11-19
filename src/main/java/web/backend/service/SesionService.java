@@ -12,7 +12,7 @@ import web.backend.service.SesionException.Motivo;
  */
 @Service
 public class SesionService {
-    /** Separa usuario y clave en Basic auth: un usuario que lo contenga sería ambiguo. */
+    /** Separador de usuario y clave en Basic auth. */
     private static final String SEPARADOR_BASIC = ":";
 
     private final FlowableRestClient flowable;
@@ -21,12 +21,7 @@ public class SesionService {
         this.flowable = flowable;
     }
 
-    /**
-     * Valida usuario y clave y devuelve el usuario con su nombre y grupos.
-     * La clave solo se usa para validar: no queda en el resultado ni en este servicio.
-     * Lanza SesionException con el motivo si los datos o las credenciales no sirven, o si
-     * Flowable no responde.
-     */
+    /** Valida usuario y clave y devuelve el usuario con su nombre y grupos. */
     public UsuarioSesion iniciar(String usuario, String clave) {
         if (usuario.contains(SEPARADOR_BASIC)) {
             throw new SesionException(Motivo.DATOS_INVALIDOS);

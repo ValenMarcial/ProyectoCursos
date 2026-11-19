@@ -17,7 +17,7 @@ public class ValidateResourceSelection implements TaskListener {
         boolean hasSelectedResource = false;
         for (String resource : RESOURCES) {
             Object value = task.getVariable(resource);
-            // El gateway falla si una condición usa una variable que no existe: lo que no vino cuenta como false.
+            // Lo que no vino cuenta como false
             if (value == null) {
                 task.setVariable(resource, false);
             }

@@ -19,10 +19,7 @@ public class SesionWebConfig implements WebMvcConfigurer {
 
     private final ObjectMapper objectMapper;
 
-    /**
-     * Recibe el ObjectMapper de Spring para que el interceptor escriba el 401 en JSON con
-     * la misma configuración que el resto de las respuestas.
-     */
+    /** Recibe el ObjectMapper de Spring para el JSON del 401. */
     public SesionWebConfig(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }

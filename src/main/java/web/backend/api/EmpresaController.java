@@ -62,10 +62,7 @@ public class EmpresaController {
         return respuesta(empresa);
     }
 
-    /**
-     * Cierra solo la sesión de la empresa: la cookie es la misma que la del personal, así que
-     * invalidar toda la sesión también cerraría la del personal en ese navegador.
-     */
+    /** Cierra solo la sesión de la empresa. */
     @DeleteMapping("/sesion")
     public ResponseEntity<Void> cerrar(HttpSession sesion) {
         sesion.removeAttribute(ATRIBUTO_EMPRESA);
@@ -88,13 +85,12 @@ public class EmpresaController {
         return error(exception.getMotivo());
     }
 
-    // El cuerpo del login (con la clave) nunca termina en un mensaje de error.
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<MensajeErrorResponse> manejarPedidoInvalido() {
         return error(Motivo.DATOS_INVALIDOS);
     }
 
-    /** Un id que no es número se responde como curso inexistente. */
+    /** Id que no es número: curso inexistente. */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<MensajeErrorResponse> manejarIdInvalido() {
         return error(Motivo.CURSO_NO_ENCONTRADO);

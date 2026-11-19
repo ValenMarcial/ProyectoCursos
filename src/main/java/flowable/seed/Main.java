@@ -45,9 +45,7 @@ public class Main {
         // 1. Crear la configuración para conectarse al motor de identidad de Flowable.
         IdmEngineConfiguration config = IdmEngineConfiguration.createStandaloneIdmEngineConfiguration();
 
-        // 2. Indicar la conexión y las credenciales de la base Institucion. Se pueden cambiar con
-        // MOTOR_DB_URL, MOTOR_DB_USER y MOTOR_DB_PASSWORD (los mismos nombres que la app de materiales),
-        // por ejemplo si Postgres está en otro puerto.
+        // 2. Conexión a la base Institucion (MOTOR_DB_URL, MOTOR_DB_USER y MOTOR_DB_PASSWORD).
         config.setJdbcUrl(System.getenv().getOrDefault("MOTOR_DB_URL", "jdbc:postgresql://localhost:5432/Institucion"));
         config.setJdbcDriver("org.postgresql.Driver");
         config.setJdbcUsername(System.getenv().getOrDefault("MOTOR_DB_USER", "UserPostgres"));
@@ -55,15 +53,13 @@ public class Main {
 
         config.setDatabaseSchemaUpdate(IdmEngineConfiguration.DB_SCHEMA_UPDATE_TRUE);
 
-        // 3. Construir el motor IDM, que proporciona acceso a usuarios, grupos y
-        // privilegios.
+        // 3. Construir el motor IDM.
         IdmEngine idmEngine = config.buildIdmEngine();
         try {
             // 4. Obtener el servicio IDM e inyectarlo en la lógica de la seed.
             IdmIdentityService idmIdentityService = idmEngine.getIdmIdentityService();
 
-            // 5. Crear los usuarios, grupos, membresías y privilegios definidos en
-            // FlowableSeed, a menos que este el argumento --no-seed.
+            // 5. Crear usuarios, grupos, membresías y privilegios, salvo con --no-seed.
             if (seedEnabled) {
                 FlowableSeed seed = new FlowableSeed(idmIdentityService);
                 System.out.println("Ejecutando la seed");
@@ -83,8 +79,7 @@ public class Main {
                     System.out.print("Contraseña: ");
                     String password = scanner.nextLine();
 
-                    // Importar el modelo BPMN al Modeler de Flowable
-                    // Se usa el archivo del repo (no el copiado a target) para poder corregirlo en el lugar
+                    // Importar al Modeler el archivo BPMN del repo
                     ModelerImporter.importModelToModeler(
                             Path.of("src/main/resources/processes/ProyectoCursos.bpmn20.xml"),
                             user,

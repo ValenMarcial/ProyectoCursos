@@ -78,7 +78,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
                 connection.commit();
                 execution.setVariable("cursoId", cursoId);
                 if (cuenta != null) {
-                    // Simulación del envío: la demo no manda emails, las credenciales quedan en el log de Flowable.
+                    // Simula el envío del email con las credenciales
                     LOG.info("Cuenta de empresa creada (envío simulado a {}): empresa {}, usuario {}, clave {}",
                             cuenta.destino, cuenta.empresaId, cuenta.usuario, cuenta.clave);
                 }
@@ -140,11 +140,7 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
         return cursoId;
     }
 
-    /**
-     * Crea la cuenta de la empresa de la solicitud si no tiene una y devuelve las credenciales nuevas;
-     * devuelve null si ya existía. El usuario es el email de contacto; si falta o ya lo usa otra
-     * empresa, es "empresa-ID".
-     */
+    /** Crea la cuenta de la empresa si no tiene una; devuelve las credenciales o null si ya existía. */
     private CuentaNueva crearCuentaSiFalta(Connection connection, long solicitudId) throws SQLException {
         long empresaId;
         String email;
@@ -169,7 +165,6 @@ public class CreateCourseOnAcceptance implements JavaDelegate {
             insert.setLong(1, empresaId);
             insert.setString(2, usuario);
             insert.setString(3, PasswordHash.hash(clave));
-            // 0 filas: otra instancia de la misma empresa la creó al mismo tiempo; esa entrega las credenciales.
             if (insert.executeUpdate() == 0) {
                 return null;
             }

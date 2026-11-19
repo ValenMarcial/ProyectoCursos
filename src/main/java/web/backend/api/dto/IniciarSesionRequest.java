@@ -8,7 +8,6 @@ public class IniciarSesionRequest {
     @NotBlank
     private String usuario;
 
-    // NotEmpty y no NotBlank: una clave hecha de espacios sigue siendo una clave.
     @NotEmpty
     private String clave;
 

@@ -143,8 +143,7 @@ class ServicioMaterialesTest {
 
     @Test
     void funcionaConUnProcesoQueTieneTareaDeReglas() {
-        // El BPMN real tiene "Evaluar Viabilidad" (Drools). Sin kie-api en el classpath, desplegar o leer
-        // las variables de la tarea falla con NoClassDefFoundError al cargar la definición del proceso.
+        // El BPMN real incluye la tarea de Drools
         procesos.getRepositoryService().createDeployment()
                 .addClasspathResource("materiales-reglas-test.bpmn20.xml").deploy();
         String instancia = procesos.getRuntimeService().startProcessInstanceByKey("materialesReglasTest",

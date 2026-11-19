@@ -22,10 +22,10 @@ import web.backend.api.dto.IniciarSolicitudRequest;
 
 @Component
 public class FlowableRestClient {
-    /** Usuario de Flowable; el id va como variable para que se codifique y no altere la ruta. */
+    /** Usuario de Flowable. */
     private static final String RUTA_USUARIO = "/identity/users/{usuario}";
     private static final String RUTA_GRUPOS = "/identity/groups";
-    /** Flowable devuelve 10 resultados por defecto; ningún usuario debería tener más grupos que esto. */
+    /** Máximo de grupos por usuario. */
     private static final int MAXIMO_GRUPOS = 100;
 
     private final RestTemplate restTemplate;
@@ -83,14 +83,10 @@ public class FlowableRestClient {
         return null;
     }
 
-    /**
-     * Valida usuario y clave pidiéndole a Flowable los datos del propio usuario con sus credenciales.
-     * Devuelve true si Flowable lo autentica (200, o 403 si solo le falta permiso para la API REST)
-     * y false si responde 401. Cualquier otro error se propaga como RestClientException.
-     */
+    /** Valida usuario y clave contra Flowable. */
     public boolean credencialesValidas(String usuario, String clave) {
         HttpHeaders headers = new HttpHeaders();
-        // Este encabezado reemplaza al de admin que agrega el RestTemplate: se valida con la clave del usuario.
+        // Credenciales del usuario en lugar de las de admin
         headers.setBasicAuth(usuario, clave, StandardCharsets.UTF_8);
         try {
             restTemplate.exchange(urlUsuario(usuario), HttpMethod.GET, new HttpEntity<>(headers), Void.class);
@@ -99,7 +95,7 @@ public class FlowableRestClient {
             if (exception.getStatusCode() == HttpStatus.UNAUTHORIZED) {
                 return false;
             }
-            // 403: Flowable ya autenticó al usuario; solo le falta el permiso de la API REST.
+            // 403: autenticado, sin permiso para la API REST
             if (exception.getStatusCode() == HttpStatus.FORBIDDEN) {
                 return true;
             }
@@ -145,7 +141,6 @@ public class FlowableRestClient {
         return grupos;
     }
 
-    // encode() antes de expandir codifica el valor completo: un "/" en el usuario no cambia la ruta.
     private URI urlUsuario(String usuario) {
         return UriComponentsBuilder.fromHttpUrl(baseUrl + RUTA_USUARIO)
                 .encode()

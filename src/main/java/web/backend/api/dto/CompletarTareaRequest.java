@@ -19,10 +19,7 @@ public class CompletarTareaRequest {
         this.variables = variables;
     }
 
-    /**
-     * Una variable con la forma de Flowable. Qué nombres y tipos se aceptan lo decide
-     * TareaService (lista de escritura).
-     */
+    /** Una variable con la forma de Flowable. */
     public static class Variable {
         private String name;
         private String type;

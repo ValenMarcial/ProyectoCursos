@@ -30,29 +30,21 @@ public class TareaService {
     static final int TAMANIO_POR_DEFECTO = 50;
     static final int TAMANIO_MAXIMO = 100;
 
-    /**
-     * Variables de la instancia que puede leer la web (lista cerrada). Las que solo usan el
-     * motor y los listeners (solicitudId, empresaId, cursoId, isViable, amountCursos,
-     * recordatoriosEnviados, plazoRecordatorio, docenteSeleccionado, aulaAsignada, cancelada)
-     * quedan afuera. docenteSeleccionado se puede escribir (ver VARIABLES_ESCRITURA) pero NO
-     * leer: ninguna pantalla la muestra. Es una sola lista para todo el proceso: no distingue por tarea.
-     */
+    /** Variables de la instancia que puede leer la web. */
     static final Set<String> VARIABLES_LECTURA = Set.of(
             // Solicitud de la empresa.
             "empresaNombre", "tematica", "descripcion", "contactoNombre", "contactoEmail",
             "contactoTelefono", "participantesEstimados", "fechasPreferidas",
             // Propuesta.
             "programa", "presupuesto", "fechaInicioPosible", "fechaFinPropuesta", "fechaInicio",
-            // Versión de la propuesta: la original es 1 y cada msgModificaciones la incrementa.
             "versionPropuesta",
             // Recursos.
             "aulaFisica", "aulaVirtual", "equipamiento",
             // Lista de participantes.
             "participantes", "listaDefinitiva",
-            // Informe: el texto lo escribe la persona (opcional si adjunta un PDF, lo que marca
-            // informeAdjunto) y la ruta la genera la web.
+            // Informe.
             "observaciones", "resultado", "informeResultados", "informeAdjunto", "rutaInforme",
-            // Cierre: código del error que cerró el curso (hoy SIN_AULAS), para mostrar el motivo.
+            // Cierre.
             "motivoCierre");
 
     // Tipos de Flowable que acepta la lista de escritura.
@@ -61,17 +53,7 @@ public class TareaService {
     private static final String TIPO_BOOLEANO = "boolean";
     private static final String TIPO_FECHA = "date";
 
-    /**
-     * Variables que la web puede escribir al completar, con su tipo de Flowable (lista cerrada,
-     * igual a tiposVariables de contrato.js). Los tipos van fijos porque los listeners castean
-     * (presupuesto a Long, las fechas a Date). Quedan afuera las que setean el motor o los
-     * listeners (resultado, aulaAsignada, isViable, cancelada, motivoCierre).
-     * docenteSeleccionado es el id de usuario de Flowable (por ejemplo "docente2", no el nombre)
-     * que elige el jefe de equipo en "Definir Docente"; acá solo se exige que sea texto, y que el
-     * usuario exista en el grupo Docentes lo valida el listener ValidateSelectedTeacher del motor.
-     * Limitación: es una sola lista para todo el proceso, no por tarea; una tarea podría recibir
-     * una variable que es de otra. El motor sigue validando cada formulario con sus listeners.
-     */
+    /** Variables que la web puede escribir al completar, con su tipo de Flowable. */
     static final Map<String, String> VARIABLES_ESCRITURA = Map.ofEntries(
             // Propuesta.
             Map.entry("programa", TIPO_TEXTO),
@@ -82,12 +64,12 @@ public class TareaService {
             Map.entry("aulaFisica", TIPO_BOOLEANO),
             Map.entry("aulaVirtual", TIPO_BOOLEANO),
             Map.entry("equipamiento", TIPO_BOOLEANO),
-            // Lista definitiva e informe. rutaInforme la genera la web al subir el PDF.
+            // Lista definitiva e informe.
             Map.entry("listaDefinitiva", TIPO_TEXTO),
             Map.entry("informeResultados", TIPO_TEXTO),
             Map.entry("informeAdjunto", TIPO_BOOLEANO),
             Map.entry("rutaInforme", TIPO_TEXTO),
-            // Definir Docente: id de usuario del docente elegido.
+            // Definir Docente.
             Map.entry("docenteSeleccionado", TIPO_TEXTO));
 
     private final FlowableTareaClient flowable;
@@ -96,12 +78,7 @@ public class TareaService {
         this.flowable = flowable;
     }
 
-    /**
-     * Lista las tareas del usuario según el alcance ("mias" o "grupo"), paginadas.
-     * Recibe el usuario de la sesión, el alcance como texto y start/size (null = valor por defecto).
-     * Devuelve la página de tareas. Lanza TareaException si el alcance o la página no son válidos,
-     * o si Flowable no responde.
-     */
+    /** Lista las tareas del usuario según el alcance ("mias" o "grupo"), paginadas. */
     public PaginaResponse<TareaResponse> listar(UsuarioSesion usuario, String alcance, Integer start, Integer size) {
         Alcance tipo = Alcance.desde(alcance);
         int inicio = start == null ? INICIO_POR_DEFECTO : start;
@@ -112,19 +89,14 @@ public class TareaService {
         if (tipo == Alcance.MIAS) {
             return conFlowable(() -> flowable.buscarTareas(usuario.getUsuario(), null, null, inicio, tamanio));
         }
-        // Sin grupos no se llama a Flowable: con candidateGroups vacío ignoraría el filtro y traería todo.
+        // Sin grupos no hay tareas de grupo
         if (usuario.getGrupos().isEmpty()) {
             return new PaginaResponse<>(Collections.emptyList(), 0, inicio, tamanio);
         }
         return conFlowable(() -> flowable.buscarTareas(null, usuario.getGrupos(), null, inicio, tamanio));
     }
 
-    /**
-     * Devuelve una tarea si el usuario la puede ver: si está asignada a él, o si alguno de sus
-     * grupos es candidato (aunque ya la haya tomado un compañero).
-     * Recibe el usuario de la sesión y el id de la tarea. Si no existe o no la puede ver lanza
-     * TareaException(TAREA_NO_ENCONTRADA), sin distinguir los dos casos.
-     */
+    /** Devuelve una tarea si es del usuario o de uno de sus grupos. */
     public TareaResponse obtener(UsuarioSesion usuario, String tareaId) {
         return conFlowable(() -> {
             TareaResponse tarea = buscar(tareaId);
@@ -135,13 +107,7 @@ public class TareaService {
         });
     }
 
-    /**
-     * Reclama la tarea para el usuario de la sesión. El assignee sale SIEMPRE de la sesión: el
-     * controller no lee ningún cuerpo. Exige que la tarea sea de uno de sus grupos o ya suya.
-     * Recibe el usuario de la sesión y el id de la tarea. Lanza TareaException: USUARIO_INVALIDO
-     * (sin llamar a Flowable), TAREA_NO_ENCONTRADA o NO_AUTORIZADA. Si la tiene otra persona,
-     * el 409 del motor sigue de largo como FlowableRespuestaException.
-     */
+    /** Reclama la tarea para el usuario de la sesión, si es de uno de sus grupos. */
     public void reclamar(UsuarioSesion usuario, String tareaId) {
         String yo = usuarioValido(usuario);
         conFlowable(() -> {
@@ -158,15 +124,7 @@ public class TareaService {
         });
     }
 
-    /**
-     * Completa la tarea con las variables recibidas, solo si está asignada al usuario de la sesión.
-     * Las variables se validan antes de consultar al motor contra VARIABLES_ESCRITURA (nombre,
-     * tipo y valor); null equivale a ninguna.
-     * Recibe el usuario de la sesión, el id de la tarea y las variables. Lanza TareaException:
-     * USUARIO_INVALIDO, VARIABLE_INVALIDA, TAREA_NO_ENCONTRADA, NO_AUTORIZADA (ni suya ni de su
-     * grupo) o NO_ASIGNADA (de su grupo pero sin reclamar). Los errores de negocio del motor
-     * (400) siguen de largo como FlowableRespuestaException.
-     */
+    /** Completa la tarea asignada al usuario de la sesión con las variables recibidas. */
     public void completar(UsuarioSesion usuario, String tareaId, List<CompletarTareaRequest.Variable> variables) {
         String yo = usuarioValido(usuario);
         List<CompletarTareaRequest.Variable> validas = validarEscritura(variables);
@@ -177,35 +135,24 @@ public class TareaService {
         });
     }
 
-    /**
-     * Devuelve la tarea solo si está asignada al usuario de la sesión: la misma regla que completar,
-     * para los pasos previos a completarla (por ejemplo, subir el informe).
-     * Lanza TareaException: USUARIO_INVALIDO, TAREA_NO_ENCONTRADA, NO_AUTORIZADA o NO_ASIGNADA.
-     */
+    /** Devuelve la tarea solo si está asignada al usuario de la sesión. */
     public TareaResponse tareaAsignada(UsuarioSesion usuario, String tareaId) {
         String yo = usuarioValido(usuario);
         return conFlowable(() -> exigirAsignada(usuario, yo, tareaId));
     }
 
-    /** Busca la tarea y exige que sea de "yo"; si no, elige entre NO_ASIGNADA y NO_AUTORIZADA. */
+    /** Busca la tarea y exige que esté asignada al usuario. */
     private TareaResponse exigirAsignada(UsuarioSesion usuario, String yo, String tareaId) {
         TareaResponse tarea = buscar(tareaId);
         if (!yo.equals(tarea.getAssignee())) {
-            // Solo en el caso de error se consultan los candidatos, para elegir el mensaje.
             throw new TareaException(esDeSuGrupo(usuario, tareaId) ? Motivo.NO_ASIGNADA : Motivo.NO_AUTORIZADA);
         }
         return tarea;
     }
 
-    /**
-     * Devuelve las variables permitidas (VARIABLES_LECTURA) de una instancia, solo si el usuario
-     * tiene una tarea activa en ella: asignada a él o sin asignar de uno de sus grupos.
-     * Recibe el usuario de la sesión y el id de la instancia. Si no hay tarea suya lanza
-     * TareaException(INSTANCIA_NO_ENCONTRADA): tampoco se revela si la instancia existe.
-     */
+    /** Devuelve las variables permitidas de una instancia en la que el usuario tiene una tarea. */
     public List<VariableResponse> variables(UsuarioSesion usuario, String instanciaId) {
         return conFlowable(() -> {
-            // Basta con saber si hay al menos una: se pide una sola tarea y se mira el total.
             boolean tieneTarea = flowable.buscarTareas(usuario.getUsuario(), null, instanciaId, 0, 1).getTotal() > 0
                     || (!usuario.getGrupos().isEmpty()
                             && flowable.buscarTareas(null, usuario.getGrupos(), instanciaId, 0, 1).getTotal() > 0);
@@ -222,13 +169,7 @@ public class TareaService {
         });
     }
 
-    /**
-     * Devuelve el valor de texto de una variable de la instancia, o vacío si no existe o no es
-     * texto. Es para uso del servidor (por ejemplo, ubicar el PDF del informe): NO aplica
-     * VARIABLES_LECTURA ni controla permisos, así que quien la llama tiene que haber validado
-     * antes que el usuario tiene una tarea de esa instancia (ver tareaAsignada).
-     * Lanza TareaException(FLOWABLE_NO_RESPONDE) si el motor no responde.
-     */
+    /** Devuelve una variable de texto de la instancia, sin controlar permisos. */
     public Optional<String> textoDeInstancia(String instanciaId, String nombre) {
         return conFlowable(() -> flowable.variablesDeInstancia(instanciaId).stream()
                 .filter(variable -> nombre.equals(variable.getName()) && variable.getValue() instanceof String)
@@ -250,10 +191,7 @@ public class TareaService {
         return usuario.getUsuario().equals(tarea.getAssignee());
     }
 
-    /**
-     * Indica si alguno de los grupos del usuario es candidato de la tarea (aunque ya la haya
-     * tomado otra persona). Sin grupos no consulta a Flowable.
-     */
+    /** Indica si alguno de los grupos del usuario es candidato de la tarea. */
     private boolean esDeSuGrupo(UsuarioSesion usuario, String tareaId) {
         return !usuario.getGrupos().isEmpty()
                 && !Collections.disjoint(usuario.getGrupos(), flowable.gruposCandidatos(tareaId));
@@ -268,11 +206,7 @@ public class TareaService {
         return nombre;
     }
 
-    /**
-     * Valida las variables a escribir: nombre en VARIABLES_ESCRITURA, el mismo tipo, un valor no
-     * nulo que coincida con el tipo y sin nombres repetidos. Devuelve la lista (vacía si vino null).
-     * Lanza TareaException(VARIABLE_INVALIDA) con el nombre de la primera variable rechazada.
-     */
+    /** Valida las variables a escribir contra VARIABLES_ESCRITURA. */
     private static List<CompletarTareaRequest.Variable> validarEscritura(List<CompletarTareaRequest.Variable> variables) {
         if (variables == null) {
             return Collections.emptyList();
@@ -289,10 +223,7 @@ public class TareaService {
         return variables;
     }
 
-    /**
-     * Indica si el valor JSON corresponde al tipo de Flowable. Las fechas van como texto ISO
-     * (las convierte el motor); long acepta enteros, no decimales.
-     */
+    /** Indica si el valor JSON corresponde al tipo de Flowable. */
     private static boolean valorDelTipo(String tipo, Object valor) {
         switch (tipo) {
             case TIPO_TEXTO:
@@ -307,11 +238,7 @@ public class TareaService {
         }
     }
 
-    /**
-     * Ejecuta una operación contra Flowable y traduce la falta de respuesta del motor (conexión
-     * o cuenta del backend rechazada) a TareaException(FLOWABLE_NO_RESPONDE). Los errores que
-     * respondió el motor (FlowableRespuestaException) siguen de largo para reenviarse tal cual.
-     */
+    /** Ejecuta una operación contra Flowable y traduce la falta de respuesta del motor. */
     private static <T> T conFlowable(Supplier<T> operacion) {
         try {
             return operacion.get();

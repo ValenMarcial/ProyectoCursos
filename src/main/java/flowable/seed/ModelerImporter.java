@@ -43,7 +43,7 @@ public class ModelerImporter {
         String original = Files.readString(bpmnPath);
         String fixed = ModelerExportFixer.fix(original);
 
-        // Se reescribe el archivo del repo para que make deploy despliegue la versión corregida
+        // Guardar en el repo la versión corregida
         if (!fixed.equals(original)) {
             Files.writeString(bpmnPath, fixed);
             System.out.println("BPMN corregido (compensaciones y nombre del proceso) en " + bpmnPath);

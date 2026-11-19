@@ -21,9 +21,9 @@ import web.backend.service.TareaException.Motivo;
  */
 @Service
 public class InformeService {
-    /** Nombre de la tarea en el BPMN (el id cambia si se vuelve a exportar el modelo). */
+    /** Nombre de la tarea en el BPMN. */
     static final String TAREA_INFORME = "Elaborar informe de resultados";
-    /** Tamaño máximo del PDF. Se repite en spring.servlet.multipart de application.yml. */
+    /** Tamaño máximo del PDF. */
     public static final int MAXIMO_MB = 10;
     private static final long MAXIMO_BYTES = MAXIMO_MB * 1024L * 1024L;
     private static final byte[] CABECERA_PDF = "%PDF-".getBytes(StandardCharsets.US_ASCII);
@@ -36,12 +36,7 @@ public class InformeService {
         this.carpeta = Path.of(carpeta);
     }
 
-    /**
-     * Guarda el PDF y devuelve su ruta relativa (cursos/&lt;instancia&gt;/&lt;uuid&gt;.pdf).
-     * Recibe el usuario de la sesión, el id de la tarea y el contenido del archivo. Lanza
-     * TareaException: las de tareaAsignada, TAREA_SIN_INFORME, INFORME_INVALIDO (vacío o sin
-     * cabecera %PDF-), INFORME_MUY_GRANDE o INFORME_NO_GUARDADO.
-     */
+    /** Guarda el PDF del informe y devuelve su ruta relativa. */
     public String guardar(UsuarioSesion usuario, String tareaId, byte[] contenido) {
         TareaResponse tarea = tareas.tareaAsignada(usuario, tareaId);
         if (!TAREA_INFORME.equals(tarea.getName())) {
@@ -64,16 +59,7 @@ public class InformeService {
         return relativa;
     }
 
-    /**
-     * Ubica el PDF del informe de la instancia de una tarea del usuario, para descargarlo.
-     * La ruta sale SIEMPRE de la variable rutaInforme de la instancia, leída en el servidor: la web
-     * no manda ninguna ruta. Se exige que sea cursos/&lt;instancia de la tarea&gt;/&lt;archivo&gt;.pdf, que
-     * quede dentro de la carpeta de informes (también tras resolver enlaces simbólicos) y que
-     * sea un archivo común.
-     * Recibe el usuario de la sesión y el id de la tarea. Lanza TareaException: las de
-     * tareaAsignada, FLOWABLE_NO_RESPONDE o INFORME_NO_ENCONTRADO (sin ruta, ruta que no
-     * corresponde a la instancia o archivo ausente: no se distingue, para no revelar rutas).
-     */
+    /** Ubica el PDF del informe de la instancia de una tarea del usuario. */
     public Path ubicar(UsuarioSesion usuario, String tareaId) {
         TareaResponse tarea = tareas.tareaAsignada(usuario, tareaId);
         String instancia = tarea.getProcessInstanceId();

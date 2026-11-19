@@ -13,10 +13,7 @@ public class FlowableRespuestaException extends RuntimeException {
     private final byte[] cuerpo;
     private final MediaType tipoContenido;
 
-    /**
-     * Recibe el estado HTTP del motor, el cuerpo en bytes (sin decodificar, para no alterarlo),
-     * el content-type (puede ser null si el motor no lo mandó) y la excepción original.
-     */
+    /** Recibe el estado HTTP, el cuerpo, el content-type y la excepción original del motor. */
     public FlowableRespuestaException(int estado, byte[] cuerpo, MediaType tipoContenido, Throwable causa) {
         super("Flowable respondió " + estado + ".", causa);
         this.estado = estado;
@@ -29,7 +26,7 @@ public class FlowableRespuestaException extends RuntimeException {
         return estado;
     }
 
-    /** Cuerpo exacto de la respuesta del motor (una copia, para que nadie lo modifique). */
+    /** Copia del cuerpo de la respuesta del motor. */
     public byte[] getCuerpo() {
         return cuerpo.clone();
     }

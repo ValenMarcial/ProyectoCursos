@@ -49,7 +49,7 @@ public final class Solicitud {
     }
 
     public String nombre() {
-        // El backend guarda el nombre de la empresa en empresaNombre; "nombre" queda por compatibilidad
+        // Nombre de la empresa
         for (String variable : new String[] {"empresaNombre", "nombre"}) {
             Object valor = variables.get(variable);
             if (valor != null) {

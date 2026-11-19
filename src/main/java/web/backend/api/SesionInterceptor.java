@@ -31,16 +31,10 @@ import web.backend.service.UsuarioSesion;
  */
 public class SesionInterceptor implements HandlerInterceptor {
     private static final String BARRA = "/";
-    /** Ruta del alta pública; tiene que coincidir con el @RequestMapping de SolicitudController. */
+    /** Ruta del alta pública. */
     static final String RUTA_SOLICITUDES = "/api/solicitudes";
 
-    /**
-     * Pedidos que pasan sin sesión, como "MÉTODO ruta". Es por método a propósito: GET, PUT o
-     * DELETE sobre las mismas rutas exigen sesión.
-     * - POST /api/sesion: el login (GET y DELETE de esa ruta piden sesión).
-     * - POST /api/solicitudes: el alta de la web pública y de las empresas, sin login.
-     * - POST /api/empresa/sesion: el login de las empresas.
-     */
+    /** Pedidos que pasan sin sesión, como "MÉTODO ruta". */
     private static final Set<String> PEDIDOS_PUBLICOS = Set.of(
             pedido(HttpMethod.POST, SesionController.RUTA),
             pedido(HttpMethod.POST, RUTA_SOLICITUDES),
@@ -55,9 +49,7 @@ public class SesionInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        // El preflight de CORS (OPTIONS) lo manda el navegador sin cookies antes del POST público
-        // desde otro origen. Spring lo responde solo con los encabezados de CORS, sin llegar al
-        // controller, así que dejarlo pasar no expone nada.
+        // El preflight de CORS pasa sin sesión
         if (CorsUtils.isPreFlightRequest(request) || esPublico(request) || tieneSesion(request)) {
             return true;
         }
@@ -75,7 +67,7 @@ public class SesionInterceptor implements HandlerInterceptor {
 
     private static String ruta(HttpServletRequest request) {
         String ruta = request.getRequestURI().substring(request.getContextPath().length());
-        // Spring acepta la barra final en la ruta del controller, así que acá también.
+        // Acepta la barra final
         if (ruta.endsWith(BARRA)) {
             ruta = ruta.substring(0, ruta.length() - 1);
         }
@@ -86,8 +78,6 @@ public class SesionInterceptor implements HandlerInterceptor {
         return metodo.name() + " " + ruta;
     }
 
-    // Una sesión sin usuario (por ejemplo, creada por otra parte del sitio) no alcanza, y cada parte
-    // de la API pide la suya.
     private static boolean tieneSesion(HttpServletRequest request) {
         HttpSession sesion = request.getSession(false);
         if (sesion == null) {

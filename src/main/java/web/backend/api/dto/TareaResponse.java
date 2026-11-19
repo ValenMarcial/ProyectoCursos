@@ -14,11 +14,7 @@ public class TareaResponse {
     private final String createTime;
     private final String dueDate;
 
-    /**
-     * Recibe el id de la tarea, su nombre, el usuario asignado (null si nadie la tomó), el id
-     * de la tarea en el BPMN, el id de la instancia y las fechas de creación y de vencimiento
-     * (esta última null si no tiene).
-     */
+    /** Recibe los datos de la tarea; assignee y vencimiento pueden ser null. */
     public TareaResponse(String id, String name, String assignee, String taskDefinitionKey,
             String processInstanceId, String createTime, String dueDate) {
         this.id = id;
