@@ -91,7 +91,8 @@
   outline-offset: 1px;
 }
 
-.formulario .boton-de-accion {
+.formulario .boton-de-accion,
+.curso .boton-de-accion {
   justify-self: start;
 }
 

@@ -23,6 +23,7 @@ public class TareaException extends RuntimeException {
         INFORME_MUY_GRANDE("El informe supera el tamaño máximo de " + InformeService.MAXIMO_MB + " MB."),
         INFORME_NO_ENCONTRADO("El informe no existe: todavía no se subió el PDF o el archivo no está en el servidor."),
         INFORME_NO_GUARDADO("No se pudo guardar el informe en el servidor."),
+        SOLO_ADMINISTRACION("Solo Administración puede consultar los informes de los cursos finalizados."),
         FLOWABLE_NO_RESPONDE("No se pudo consultar las tareas porque Flowable no responde.");
 
         private final String mensaje;

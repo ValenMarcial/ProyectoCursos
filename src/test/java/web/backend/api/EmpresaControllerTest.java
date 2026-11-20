@@ -10,12 +10,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -109,6 +114,32 @@ class EmpresaControllerTest {
 
         mvc.perform(get(EmpresaController.RUTA + "/cursos/20").session(sesionDeEmpresa()))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void elInformeSeDevuelveComoPdf(@TempDir Path carpeta) throws Exception {
+        byte[] pdf = "%PDF-1.7 informe".getBytes(StandardCharsets.US_ASCII);
+        when(empresas.informe(TECH, 11L)).thenReturn(Files.write(carpeta.resolve("b.pdf"), pdf));
+
+        mvc.perform(get(EmpresaController.RUTA + "/cursos/11/informe").session(sesionDeEmpresa()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(content().bytes(pdf));
+    }
+
+    @Test
+    void unInformeNoDisponibleResponde404ConMensaje() throws Exception {
+        when(empresas.informe(any(), anyLong())).thenThrow(new EmpresaException(Motivo.INFORME_NO_DISPONIBLE));
+
+        mvc.perform(get(EmpresaController.RUTA + "/cursos/11/informe").session(sesionDeEmpresa()))
+                .andExpect(status().isNotFound())
+                .andExpect(content().json("{\"message\":\"" + Motivo.INFORME_NO_DISPONIBLE.getMensaje() + "\"}"));
+    }
+
+    @Test
+    void sinSesionDeEmpresaNoSeVeElInforme() throws Exception {
+        mvc.perform(get(EmpresaController.RUTA + "/cursos/11/informe")).andExpect(status().isUnauthorized());
     }
 
     @Test

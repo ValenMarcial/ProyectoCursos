@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Informes de cursos finalizados</title>
+  <link rel="stylesheet" href="css/administracion.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <h1>Informes de cursos finalizados</h1>
+    <p>Administración</p>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- Aviso de errores -->
+    <p id="aviso" class="aviso" role="alert" hidden></p>
+
+    <p id="sin-cursos" hidden>Todavía no hay cursos finalizados.</p>
+
+    <!-- js/informes.js agrega una tarjeta por cada curso finalizado -->
+    <section class="bloque" aria-label="Cursos finalizados">
+      <div id="lista-cursos" class="tarjetas"></div>
+    </section>
+
+  </main>
+
+  <footer class="pie">
+    <a href="index.html">Volver al menú de Administración</a>
+  </footer>
+
+  <script type="module" src="js/guardia.js"></script>
+  <script type="module" src="js/informes.js"></script>
+
+</body>
+</html>

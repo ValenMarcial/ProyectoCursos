@@ -15,11 +15,11 @@ import web.backend.service.TareaException;
 import web.backend.service.TareaException.Motivo;
 
 /**
- * Respuestas de error de los endpoints de tareas e instancias (limitado a esos controllers).
+ * Respuestas de error de los endpoints de tareas, instancias y cursos (limitado a esos controllers).
  * - Errores del backend: {"message": "..."} con el estado de cada motivo.
  * - Errores que respondió el motor: estado, cuerpo y content-type exactos, sin tocarlos.
  */
-@RestControllerAdvice(assignableTypes = {TareaController.class, InstanciaController.class})
+@RestControllerAdvice(assignableTypes = {TareaController.class, InstanciaController.class, CursoController.class})
 public class TareaErrorHandler {
 
     /** Error de las reglas del backend: devuelve {"message"} con el estado del motivo. */
@@ -84,6 +84,7 @@ public class TareaErrorHandler {
                 return HttpStatus.UNAUTHORIZED;
             case NO_AUTORIZADA:
             case NO_ASIGNADA:
+            case SOLO_ADMINISTRACION:
                 return HttpStatus.FORBIDDEN;
             case TAREA_NO_ENCONTRADA:
             case INSTANCIA_NO_ENCONTRADA:

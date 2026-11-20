@@ -19,9 +19,17 @@ public class CursoEmpresaResponse {
     public final LocalDate fechaInicio;
     public final LocalDate fechaFin;
     public final List<ActividadResponse> actividades;
+    /** true si el curso finalizó y tiene el PDF del informe para descargar. */
+    public final Boolean informeDisponible;
 
     public CursoEmpresaResponse(long id, String nombre, String descripcion, String estado,
             LocalDate fechaInicio, LocalDate fechaFin, List<ActividadResponse> actividades) {
+        this(id, nombre, descripcion, estado, fechaInicio, fechaFin, actividades, null);
+    }
+
+    public CursoEmpresaResponse(long id, String nombre, String descripcion, String estado,
+            LocalDate fechaInicio, LocalDate fechaFin, List<ActividadResponse> actividades,
+            Boolean informeDisponible) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -29,10 +37,12 @@ public class CursoEmpresaResponse {
         this.fechaInicio = fechaInicio;
         this.fechaFin = fechaFin;
         this.actividades = actividades;
+        this.informeDisponible = informeDisponible;
     }
 
     /** Mismo curso con sus actividades en curso. */
     public CursoEmpresaResponse conActividades(List<ActividadResponse> lista) {
-        return new CursoEmpresaResponse(id, nombre, descripcion, estado, fechaInicio, fechaFin, lista);
+        return new CursoEmpresaResponse(id, nombre, descripcion, estado, fechaInicio, fechaFin, lista,
+                informeDisponible);
     }
 }

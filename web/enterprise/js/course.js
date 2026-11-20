@@ -1,4 +1,4 @@
-import { cerrarSesion, exigirSesion, listarCursos, obtenerCurso } from "./enterprise-api.js";
+import { cerrarSesion, exigirSesion, listarCursos, obtenerCurso, rutaInforme } from "./enterprise-api.js";
 
 const nombreEmpresa = document.getElementById("empresa-nombre");
 const botonCerrarSesion = document.getElementById("cerrar-sesion");
@@ -132,6 +132,14 @@ function crearTarjeta(curso) {
     tarjeta.append(cabecera, datos);
     if (curso.estado !== "finalizado" && curso.estado !== "cancelado") {
         tarjeta.append(crearDesplegable(curso.id));
+    }
+    // El informe aparece cuando el administrativo lo envía: el curso queda finalizado.
+    if (curso.informeDisponible) {
+        const enlace = crear("a", "boton-de-accion", "Ver informe de resultados (PDF)");
+        enlace.href = rutaInforme(curso.id);
+        enlace.target = "_blank";
+        enlace.rel = "noopener";
+        tarjeta.append(enlace);
     }
     return tarjeta;
 }

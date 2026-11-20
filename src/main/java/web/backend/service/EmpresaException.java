@@ -6,6 +6,7 @@ public class EmpresaException extends RuntimeException {
         DATOS_INVALIDOS("Ingresá el usuario y la clave."),
         CREDENCIALES_INVALIDAS("Usuario o clave incorrectos."),
         CURSO_NO_ENCONTRADO("No existe el curso."),
+        INFORME_NO_DISPONIBLE("El informe de resultados de este curso todavía no está disponible."),
         FLOWABLE_NO_RESPONDE("No se pudieron consultar las actividades porque Flowable no responde.");
 
         private final String mensaje;

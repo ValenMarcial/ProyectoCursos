@@ -6,6 +6,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
 
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -80,6 +81,13 @@ public class EmpresaController {
         return empresas.curso(empresa, id);
     }
 
+    /** GET /api/empresa/cursos/{id}/informe: el PDF del informe de un curso propio y finalizado. */
+    @GetMapping("/cursos/{id}/informe")
+    public ResponseEntity<Resource> informe(@SessionAttribute(ATRIBUTO_EMPRESA) EmpresaSesion empresa,
+            @PathVariable long id) {
+        return RespuestaPdf.informe(empresas.informe(empresa, id));
+    }
+
     @ExceptionHandler(EmpresaException.class)
     public ResponseEntity<MensajeErrorResponse> manejarError(EmpresaException exception) {
         return error(exception.getMotivo());
@@ -111,6 +119,7 @@ public class EmpresaController {
             case CREDENCIALES_INVALIDAS:
                 return HttpStatus.UNAUTHORIZED;
             case CURSO_NO_ENCONTRADO:
+            case INFORME_NO_DISPONIBLE:
                 return HttpStatus.NOT_FOUND;
             case FLOWABLE_NO_RESPONDE:
                 return HttpStatus.BAD_GATEWAY;
