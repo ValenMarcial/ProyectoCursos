@@ -1,5 +1,6 @@
 package web.backend.service;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -31,10 +32,12 @@ public class EmpresaService {
 
     private final EmpresaRepository empresas;
     private final FlowableTareaClient flowable;
+    private final InformeService informes;
 
-    public EmpresaService(EmpresaRepository empresas, FlowableTareaClient flowable) {
+    public EmpresaService(EmpresaRepository empresas, FlowableTareaClient flowable, InformeService informes) {
         this.empresas = empresas;
         this.flowable = flowable;
+        this.informes = informes;
     }
 
     /** Valida usuario y clave de la empresa. */
@@ -63,5 +66,16 @@ public class EmpresaService {
         } catch (RestClientException | FlowableRespuestaException exception) {
             throw new EmpresaException(Motivo.FLOWABLE_NO_RESPONDE, exception);
         }
+    }
+
+    /** El PDF del informe de un curso propio, una vez que el administrativo lo envió (curso finalizado). */
+    public Path informe(EmpresaSesion sesion, long cursoId) {
+        CursoConInstancia curso = empresas.curso(sesion.getEmpresaId(), cursoId)
+                .orElseThrow(() -> new EmpresaException(Motivo.CURSO_NO_ENCONTRADO));
+        if (!EmpresaRepository.ESTADO_FINALIZADO.equals(curso.curso.estado)) {
+            throw new EmpresaException(Motivo.INFORME_NO_DISPONIBLE);
+        }
+        return informes.archivo(curso.instanciaId, curso.rutaInforme)
+                .orElseThrow(() -> new EmpresaException(Motivo.INFORME_NO_DISPONIBLE));
     }
 }

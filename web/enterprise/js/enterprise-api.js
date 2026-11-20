@@ -58,6 +58,11 @@ export function listarCursos() {
     return pedir("/api/empresa/cursos");
 }
 
+// GET /api/empresa/cursos/{id}/informe -> el PDF del informe (se abre directo en el navegador)
+export function rutaInforme(id) {
+    return `/api/empresa/cursos/${encodeURIComponent(id)}/informe`;
+}
+
 // GET /api/empresa/cursos/{id} -> el curso con sus actividades en curso
 export function obtenerCurso(id) {
     return pedir(`/api/empresa/cursos/${encodeURIComponent(id)}`);

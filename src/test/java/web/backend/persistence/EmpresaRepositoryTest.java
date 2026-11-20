@@ -1,6 +1,7 @@
 package web.backend.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDate;
@@ -27,13 +28,16 @@ class EmpresaRepositoryTest {
                 + "clave_hash VARCHAR(200))");
         jdbc.execute("CREATE TABLE cursos (id BIGINT PRIMARY KEY, empresa_id BIGINT, nombre VARCHAR(255), "
                 + "descripcion VARCHAR(2000), estado VARCHAR(40), fecha_inicio DATE, fecha_fin DATE, "
-                + "instancia_flowable_id VARCHAR(64))");
+                + "instancia_flowable_id VARCHAR(64), resultados VARCHAR(255))");
         jdbc.execute("INSERT INTO empresas VALUES (1, 'Tech S.A.'), (2, 'Otra S.R.L.')");
         jdbc.execute("INSERT INTO cuentas_empresa VALUES (1, 'rrhh@tech.com', 'hash')");
         jdbc.execute("INSERT INTO cursos VALUES "
-                + "(10, 1, 'BPMN', 'Modelado', 'confirmado', DATE '2027-01-15', DATE '2027-02-15', 'proc-10'), "
-                + "(11, 1, 'Cloud', 'AWS', 'finalizado', DATE '2026-03-01', DATE '2026-04-01', 'proc-11'), "
-                + "(20, 2, 'IA', 'LLM', 'en_preparacion', DATE '2027-05-01', DATE '2027-06-01', 'proc-20')");
+                + "(10, 1, 'BPMN', 'Modelado', 'en_elaboracion_informe', DATE '2027-01-15', DATE '2027-02-15', "
+                + "'proc-10', 'cursos/proc-10/a.pdf'), "
+                + "(11, 1, 'Cloud', 'AWS', 'finalizado', DATE '2026-03-01', DATE '2026-04-01', 'proc-11', "
+                + "'cursos/proc-11/b.pdf'), "
+                + "(12, 1, 'Viejo', 'Sin PDF', 'finalizado', DATE '2025-03-01', DATE '2025-04-01', 'proc-12', NULL), "
+                + "(20, 2, 'IA', 'LLM', 'en_preparacion', DATE '2027-05-01', DATE '2027-06-01', 'proc-20', NULL)");
         repository = new EmpresaRepository(jdbc);
     }
 
@@ -51,7 +55,7 @@ class EmpresaRepositoryTest {
     void listaSoloLosCursosDeLaEmpresaDelMasNuevoAlMasViejo() {
         List<Long> ids = repository.cursos(1L).stream().map(c -> c.id).collect(Collectors.toList());
 
-        assertEquals(List.of(10L, 11L), ids);
+        assertEquals(List.of(10L, 11L, 12L), ids);
     }
 
     @Test
@@ -59,8 +63,18 @@ class EmpresaRepositoryTest {
         CursoConInstancia propio = repository.curso(1L, 10L).orElseThrow();
 
         assertEquals("proc-10", propio.instanciaId);
-        assertEquals("confirmado", propio.curso.estado);
+        assertEquals("en_elaboracion_informe", propio.curso.estado);
         assertEquals(LocalDate.of(2027, 1, 15), propio.curso.fechaInicio);
         assertTrue(repository.curso(1L, 20L).isEmpty());
+    }
+
+    @Test
+    void elInformeEstaDisponibleSoloEnCursosFinalizadosConPdf() {
+        CursoConInstancia finalizado = repository.curso(1L, 11L).orElseThrow();
+
+        assertEquals("cursos/proc-11/b.pdf", finalizado.rutaInforme);
+        assertTrue(finalizado.curso.informeDisponible);
+        assertFalse(repository.curso(1L, 10L).orElseThrow().curso.informeDisponible);
+        assertFalse(repository.curso(1L, 12L).orElseThrow().curso.informeDisponible);
     }
 }

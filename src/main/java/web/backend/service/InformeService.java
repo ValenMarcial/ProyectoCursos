@@ -3,8 +3,10 @@ package web.backend.service;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -65,6 +67,14 @@ public class InformeService {
         String instancia = tarea.getProcessInstanceId();
         String ruta = tareas.textoDeInstancia(instancia, "rutaInforme")
                 .orElseThrow(() -> new TareaException(Motivo.INFORME_NO_ENCONTRADO));
+        return archivo(instancia, ruta).orElseThrow(() -> new TareaException(Motivo.INFORME_NO_ENCONTRADO));
+    }
+
+    /** El PDF de una ruta guardada por el servidor, si es de esa instancia y está dentro de la carpeta de informes. */
+    public Optional<Path> archivo(String instancia, String ruta) {
+        if (instancia == null || ruta == null) {
+            return Optional.empty();
+        }
         String prefijo = "cursos/" + instancia + "/";
         Path base = carpeta.toAbsolutePath().normalize();
         Path archivo = base.resolve(ruta).normalize();
@@ -73,12 +83,12 @@ public class InformeService {
                     || !archivo.startsWith(base.resolve("cursos").resolve(instancia))
                     || !Files.isRegularFile(archivo)
                     || !archivo.toRealPath().startsWith(base.toRealPath())) {
-                throw new TareaException(Motivo.INFORME_NO_ENCONTRADO);
+                return Optional.empty();
             }
-        } catch (IOException exception) {
-            throw new TareaException(Motivo.INFORME_NO_ENCONTRADO, exception);
+        } catch (IOException | InvalidPathException exception) {
+            return Optional.empty();
         }
-        return archivo;
+        return Optional.of(archivo);
     }
 
     private static boolean esPdf(byte[] contenido) {

@@ -15,8 +15,10 @@ import web.backend.api.dto.CursoEmpresaResponse;
 public class EmpresaRepository {
     private static final String BUSCAR_CUENTA = "SELECT c.empresa_id, c.usuario, c.clave_hash, e.nombre "
             + "FROM cuentas_empresa c JOIN empresas e ON e.id = c.empresa_id WHERE c.usuario = ?";
-    private static final String COLUMNAS_CURSO =
-            "SELECT id, nombre, descripcion, estado, fecha_inicio, fecha_fin, instancia_flowable_id FROM cursos ";
+    /** Estado en el que la empresa puede descargar el informe: el administrativo ya lo envió. */
+    public static final String ESTADO_FINALIZADO = "finalizado";
+    private static final String COLUMNAS_CURSO = "SELECT id, nombre, descripcion, estado, fecha_inicio, fecha_fin, "
+            + "instancia_flowable_id, resultados FROM cursos ";
     private static final String CURSOS = COLUMNAS_CURSO + "WHERE empresa_id = ? ORDER BY fecha_inicio DESC, id DESC";
     private static final String CURSO = COLUMNAS_CURSO + "WHERE empresa_id = ? AND id = ?";
 
@@ -41,9 +43,13 @@ public class EmpresaRepository {
     }
 
     private static CursoConInstancia curso(ResultSet rs) throws SQLException {
+        String estado = rs.getString("estado");
+        String rutaInforme = rs.getString("resultados");
+        boolean informeDisponible = ESTADO_FINALIZADO.equals(estado) && rutaInforme != null;
         return new CursoConInstancia(new CursoEmpresaResponse(rs.getLong("id"), rs.getString("nombre"),
-                rs.getString("descripcion"), rs.getString("estado"), rs.getDate("fecha_inicio").toLocalDate(),
-                rs.getDate("fecha_fin").toLocalDate(), null), rs.getString("instancia_flowable_id"));
+                rs.getString("descripcion"), estado, rs.getDate("fecha_inicio").toLocalDate(),
+                rs.getDate("fecha_fin").toLocalDate(), null, informeDisponible),
+                rs.getString("instancia_flowable_id"), rutaInforme);
     }
 
     public static final class Cuenta {
@@ -60,14 +66,20 @@ public class EmpresaRepository {
         }
     }
 
-    /** El curso con el id de su instancia, que no se expone a la empresa. */
+    /** El curso con el id de su instancia y la ruta del informe, que no se exponen a la empresa. */
     public static final class CursoConInstancia {
         public final CursoEmpresaResponse curso;
         public final String instanciaId;
+        public final String rutaInforme;
 
         public CursoConInstancia(CursoEmpresaResponse curso, String instanciaId) {
+            this(curso, instanciaId, null);
+        }
+
+        public CursoConInstancia(CursoEmpresaResponse curso, String instanciaId, String rutaInforme) {
             this.curso = curso;
             this.instanciaId = instanciaId;
+            this.rutaInforme = rutaInforme;
         }
     }
 }

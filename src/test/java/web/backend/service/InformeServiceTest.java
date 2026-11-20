@@ -176,6 +176,20 @@ class InformeServiceTest {
                 assertThrows(TareaException.class, () -> service.ubicar(JEFE, "7501")).getMotivo());
     }
 
+    @Test
+    void archivoValidaLaRutaGuardadaContraSuInstancia() throws IOException {
+        Path propio = crear("cursos/7420/informe.pdf");
+        crear("cursos/9999/ajeno.pdf");
+
+        assertEquals(Optional.of(propio.toAbsolutePath().normalize()),
+                service.archivo("7420", "cursos/7420/informe.pdf"));
+        assertTrue(service.archivo("7420", "cursos/9999/ajeno.pdf").isEmpty());
+        assertTrue(service.archivo("7420", "cursos/7420/../9999/ajeno.pdf").isEmpty());
+        assertTrue(service.archivo("7420", "cursos/7420/no-esta.pdf").isEmpty());
+        assertTrue(service.archivo("7420", null).isEmpty());
+        assertTrue(service.archivo(null, "cursos/7420/informe.pdf").isEmpty());
+    }
+
     private void pedirRuta(String ruta) {
         when(tareas.tareaAsignada(JEFE, "7501")).thenReturn(tarea("Enviar informe"));
         when(tareas.textoDeInstancia("7420", "rutaInforme")).thenReturn(Optional.of(ruta));

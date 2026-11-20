@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -30,13 +31,15 @@ class EmpresaServiceTest {
 
     private EmpresaRepository repository;
     private FlowableTareaClient flowable;
+    private InformeService informes;
     private EmpresaService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(EmpresaRepository.class);
         flowable = mock(FlowableTareaClient.class);
-        service = new EmpresaService(repository, flowable);
+        informes = mock(InformeService.class);
+        service = new EmpresaService(repository, flowable, informes);
         when(repository.buscarCuenta(anyString())).thenReturn(Optional.empty());
         when(repository.buscarCuenta("rrhh@tech.com"))
                 .thenReturn(Optional.of(new Cuenta(1L, "rrhh@tech.com", HASH, "Tech S.A.")));
@@ -95,6 +98,46 @@ class EmpresaServiceTest {
 
         EmpresaException error = assertThrows(EmpresaException.class, () -> service.curso(TECH, 10L));
         assertEquals(Motivo.FLOWABLE_NO_RESPONDE, error.getMotivo());
+    }
+
+    @Test
+    void elInformeDeUnCursoFinalizadoSeEntrega() {
+        Path pdf = Path.of("cursos/proc-11/b.pdf");
+        when(repository.curso(1L, 11L)).thenReturn(Optional.of(cursoConInforme("finalizado")));
+        when(informes.archivo("proc-11", "cursos/proc-11/b.pdf")).thenReturn(Optional.of(pdf));
+
+        assertEquals(pdf, service.informe(TECH, 11L));
+    }
+
+    @Test
+    void antesDeQueElAdministrativoLoEnvieElInformeNoEstaDisponible() {
+        when(repository.curso(1L, 11L)).thenReturn(Optional.of(cursoConInforme("en_elaboracion_informe")));
+
+        EmpresaException error = assertThrows(EmpresaException.class, () -> service.informe(TECH, 11L));
+        assertEquals(Motivo.INFORME_NO_DISPONIBLE, error.getMotivo());
+        verifyNoInteractions(informes);
+    }
+
+    @Test
+    void sinArchivoEnElServidorElInformeNoEstaDisponible() {
+        when(repository.curso(1L, 11L)).thenReturn(Optional.of(cursoConInforme("finalizado")));
+        when(informes.archivo(anyString(), anyString())).thenReturn(Optional.empty());
+
+        EmpresaException error = assertThrows(EmpresaException.class, () -> service.informe(TECH, 11L));
+        assertEquals(Motivo.INFORME_NO_DISPONIBLE, error.getMotivo());
+    }
+
+    @Test
+    void elInformeDeUnCursoAjenoNoSeEncuentra() {
+        when(repository.curso(1L, 20L)).thenReturn(Optional.empty());
+
+        EmpresaException error = assertThrows(EmpresaException.class, () -> service.informe(TECH, 20L));
+        assertEquals(Motivo.CURSO_NO_ENCONTRADO, error.getMotivo());
+    }
+
+    private static CursoConInstancia cursoConInforme(String estado) {
+        return new CursoConInstancia(new CursoEmpresaResponse(11L, "Cloud", "AWS", estado,
+                LocalDate.of(2026, 3, 1), LocalDate.of(2026, 4, 1), null), "proc-11", "cursos/proc-11/b.pdf");
     }
 
     private static CursoConInstancia curso(String estado, String instancia) {
