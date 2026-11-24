@@ -18,13 +18,19 @@ Implementación del proceso de organización de cursos de capacitación (enuncia
 | `infra/` | Base de datos `Institucion` (schema, seed y migraciones) y scripts (`recorrido.py`, `corridas.py`) |
 | `docs/contrato.md` | Contrato del proceso: ids de tareas, mensajes, variables y sus tipos |
 | `docs/informe-*.md` | Informe: variables, listeners y decisiones de implementación |
+| `docs/escenarios.md` | Pasos para probar los 11 escenarios de la demostración |
 | `docs/preparar-demo.md` | Cómo generar las instancias para 4.3 y 4.4 y dejar lista la presentación |
+| `process-mining/` | Minería de procesos de la negociación (4.4): CSV, scripts, capturas y conclusión |
 
 ---
 
 ## 2. Cómo ejecutar la solución
 
-Requisitos: Docker con Docker Compose, Java 11 o 17, Maven y Python 3.
+Requisitos:
+
+- Docker con Docker Compose, Java 11 o 17 (no 21 o superior, ver [Requisitos y configuración](#requisitos-y-configuración)), Maven, Python 3 y `make`. En Windows, correr los comandos desde WSL.
+- Los puertos 5432 (PostgreSQL), 8080 (Flowable), 8081 (sitio y backend) y 5050 (pgAdmin) tienen que estar libres.
+- Solo para la minería de procesos (4.4): PM4Py y Graphviz, ver [process-mining/README.md](process-mining/README.md).
 
 ```bash
 make dev-up      # compila y levanta Postgres, Flowable UI, el backend y pgAdmin
@@ -56,11 +62,15 @@ Con eso queda todo funcionando:
 | `docente1` | `Docente1` | `Docentes` | Docente |
 | `docente2` | `Docente2` | `Docentes` | Docente |
 
-También crea una cuenta para cada integrante del grupo de desarrollo (`valentin`, `juan`, `matiasP`, `matiasB`, `marcelo`) en el grupo `Admin`, con acceso al Modeler. Las cuentas de las empresas las crea el proceso en "Habilitar acceso de la empresa"; para la demostración, las credenciales se escriben en el log de Flowable:
+También crea cuentas del grupo de desarrollo en el grupo `Admin`, con acceso al Modeler; no participan del proceso. Las cuentas de las empresas las crea el proceso en "Habilitar acceso de la empresa"; para la demostración, las credenciales se escriben en el log de Flowable:
 
 ```bash
 docker compose logs flowable | grep "Cuenta de empresa creada"
 ```
+
+### Probar los escenarios
+
+[docs/escenarios.md](docs/escenarios.md) tiene, para cada uno de los 11 escenarios de la demostración, qué usuario entra, en qué pantalla y qué hay que verificar al final.
 
 ### Generar ejecuciones
 
@@ -114,9 +124,9 @@ make dev-down    # detiene y elimina los contenedores, conserva los volúmenes
 
 Direcciones locales:
 
-- Flowable UI: <http://127.0.0.1:8080/flowable-ui>
-- Backend REST: <http://127.0.0.1:8081/api>
-- pgAdmin: <http://127.0.0.1:5050> (usuario `admin@localhost.com`, contraseña `admin123`)
+- Flowable UI: <http://localhost:8080/flowable-ui>
+- Backend REST: <http://localhost:8081/api>
+- pgAdmin: <http://localhost:5050> (usuario `admin@localhost.com`, contraseña `admin123`)
 
 ### Backend REST
 
@@ -262,7 +272,7 @@ make recorrido ESCENARIO=rechazo         # la empresa rechaza y se archiva
 make recorrido ESCENARIO=sin-respuesta   # dos recordatorios y se archiva (~1 minuto)
 make recorrido ESCENARIO=limite          # completa hasta 5 cursos en ejecución y la solicitud siguiente no es viable (escenario 5)
 make recorrido ESCENARIO=limpiar-limite  # cancela los cursos que dejó «limite»
-make recorrido ESCENARIO=final RECURSOS=virtual FLOWABLE_USER=juan FLOWABLE_PASSWORD=Juan
+make recorrido ESCENARIO=final RECURSOS=virtual   # solo con aula virtual
 ```
 
 Al terminar muestra las actividades recorridas, el valor de `resultado` y si la instancia terminó. Si el proceso se queda en algún paso, avisa dónde. Cada corrida crea una empresa "Empresa recorrido HHMMSS" (`limite` crea "Empresa límite 2" a "Empresa límite 5", según cuántos cursos haya ya en ejecución, y los deja esperando en "Preparar curso" para mostrarlos en la defensa); las instancias se pueden seguir en la Admin app mientras corre. Necesita el backend y Flowable levantados y el BPMN desplegado; solo usa Python 3 sin dependencias.
@@ -327,7 +337,9 @@ La solicitud no tiene un estado de curso: su integración con Flowable se contro
 ## 4. Documentación
 
 - [docs/contrato.md](docs/contrato.md): ids de las tareas, mensajes, variables, asignaciones y errores de negocio.
-- [docs/informe-motor-y-empresas.md](docs/informe-motor-y-empresas.md) y [docs/informe-apps-y-docentes.md](docs/informe-apps-y-docentes.md): informe de implementación.
+- [docs/informe-motor-y-empresas.md](docs/informe-motor-y-empresas.md), [docs/informe-web-administracion.md](docs/informe-web-administracion.md) y [docs/informe-apps-y-docentes.md](docs/informe-apps-y-docentes.md): informe de implementación.
+- [docs/escenarios.md](docs/escenarios.md): cómo probar los 11 escenarios.
 - [docs/uso-web-springboot.md](docs/uso-web-springboot.md): uso del backend REST.
+- [process-mining/README.md](process-mining/README.md) y [process-mining/CONCLUSION.md](process-mining/CONCLUSION.md): minería de procesos (4.4).
 - [docs/preparar-demo.md](docs/preparar-demo.md): instancias para 4.3 y 4.4, y preparación de la presentación.
 - [web/README.md](web/README.md), [desktop/materiales/README.md](desktop/materiales/README.md) y [desktop/simulador/README.md](desktop/simulador/README.md): cada aplicación.

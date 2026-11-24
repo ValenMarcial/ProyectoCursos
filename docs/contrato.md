@@ -335,13 +335,6 @@ Cuando una clase rechaza un dato por una regla de negocio, lanza `FlowableIllega
 
 Una clase nueva con validaciones de negocio debe seguir la misma regla. El backend reenvía el status que recibe de Flowable.
 
-## Pendiente para que el proceso corra completo
-
-Estos puntos no impiden desplegar, pero sí que el proceso recorra todos los caminos:
-
-- Asignaciones y grupos candidatos de las demás tareas de usuario.
-- Enganchar en el BPMN las clases de "Reservar aula" y "Liberar Aula", y vincular las compensaciones con `association` (ver "Reservar y liberar aula").
-
 ## Evaluación de recursos
 
 La tarea **Evaluar Recursos** registra los recursos requeridos mediante tres campos booleanos:
